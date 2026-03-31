@@ -1,0 +1,13 @@
+{
+  "name": "@eyestalk/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > ../shared/src/types/database.generated.ts",
+    "start": "supabase start",
+    "stop": "supabase stop",
+    "status": "supabase status"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "app": {
+    "name": "EyesTalk",
+    "tagline": "От взгляда к разговору"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "activeUsers": "Активные пользователи",
+    "totalCheckins": "Всего чекинов",
+    "activeActivities": "Активные активности",
+    "peakHours": "Пиковые часы",
+    "analytics": "Аналитика",
+    "moderation": "Модерация",
+    "activities": "Активности",
+    "qrCodes": "QR-коды",
+    "settings": "Настройки"
+  },
+  "auth": {
+    "signIn": "Войти",
+    "signUp": "Зарегистрироваться",
+    "signOut": "Выйти",
+    "email": "Email",
+    "password": "Пароль",
+    "venueOwnerLogin": "Вход для владельцев заведений"
+  },
+  "venues": {
+    "myVenue": "Моё заведение",
+    "createVenue": "Создать заведение",
+    "name": "Название заведения",
+    "type": "Тип заведения",
+    "address": "Адрес",
+    "description": "Описание"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск"
+  }
+}

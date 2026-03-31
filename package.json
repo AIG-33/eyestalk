@@ -1,0 +1,19 @@
+{
+  "name": "eyestalk",
+  "private": true,
+  "scripts": {
+    "dev:mobile": "turbo run dev --filter=@eyestalk/mobile",
+    "dev:web": "turbo run dev --filter=@eyestalk/web",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "db:migrate": "turbo run db:migrate --filter=@eyestalk/supabase",
+    "db:reset": "turbo run db:reset --filter=@eyestalk/supabase",
+    "db:types": "turbo run db:types --filter=@eyestalk/supabase"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

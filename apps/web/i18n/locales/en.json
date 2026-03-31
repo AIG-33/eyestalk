@@ -1,0 +1,43 @@
+{
+  "app": {
+    "name": "EyesTalk",
+    "tagline": "From a glance to a conversation"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "activeUsers": "Active Users",
+    "totalCheckins": "Total Check-ins",
+    "activeActivities": "Active Activities",
+    "peakHours": "Peak Hours",
+    "analytics": "Analytics",
+    "moderation": "Moderation",
+    "activities": "Activities",
+    "qrCodes": "QR Codes",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "venueOwnerLogin": "Venue Owner Login"
+  },
+  "venues": {
+    "myVenue": "My Venue",
+    "createVenue": "Create Venue",
+    "name": "Venue Name",
+    "type": "Venue Type",
+    "address": "Address",
+    "description": "Description"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Что-то пошло не так",
+    "retry": "Повторить",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "done": "Готово",
+    "ok": "ОК",
+    "yes": "Да",
+    "no": "Нет",
+    "search": "Поиск",
+    "close": "Закрыть"
+  },
+  "auth": {
+    "signIn": "Войти",
+    "signUp": "Зарегистрироваться",
+    "signOut": "Выйти",
+    "signInSubtitle": "От взгляда к разговору",
+    "signUpSubtitle": "Присоединяйся к социальному слою реальной жизни",
+    "createAccount": "Создать аккаунт",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Пароль",
+    "confirmPasswordPlaceholder": "Подтвердите пароль",
+    "noAccount": "Нет аккаунта? Зарегистрируйтесь",
+    "hasAccount": "Уже есть аккаунт? Войдите",
+    "passwordMismatch": "Пароли не совпадают",
+    "passwordTooShort": "Пароль должен быть не менее 8 символов"
+  },
+  "profile": {
+    "createTitle": "Ваш профиль",
+    "createSubtitle": "Расскажите немного о себе",
+    "nickname": "Никнейм",
+    "nicknamePlaceholder": "Как вас называть?",
+    "ageRange": "Возрастной диапазон",
+    "interests": "Интересы",
+    "continue": "Продолжить",
+    "language": "Язык",
+    "editProfile": "Редактировать профиль",
+    "tokens": "Токены"
+  },
+  "tabs": {
+    "map": "Карта",
+    "chats": "Чаты",
+    "profile": "Профиль"
+  },
+  "map": {
+    "discoverVenues": "Найдите заведения рядом с вами",
+    "placeholder": "Здесь будет карта",
+    "peopleInside": "{{count}} человек внутри",
+    "openToChat": "{{count}} открыты к общению",
+    "activeNow": "Сейчас активны",
+    "noVenues": "Нет заведений поблизости",
+    "checkinRequired": "Зачекиньтесь, чтобы начать общение"
+  },
+  "venue": {
+    "checkin": "Чекин",
+    "checkout": "Выйти",
+    "people": "Люди",
+    "chat": "Чат",
+    "activities": "Активности",
+    "scanQR": "Сканировать QR-код",
+    "checkedIn": "Вы внутри!",
+    "distance": "{{distance}} от вас"
+  },
+  "chats": {
+    "empty": "Пока нет чатов",
+    "emptyHint": "Зачекиньтесь в заведении и начните знакомиться с людьми вокруг",
+    "microChat": "Микро-чат",
+    "microChatHint": "5 мин · 10 сообщений",
+    "sendMessage": "Напишите сообщение...",
+    "chatRequest": "Запрос на чат",
+    "accept": "Принять",
+    "decline": "Отклонить"
+  },
+  "interests": {
+    "music": "Музыка",
+    "sports": "Спорт",
+    "gaming": "Игры",
+    "food": "Еда и напитки",
+    "travel": "Путешествия",
+    "art": "Искусство",
+    "tech": "Технологии",
+    "fitness": "Фитнес",
+    "movies": "Кино",
+    "reading": "Чтение",
+    "dancing": "Танцы",
+    "photography": "Фотография",
+    "cooking": "Кулинария",
+    "nightlife": "Ночная жизнь",
+    "boardgames": "Настольные игры"
+  },
+  "status": {
+    "wantToChat": "Хочу общаться",
+    "lookingForCompany": "Ищу компанию",
+    "playing": "Играю",
+    "listening": "Слушаю",
+    "lookingForDancePartner": "Ищу партнёра для танцев",
+    "justChilling": "Просто отдыхаю"
+  },
+  "safety": {
+    "block": "Заблокировать",
+    "report": "Пожаловаться",
+    "reportSent": "Жалоба отправлена. Спасибо!",
+    "blockConfirm": "Вы уверены, что хотите заблокировать этого пользователя?"
+  }
+}

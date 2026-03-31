@@ -1,0 +1,107 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "done": "Done",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "close": "Close"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "signInSubtitle": "From a glance to a conversation",
+    "signUpSubtitle": "Join the social layer of real life",
+    "createAccount": "Create Account",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "noAccount": "Don't have an account? Sign up",
+    "hasAccount": "Already have an account? Sign in",
+    "passwordMismatch": "Passwords don't match",
+    "passwordTooShort": "Password must be at least 8 characters"
+  },
+  "profile": {
+    "createTitle": "Your Profile",
+    "createSubtitle": "Tell us a bit about yourself",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "How should we call you?",
+    "ageRange": "Age range",
+    "interests": "Interests",
+    "continue": "Continue",
+    "language": "Language",
+    "editProfile": "Edit Profile",
+    "tokens": "Tokens"
+  },
+  "tabs": {
+    "map": "Map",
+    "chats": "Chats",
+    "profile": "Profile"
+  },
+  "map": {
+    "discoverVenues": "Discover venues near you",
+    "placeholder": "Map will be displayed here",
+    "peopleInside": "{{count}} people inside",
+    "openToChat": "{{count}} open to chat",
+    "activeNow": "Active now",
+    "noVenues": "No venues nearby",
+    "checkinRequired": "Check in to start chatting"
+  },
+  "venue": {
+    "checkin": "Check In",
+    "checkout": "Check Out",
+    "people": "People",
+    "chat": "Chat",
+    "activities": "Activities",
+    "scanQR": "Scan QR Code",
+    "checkedIn": "You're checked in!",
+    "distance": "{{distance}} away"
+  },
+  "chats": {
+    "empty": "No chats yet",
+    "emptyHint": "Check in to a venue and start meeting people around you",
+    "microChat": "Micro-chat",
+    "microChatHint": "5 min · 10 messages",
+    "sendMessage": "Type a message...",
+    "chatRequest": "Chat request",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "interests": {
+    "music": "Music",
+    "sports": "Sports",
+    "gaming": "Gaming",
+    "food": "Food & Drinks",
+    "travel": "Travel",
+    "art": "Art",
+    "tech": "Technology",
+    "fitness": "Fitness",
+    "movies": "Movies",
+    "reading": "Reading",
+    "dancing": "Dancing",
+    "photography": "Photography",
+    "cooking": "Cooking",
+    "nightlife": "Nightlife",
+    "boardgames": "Board Games"
+  },
+  "status": {
+    "wantToChat": "Want to chat",
+    "lookingForCompany": "Looking for company",
+    "playing": "Playing",
+    "listening": "Listening",
+    "lookingForDancePartner": "Looking for dance partner",
+    "justChilling": "Just chilling"
+  },
+  "safety": {
+    "block": "Block",
+    "report": "Report",
+    "reportSent": "Report sent. Thank you!",
+    "blockConfirm": "Are you sure you want to block this user?"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "EyesTalk",
+    "slug": "eyestalk",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "eyestalk",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6C5CE7"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.eyestalk.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EyesTalk needs your location to find venues near you and verify check-ins.",
+        "NSCameraUsageDescription": "EyesTalk needs camera access to scan QR codes for venue check-in."
+      }
+    },
+    "android": {
+      "package": "com.eyestalk.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6C5CE7"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "EyesTalk needs your location to find venues near you."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "EyesTalk needs camera access to scan QR codes."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
