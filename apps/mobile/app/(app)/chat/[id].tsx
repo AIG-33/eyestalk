@@ -1,139 +1,239 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
+  View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useChatMessages, useSendMessage, type ChatMessage } from '@/hooks/use-chat';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useChatMessages, useSendMessage } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth.store';
+import { supabase } from '@/lib/supabase';
+import { Avatar } from '@/components/ui/avatar';
+import { IcebreakerBar } from '@/components/chat/icebreaker-bar';
+import { MicroChatTimer } from '@/components/chat/micro-chat-timer';
+import { colors, typography, spacing, shadows, radius, component } from '@/theme';
 
 export default function DirectChatScreen() {
   const { id: chatId } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const session = useAuthStore((s) => s.session);
+  const { data: messages = [] } = useChatMessages(chatId);
+  const sendMessage = useSendMessage();
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
-  const { data: messages = [] } = useChatMessages(chatId);
-  const sendMessage = useSendMessage(chatId);
+  const { data: chatMeta } = useQuery({
+    queryKey: ['chat-meta', chatId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('chats')
+        .select('type, expires_at')
+        .eq('id', chatId)
+        .single();
+      return data;
+    },
+    enabled: !!chatId,
+  });
+
+  const isMicroChat = chatMeta?.type === 'micro';
+  const isFirstMessage = messages.length === 0;
+  const myId = session?.user.id;
 
   const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    sendMessage.mutate(trimmed);
+    if (!text.trim()) return;
+    sendMessage.mutate({ chatId, content: text.trim() });
     setText('');
   };
 
-  const otherUser = messages.find((m) => m.sender_id !== session?.user.id)?.sender;
+  const handleIcebreaker = (question: string) => {
+    sendMessage.mutate({ chatId, content: question });
+  };
 
-  const isOwnMessage = (msg: ChatMessage) => msg.sender_id === session?.user.id;
-
-  const renderMessage = ({ item }: { item: ChatMessage }) => (
-    <View style={[styles.msgRow, isOwnMessage(item) && styles.msgRowOwn]}>
-      <View style={[styles.msgBubble, isOwnMessage(item) ? styles.msgOwn : styles.msgOther]}>
-        <Text style={styles.msgText}>{item.content}</Text>
-        <Text style={styles.msgTime}>
-          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+  const renderMessage = ({ item }: { item: any }) => {
+    const isOwn = item.sender_id === myId;
+    return (
+      <View style={[styles.bubbleRow, isOwn && styles.bubbleRowOwn]}>
+        {!isOwn && (
+          <Avatar uri={null} name={item.sender_id.charAt(0)} size="xs" />
+        )}
+        {isOwn ? (
+          <LinearGradient
+            colors={colors.gradient.primary}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={[styles.bubble, styles.bubbleOwn]}
+          >
+            <Text style={styles.bubbleText}>{item.content}</Text>
+            <Text style={styles.bubbleTime}>
+              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.bubble, styles.bubbleOther]}>
+            <Text style={styles.bubbleText}>{item.content}</Text>
+            <Text style={[styles.bubbleTime, { color: colors.text.tertiary }]}>
+              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
+        )}
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>←</Text>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <View style={styles.headerAvatar}>
-          <Text style={styles.headerAvatarText}>
-            {(otherUser?.nickname || '?').charAt(0).toUpperCase()}
-          </Text>
+        <Avatar uri={null} name="C" size="sm" status="inVenue" />
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerName}>Chat</Text>
+          <Text style={styles.headerStatus}>{t('map.activeNow')}</Text>
         </View>
-        <Text style={styles.headerName}>{otherUser?.nickname || t('chats.chatRequest')}</Text>
+        <TouchableOpacity>
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.text.secondary} />
+        </TouchableOpacity>
       </View>
 
+      {/* MicroChat timer */}
+      {isMicroChat && (
+        <MicroChatTimer
+          expiresAt={chatMeta?.expires_at ?? null}
+          messageCount={messages.length}
+          onExtend={() => {/* TODO: token extend flow */}}
+          extendCost={5}
+        />
+      )}
+
+      {/* Ephemeral notice */}
+      {!isMicroChat && (
+        <View style={styles.ephemeralNotice}>
+          <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
+          <Text style={styles.ephemeralText}>{t('chats.ephemeralNotice')}</Text>
+        </View>
+      )}
+
+      {/* Icebreaker */}
+      {isFirstMessage && <IcebreakerBar onSelect={handleIcebreaker} />}
+
+      {/* Messages */}
       <FlatList
         ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item.id}
         renderItem={renderMessage}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyChat}>
-            <Text style={styles.emptyChatText}>
-              {t('chats.startConversation', { defaultValue: 'Say something!' })}
-            </Text>
-          </View>
-        }
+        inverted={false}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
       />
 
+      {/* Input */}
       <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          placeholder={t('chats.sendMessage')}
-          placeholderTextColor="#666"
-          value={text}
-          onChangeText={setText}
-          multiline
-          maxLength={2000}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || sendMessage.isPending}
-        >
-          <Text style={styles.sendIcon}>↑</Text>
-        </TouchableOpacity>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={text}
+            onChangeText={setText}
+            placeholder={t('chats.sendMessage')}
+            placeholderTextColor={colors.text.tertiary}
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={[styles.sendBtn, !text.trim() && { opacity: 0.3 }]}
+            onPress={handleSend}
+            disabled={!text.trim()}
+          >
+            <Ionicons name="send" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.bg.primary },
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#1A1929',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingTop: 52, paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  backText: { color: '#FFFFFE', fontSize: 24 },
-  headerAvatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center',
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerInfo: { flex: 1 },
+  headerName: {
+    fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
-  headerAvatarText: { color: '#FFFFFE', fontSize: 16, fontWeight: '700' },
-  headerName: { color: '#FFFFFE', fontSize: 17, fontWeight: '700' },
-  messageList: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1 },
-  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 100 },
-  emptyChatText: { color: '#A7A9BE', fontSize: 16 },
-  msgRow: { marginBottom: 8, flexDirection: 'row' },
-  msgRowOwn: { justifyContent: 'flex-end' },
-  msgBubble: { maxWidth: '78%', borderRadius: 16, padding: 10 },
-  msgOwn: { backgroundColor: '#6C5CE7', borderBottomRightRadius: 4 },
-  msgOther: { backgroundColor: '#1A1929', borderBottomLeftRadius: 4 },
-  msgText: { color: '#FFFFFE', fontSize: 15, lineHeight: 20 },
-  msgTime: { color: 'rgba(255,255,255,0.4)', fontSize: 10, alignSelf: 'flex-end', marginTop: 4 },
+  headerStatus: {
+    fontSize: typography.size.bodySm, color: colors.accent.success,
+  },
+  ephemeralNotice: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(90,90,120,0.1)',
+  },
+  ephemeralText: {
+    color: colors.text.tertiary, fontSize: typography.size.micro,
+  },
+  messageList: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingBottom: 8,
+  },
+  bubbleRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
+    marginBottom: spacing.sm, maxWidth: '80%',
+  },
+  bubbleRowOwn: {
+    alignSelf: 'flex-end', flexDirection: 'row-reverse',
+  },
+  bubble: {
+    paddingHorizontal: component.chatBubble.paddingH,
+    paddingVertical: component.chatBubble.paddingV,
+    maxWidth: '100%',
+  },
+  bubbleOwn: {
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20, borderBottomRightRadius: 4,
+  },
+  bubbleOther: {
+    backgroundColor: component.chatBubble.otherBg,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    borderBottomLeftRadius: 4, borderBottomRightRadius: 20,
+  },
+  bubbleText: {
+    fontSize: typography.size.bodyMd, color: colors.text.primary,
+    lineHeight: typography.size.bodyMd * 1.45,
+  },
+  bubbleTime: {
+    fontSize: typography.size.micro, color: 'rgba(255,255,255,0.5)',
+    marginTop: 4, alignSelf: 'flex-end',
+  },
   inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    paddingHorizontal: 12, paddingVertical: 8, paddingBottom: 32,
-    borderTopWidth: 1, borderTopColor: '#1A1929',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingBottom: spacing['3xl'],
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+  },
+  inputContainer: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
+    backgroundColor: colors.bg.tertiary, borderRadius: radius['2xl'],
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.bg.surface,
   },
   input: {
-    flex: 1, backgroundColor: '#1A1929', borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 10, color: '#FFFFFE',
-    fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: '#2A2940',
+    flex: 1, fontSize: typography.size.bodyMd, color: colors.text.primary,
+    maxHeight: 100, paddingVertical: spacing.sm,
   },
-  sendButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center',
+  sendBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center',
+    ...shadows.glowPrimary,
   },
-  sendButtonDisabled: { opacity: 0.3 },
-  sendIcon: { color: '#FFFFFE', fontSize: 20, fontWeight: '700' },
 });

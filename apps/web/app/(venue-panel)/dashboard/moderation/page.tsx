@@ -25,6 +25,22 @@ export default async function ModerationPage() {
   return <ModerationContent reports={reports} />;
 }
 
+function ReportAction({ reportId, action, label, color }: { reportId: string; action: string; label: string; color: string }) {
+  const handleAction = async () => {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('reports').update({ status: action, resolved_by: user?.id }).eq('id', reportId);
+    window.location.reload();
+  };
+  const colorClass = color === 'green' ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-400 hover:bg-gray-500/10';
+  return (
+    <button onClick={handleAction} className={`text-xs px-2 py-1 rounded ${colorClass} transition-colors`}>
+      {label}
+    </button>
+  );
+}
+
 function ModerationContent({ reports }: { reports: any[] }) {
   const t = useTranslations('dashboard');
 
@@ -66,9 +82,17 @@ function ModerationContent({ reports }: { reports: any[] }) {
                   <p className="text-sm text-gray-400 mt-1">{report.description}</p>
                 )}
               </div>
-              <span className="text-xs text-gray-500 whitespace-nowrap">
-                {new Date(report.created_at).toLocaleDateString()}
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                  {new Date(report.created_at).toLocaleDateString()}
+                </span>
+                {report.status === 'pending' && (
+                  <div className="flex gap-1">
+                    <ReportAction reportId={report.id} action="resolved" label="Resolve" color="green" />
+                    <ReportAction reportId={report.id} action="dismissed" label="Dismiss" color="gray" />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

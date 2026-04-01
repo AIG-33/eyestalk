@@ -1,7 +1,11 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserChats } from '@/hooks/use-chat';
+import { Avatar } from '@/components/ui/avatar';
+import { ChatListSkeleton } from '@/components/ui/skeleton';
+import { colors, typography, spacing, radius, shadows } from '@/theme';
 
 export default function ChatsScreen() {
   const { t } = useTranslation();
@@ -10,12 +14,13 @@ export default function ChatsScreen() {
   const renderChat = ({ item }: { item: any }) => {
     const chat = item.chats;
     const venueName = chat?.venues?.name || '';
-    const chatName = chat?.name || venueName || t('chats.directChat', { defaultValue: 'Direct Chat' });
+    const chatName = chat?.name || venueName || 'Chat';
     const isVenueChat = chat?.type === 'venue_general';
 
     return (
       <TouchableOpacity
         style={styles.chatCard}
+        activeOpacity={0.7}
         onPress={() => {
           if (isVenueChat) {
             router.push(`/(app)/venue/${chat.venue_id}/chat` as any);
@@ -24,17 +29,19 @@ export default function ChatsScreen() {
           }
         }}
       >
-        <View style={[styles.avatar, isVenueChat && styles.avatarVenue]}>
-          <Text style={styles.avatarText}>
-            {isVenueChat ? '🏠' : chatName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        <Avatar
+          uri={null}
+          name={isVenueChat ? '🏠' : chatName}
+          size="md"
+          status={isVenueChat ? 'inVenue' : 'online'}
+        />
         <View style={styles.chatInfo}>
-          <Text style={styles.chatName}>{chatName}</Text>
-          <Text style={styles.chatMeta}>
-            {isVenueChat
-              ? t('chats.venueChat', { defaultValue: 'Venue Chat' })
-              : t('chats.directChat', { defaultValue: 'Direct Chat' })}
+          <View style={styles.chatTop}>
+            <Text style={styles.chatName} numberOfLines={1}>{chatName}</Text>
+            <Text style={styles.chatTime}>now</Text>
+          </View>
+          <Text style={styles.chatPreview} numberOfLines={1}>
+            {isVenueChat ? `🏠 ${venueName}` : 'Tap to open'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -48,8 +55,10 @@ export default function ChatsScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.centered}>
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <ChatListSkeleton key={i} />
+          ))}
         </View>
       ) : chats.length > 0 ? (
         <FlatList
@@ -60,9 +69,16 @@ export default function ChatsScreen() {
         />
       ) : (
         <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>💬</Text>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="chatbubbles-outline" size={64} color={colors.text.tertiary} />
+          </View>
           <Text style={styles.emptyText}>{t('chats.empty')}</Text>
           <Text style={styles.emptySubtext}>{t('chats.emptyHint')}</Text>
+          <View style={styles.stepsContainer}>
+            <Text style={styles.stepText}>{t('chats.emptyStep1')}</Text>
+            <Text style={styles.stepText}>{t('chats.emptyStep2')}</Text>
+            <Text style={styles.stepText}>{t('chats.emptyStep3')}</Text>
+          </View>
         </View>
       )}
     </View>
@@ -70,27 +86,58 @@ export default function ChatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  header: { paddingTop: 60, paddingHorizontal: 24, paddingBottom: 16 },
-  title: { fontSize: 28, fontWeight: '800', color: '#FFFFFE' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  loadingText: { color: '#A7A9BE' },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: '#FFFFFE', marginBottom: 8, textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: '#A7A9BE', textAlign: 'center', lineHeight: 20 },
-  list: { paddingHorizontal: 16 },
+  container: { flex: 1, backgroundColor: colors.bg.primary },
+  header: {
+    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg,
+  },
+  title: {
+    fontSize: typography.size.displayLg, fontWeight: typography.weight.extrabold,
+    color: colors.text.primary, letterSpacing: typography.letterSpacing.display,
+  },
+  centered: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40,
+  },
+  skeletonContainer: { paddingTop: spacing.md },
+  emptyIcon: { marginBottom: spacing.xl },
+  emptyText: {
+    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+    color: colors.text.primary, marginBottom: spacing.sm, textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: typography.size.bodyMd, color: colors.text.secondary,
+    textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
+  },
+  stepsContainer: {
+    marginTop: spacing.xl, gap: spacing.sm,
+    backgroundColor: colors.bg.secondary, borderRadius: radius.lg,
+    padding: spacing.lg, width: '100%',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  stepText: {
+    fontSize: typography.size.bodyMd, color: colors.text.secondary,
+    lineHeight: typography.size.bodyMd * 1.6,
+  },
+  list: { paddingHorizontal: spacing.xl },
   chatCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#1A1929', borderRadius: 16, padding: 14,
-    marginBottom: 8, borderWidth: 1, borderColor: '#2A2940',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.bg.secondary, borderRadius: radius.xl,
+    padding: spacing.lg, marginBottom: spacing.sm,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  avatar: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center',
-  },
-  avatarVenue: { backgroundColor: '#2A2940' },
-  avatarText: { fontSize: 20 },
   chatInfo: { flex: 1 },
-  chatName: { color: '#FFFFFE', fontSize: 16, fontWeight: '600' },
-  chatMeta: { color: '#A7A9BE', fontSize: 12, marginTop: 2 },
+  chatTop: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  chatName: {
+    color: colors.text.primary, fontSize: typography.size.headingSm,
+    fontWeight: typography.weight.semibold, flex: 1,
+  },
+  chatTime: {
+    color: colors.text.tertiary, fontSize: typography.size.bodySm,
+    marginLeft: spacing.sm,
+  },
+  chatPreview: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+  },
 });

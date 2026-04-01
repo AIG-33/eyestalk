@@ -2,8 +2,11 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
+import { Button } from '@/components/ui/button';
+import { colors, typography, spacing, radius, shadows } from '@/theme';
 
 interface Activity {
   id: string;
@@ -65,6 +68,7 @@ export default function ActivitiesScreen() {
   const renderActivity = ({ item }: { item: Activity }) => {
     const isActive = item.status === 'active';
     const timeLeft = getTimeLeft(item.ends_at);
+    const typeHint = t(`activities.types.${item.type}`, { defaultValue: '' });
 
     return (
       <View style={[styles.activityCard, isActive && styles.activityCardActive]}>
@@ -75,7 +79,7 @@ export default function ActivitiesScreen() {
           <View style={styles.activityHeaderText}>
             <Text style={styles.activityTitle}>{item.title}</Text>
             <Text style={styles.activityType}>
-              {t(`activityTypes.${item.type}`, { defaultValue: item.type })}
+              {item.type.replace('_', ' ')}
             </Text>
           </View>
           {isActive && timeLeft && (
@@ -89,12 +93,18 @@ export default function ActivitiesScreen() {
           <Text style={styles.activityDescription}>{item.description}</Text>
         )}
 
+        {typeHint ? (
+          <Text style={styles.typeHint}>{typeHint}</Text>
+        ) : null}
+
         <View style={styles.activityFooter}>
-          {item.token_cost > 0 && (
-            <Text style={styles.tokenCost}>🪙 {item.token_cost}</Text>
-          )}
+          <Text style={styles.tokenCost}>
+            {item.token_cost > 0
+              ? t('activities.tokenCost', { cost: item.token_cost })
+              : t('activities.free')}
+          </Text>
           <TouchableOpacity
-            style={styles.joinButton}
+            style={[styles.joinButton, shadows.glowPrimary]}
             onPress={() => joinActivity.mutate(item.id)}
             disabled={joinActivity.isPending}
           >
@@ -110,10 +120,17 @@ export default function ActivitiesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>←</Text>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('venue.activities')}</Text>
+        <Text style={styles.headerTitle}>{t('activities.title')}</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      {/* Hint */}
+      <View style={styles.hintBanner}>
+        <Ionicons name="flash-outline" size={16} color={colors.accent.warning} />
+        <Text style={styles.hintText}>{t('activities.joinHint')}</Text>
       </View>
 
       {isLoading ? (
@@ -130,12 +147,8 @@ export default function ActivitiesScreen() {
       ) : (
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>🎯</Text>
-          <Text style={styles.emptyText}>
-            {t('activities.empty', { defaultValue: 'No activities right now' })}
-          </Text>
-          <Text style={styles.emptyHint}>
-            {t('activities.emptyHint', { defaultValue: 'Check back soon!' })}
-          </Text>
+          <Text style={styles.emptyTitle}>{t('activities.emptyTitle')}</Text>
+          <Text style={styles.emptyText}>{t('activities.emptyHint')}</Text>
         </View>
       )}
     </View>
@@ -152,34 +165,92 @@ function getTimeLeft(endDate: string): string | null {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
+  container: { flex: 1, backgroundColor: colors.bg.primary },
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
-  backText: { color: '#FFFFFE', fontSize: 24 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFE' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  loadingText: { color: '#A7A9BE' },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { color: '#FFFFFE', fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
-  emptyHint: { color: '#A7A9BE', fontSize: 14, textAlign: 'center' },
-  list: { padding: 16, gap: 12 },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: typography.size.headingMd, fontWeight: typography.weight.extrabold,
+    color: colors.text.primary,
+  },
+  hintBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginHorizontal: spacing.xl, marginBottom: spacing.md,
+    backgroundColor: 'rgba(255,217,61,0.06)', borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: 'rgba(255,217,61,0.1)',
+  },
+  hintText: {
+    color: colors.text.secondary, fontSize: typography.size.bodySm,
+    flex: 1, lineHeight: typography.size.bodySm * 1.5,
+  },
+  centered: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing['3xl'],
+  },
+  loadingText: { color: colors.text.secondary },
+  emptyIcon: { fontSize: 56, marginBottom: spacing.lg },
+  emptyTitle: {
+    color: colors.text.primary, fontSize: typography.size.headingMd,
+    fontWeight: typography.weight.bold, textAlign: 'center', marginBottom: spacing.sm,
+  },
+  emptyText: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+    textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
+  },
+  list: { padding: spacing.xl, gap: spacing.md },
   activityCard: {
-    backgroundColor: '#1A1929', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#2A2940',
+    backgroundColor: colors.bg.secondary, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  activityCardActive: { borderColor: '#6C5CE7' },
-  activityHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  activityCardActive: { borderColor: colors.accent.primary },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   activityEmoji: { fontSize: 32 },
   activityHeaderText: { flex: 1 },
-  activityTitle: { color: '#FFFFFE', fontSize: 16, fontWeight: '700' },
-  activityType: { color: '#A7A9BE', fontSize: 12, textTransform: 'capitalize', marginTop: 2 },
-  timerBadge: { backgroundColor: '#FF6B6B', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  timerText: { color: '#FFFFFE', fontSize: 12, fontWeight: '700' },
-  activityDescription: { color: '#A7A9BE', fontSize: 14, marginTop: 10, lineHeight: 20 },
-  activityFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  tokenCost: { color: '#A7A9BE', fontSize: 14 },
-  joinButton: { backgroundColor: '#6C5CE7', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-  joinButtonText: { color: '#FFFFFE', fontSize: 14, fontWeight: '700' },
+  activityTitle: {
+    color: colors.text.primary, fontSize: typography.size.bodyLg,
+    fontWeight: typography.weight.bold,
+  },
+  activityType: {
+    color: colors.text.secondary, fontSize: typography.size.bodySm,
+    textTransform: 'capitalize', marginTop: 2,
+  },
+  timerBadge: {
+    backgroundColor: 'rgba(255,71,87,0.15)', paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: 'rgba(255,71,87,0.3)',
+  },
+  timerText: {
+    color: colors.accent.error, fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.bold,
+  },
+  activityDescription: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+    marginTop: spacing.md, lineHeight: typography.size.bodyMd * 1.5,
+  },
+  typeHint: {
+    color: colors.text.tertiary, fontSize: typography.size.bodySm,
+    marginTop: spacing.sm, fontStyle: 'italic',
+  },
+  activityFooter: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginTop: spacing.lg,
+  },
+  tokenCost: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+  },
+  joinButton: {
+    backgroundColor: colors.accent.primary,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  joinButtonText: {
+    color: '#FFFFFF', fontSize: typography.size.bodyMd,
+    fontWeight: typography.weight.bold,
+  },
 });

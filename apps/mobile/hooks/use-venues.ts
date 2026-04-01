@@ -25,15 +25,31 @@ export function useNearbyVenues(lat: number | null, lng: number | null) {
     queryFn: async (): Promise<VenueWithStats[]> => {
       if (!lat || !lng) return [];
 
-      const { data: venues, error } = await supabase
+      let venues: Venue[] | null = null;
+
+      // Try PostGIS-based RPC first
+      const { data: rpcData, error: rpcError } = await supabase
         .rpc('nearby_venues', {
           user_lat: lat,
           user_lng: lng,
           radius_km: 5,
         });
 
-      if (error) throw error;
-      if (!venues) return [];
+      if (!rpcError && rpcData) {
+        venues = rpcData;
+      } else {
+        // Fallback: fetch all active venues (PostGIS may not be set up)
+        console.warn('nearby_venues RPC failed, falling back to direct query:', rpcError?.message);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('venues')
+          .select('*')
+          .eq('is_active', true);
+
+        if (fallbackError) throw fallbackError;
+        venues = fallbackData;
+      }
+
+      if (!venues || venues.length === 0) return [];
 
       const venueIds = venues.map((v: Venue) => v.id);
 

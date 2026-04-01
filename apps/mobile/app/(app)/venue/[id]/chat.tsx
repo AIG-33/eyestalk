@@ -132,11 +132,14 @@ export default function VenueChatScreen() {
       keyboardVerticalOffset={0}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{t('venue.chat')}</Text>
-        <Text style={styles.subtitle}>{messages.length} {t('chats.messages', { defaultValue: 'messages' })}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{t('venue.chat')}</Text>
+          <Text style={styles.subtitle}>{t('chats.venueChatHint')}</Text>
+        </View>
+        <Text style={styles.msgCount}>{messages.length}</Text>
       </View>
 
       <FlatList
@@ -180,7 +183,8 @@ const styles = StyleSheet.create({
   },
   backText: { color: '#FFFFFE', fontSize: 24 },
   title: { flex: 1, fontSize: 18, fontWeight: '700', color: '#FFFFFE' },
-  subtitle: { color: '#A7A9BE', fontSize: 12 },
+  subtitle: { color: '#A7A9BE', fontSize: 11, marginTop: 2 },
+  msgCount: { color: '#A7A9BE', fontSize: 12, fontWeight: '700' },
   messageList: { paddingHorizontal: 16, paddingVertical: 12 },
   msgRow: { marginBottom: 8, flexDirection: 'row' },
   msgRowOwn: { justifyContent: 'flex-end' },

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
@@ -32,39 +33,89 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-4xl font-bold text-center text-white mb-2">EyesTalk</h1>
-        <p className="text-center text-gray-400 mb-10">{t('venueOwnerLogin')}</p>
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      {/* Ambient glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-20 blur-[120px]"
+        style={{ background: 'linear-gradient(135deg, #7C6FF7, #FF6B9D)' }}
+      />
 
-        <form onSubmit={handleLogin} className="space-y-4">
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-12">
+          <Image
+            src="/logo.png"
+            alt="EyesTalk"
+            width={80}
+            height={80}
+            className="mb-6"
+          />
+          <h1 className="text-4xl font-extrabold tracking-tight"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            EyesTalk
+          </h1>
+          <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
+            {t('venueOwnerLogin')}
+          </p>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            {t('venueOwnerHint')}
+          </p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{t('email')}</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {t('email')}
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 transition-colors"
+              className="input-field"
+              style={{ height: 52 }}
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{t('password')}</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {t('password')}
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 transition-colors"
+              className="input-field"
+              style={{ height: 52 }}
               required
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+          {error && (
+            <div className="rounded-xl p-3 text-sm text-center"
+              style={{
+                backgroundColor: 'rgba(255,71,87,0.1)',
+                border: '1px solid rgba(255,71,87,0.3)',
+                color: 'var(--accent-error)',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
+            className="w-full font-bold py-4 rounded-2xl text-white transition-all disabled:opacity-40 glow-primary"
+            style={{
+              background: 'linear-gradient(135deg, #7C6FF7, #A29BFE)',
+              fontSize: 16,
+            }}
           >
             {loading ? '...' : t('signIn')}
           </button>

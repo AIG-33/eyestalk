@@ -509,6 +509,29 @@ CREATE POLICY venue_moderators_select ON venue_moderators FOR SELECT USING (
 );
 
 -- ============================================================
+-- AUTO-CREATE PROFILE ON SIGNUP
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nickname, age_range)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1)),
+    '18-24'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
 -- REALTIME
 -- ============================================================
 
@@ -517,3 +540,47 @@ ALTER PUBLICATION supabase_realtime ADD TABLE checkins;
 ALTER PUBLICATION supabase_realtime ADD TABLE activities;
 ALTER PUBLICATION supabase_realtime ADD TABLE votes;
 ALTER PUBLICATION supabase_realtime ADD TABLE mutual_interests;
+
+-- ============================================================
+-- STORAGE
+-- ============================================================
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+) ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Avatar upload" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Avatar update" ON storage.objects FOR UPDATE
+  USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Avatar public read" ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+CREATE POLICY "Avatar delete own" ON storage.objects FOR DELETE
+  USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ============================================================
+-- CRON (pg_cron) — auto-checkout expired checkins
+-- ============================================================
+
+-- Uncomment if pg_cron extension is enabled in your Supabase project:
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
+--
+-- SELECT cron.schedule(
+--   'auto-checkout-expired',
+--   '*/5 * * * *',
+--   $$UPDATE checkins SET status = 'expired', checked_out_at = now() WHERE status = 'active' AND expires_at < now()$$
+-- );
+--
+-- SELECT cron.schedule(
+--   'cleanup-expired-chats',
+--   '0 * * * *',
+--   $$UPDATE chats SET is_active = false WHERE is_active = true AND expires_at < now()$$
+-- );

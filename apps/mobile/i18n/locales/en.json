@@ -10,7 +10,11 @@
     "yes": "Yes",
     "no": "No",
     "search": "Search",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "swipeHint": "Swipe for more options"
   },
   "auth": {
     "signIn": "Sign In",
@@ -18,6 +22,8 @@
     "signOut": "Sign Out",
     "signInSubtitle": "From a glance to a conversation",
     "signUpSubtitle": "Join the social layer of real life",
+    "signInHint": "Sign in to see who's around you right now",
+    "signUpHint": "Create an account to connect with people at your favorite spots",
     "createAccount": "Create Account",
     "emailPlaceholder": "Email",
     "passwordPlaceholder": "Password",
@@ -25,19 +31,40 @@
     "noAccount": "Don't have an account? Sign up",
     "hasAccount": "Already have an account? Sign in",
     "passwordMismatch": "Passwords don't match",
-    "passwordTooShort": "Password must be at least 8 characters"
+    "passwordTooShort": "Password must be at least 8 characters",
+    "whySignUp": "Your account keeps your chats and connections safe across devices"
   },
   "profile": {
     "createTitle": "Your Profile",
     "createSubtitle": "Tell us a bit about yourself",
     "nickname": "Nickname",
     "nicknamePlaceholder": "How should we call you?",
+    "nicknameHint": "This is how others will see you. You can change it anytime.",
     "ageRange": "Age range",
+    "ageRangeHint": "Helps people find others in their age group",
     "interests": "Interests",
+    "interestsHint": "Pick up to 5 interests — we'll highlight what you have in common with others",
     "continue": "Continue",
     "language": "Language",
+    "languageHint": "Switch the app language between English and Russian",
     "editProfile": "Edit Profile",
-    "tokens": "Tokens"
+    "editProfileHint": "Update your nickname, age range, or interests",
+    "tokens": "Tokens",
+    "tokenBalance": "Token Balance",
+    "tokenBalanceHint": "Earn tokens by checking in and participating in activities. Spend them to boost visibility or join premium activities.",
+    "changeAvatar": "Change Photo",
+    "changeAvatarHint": "Tap your photo to pick a new one from your gallery",
+    "saved": "Profile saved!",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Are you sure? This action is irreversible. All your data, chats, and connections will be permanently deleted.",
+    "visibility": "Visibility",
+    "visibilityHint": "When visible, others can see you in the venue's people list",
+    "visibilityOffHint": "You're hidden — no one can see you or send you waves",
+    "statusTag": "Your Status",
+    "statusTagHint": "Let others know what you're up for — this shows next to your name",
+    "settingsHint": "Manage privacy, appearance, and account settings",
+    "profileCompleteness": "Complete your profile to get more connections",
+    "tapToViewTokens": "Tap to view balance and transaction history"
   },
   "tabs": {
     "map": "Map",
@@ -46,32 +73,66 @@
   },
   "map": {
     "discoverVenues": "Discover venues near you",
+    "discoverHint": "Find bars, clubs, and spots where people are hanging out right now",
     "placeholder": "Map will be displayed here",
     "peopleInside": "{{count}} people inside",
     "openToChat": "{{count}} open to chat",
     "activeNow": "Active now",
     "noVenues": "No venues nearby",
-    "checkinRequired": "Check in to start chatting"
+    "noVenuesHint": "Try zooming out or check back later — new venues are added regularly",
+    "checkinRequired": "Check in to start chatting",
+    "tapVenueHint": "Tap a venue on the map to see details and check in",
+    "qrScanHint": "Scan the QR code at the venue to check in instantly",
+    "activeCheckinHint": "You're checked in — tap to return to your venue",
+    "scrollVenuesHint": "Scroll cards to explore nearby venues"
   },
   "venue": {
     "checkin": "Check In",
+    "checkinHint": "Check in to see who's here and start meeting people",
     "checkout": "Check Out",
+    "checkoutHint": "Leave this venue — your chats will expire in 24 hours",
     "people": "People",
+    "peopleHint": "See who's here right now and send a wave to connect",
     "chat": "Chat",
+    "chatHint": "Join the general venue chat — everyone checked in can see it",
     "activities": "Activities",
+    "activitiesHint": "Polls, games, and challenges happening right now",
     "scanQR": "Scan QR Code",
+    "scanQRHint": "Point your camera at the QR code displayed at the venue",
     "checkedIn": "You're checked in!",
-    "distance": "{{distance}} away"
+    "checkedInHint": "Explore people, chat, and join activities while you're here",
+    "distance": "{{distance}} away",
+    "checkedInElsewhere": "You're checked in at another venue",
+    "checkedInElsewhereHint": "Check out from your current venue first to check in here",
+    "zonesTitle": "Zones",
+    "zonesHint": "This venue has different areas — check where the action is",
+    "venueInfoHint": "Venue details, location, and what's happening inside",
+    "waveExplain": "A wave lets them know you're interested — if they wave back, you can chat!",
+    "activitiesEmpty": "No activities yet",
+    "activitiesEmptyHint": "Activities will appear here when the venue or other users create them",
+    "checkoutConfirm": "Are you sure you want to leave? Your venue chats will expire in 24 hours."
   },
   "chats": {
     "empty": "No chats yet",
     "emptyHint": "Check in to a venue and start meeting people around you",
+    "emptyStep1": "1. Find a venue on the map",
+    "emptyStep2": "2. Check in by scanning the QR code",
+    "emptyStep3": "3. Send a wave to someone you'd like to chat with",
     "microChat": "Micro-chat",
-    "microChatHint": "5 min · 10 messages",
+    "microChatHint": "5 min · 10 messages — a quick way to break the ice",
+    "microChatExplain": "Micro-chats are short and sweet — if you hit it off, extend the chat with tokens",
     "sendMessage": "Type a message...",
     "chatRequest": "Chat request",
     "accept": "Accept",
-    "decline": "Decline"
+    "decline": "Decline",
+    "ephemeralNotice": "This chat expires 24h after you leave the venue",
+    "directChatHint": "This is a private chat — only you two can see it",
+    "venueChatHint": "Everyone checked in at this venue can see and send messages here",
+    "chatSections": {
+      "active": "Active — you're both here now",
+      "recent": "Recent conversations",
+      "expired": "Expired chats"
+    }
   },
   "interests": {
     "music": "Music",
@@ -96,12 +157,154 @@
     "playing": "Playing",
     "listening": "Listening",
     "lookingForDancePartner": "Looking for dance partner",
-    "justChilling": "Just chilling"
+    "justChilling": "Just chilling",
+    "hint": {
+      "wantToChat": "Open to meeting new people and having a conversation",
+      "lookingForCompany": "Looking for someone to hang out with",
+      "playing": "Currently playing a game and open to challengers",
+      "listening": "Enjoying the music — feel free to say hi",
+      "lookingForDancePartner": "Looking for someone to hit the dance floor with",
+      "justChilling": "Relaxing, but still open to a chat"
+    }
   },
   "safety": {
     "block": "Block",
+    "blockHint": "This person won't be able to see you or send you messages",
     "report": "Report",
-    "reportSent": "Report sent. Thank you!",
-    "blockConfirm": "Are you sure you want to block this user?"
+    "reportHint": "Let us know if someone is behaving inappropriately — reports are anonymous",
+    "reportSent": "Report sent. Thank you for keeping EyesTalk safe!",
+    "blockConfirm": "Are you sure you want to block this user? They won't know they've been blocked.",
+    "reportReason": "Reason",
+    "reportReasonHint": "Select the reason that best describes the issue",
+    "reportDescription": "Description (optional)",
+    "reportDescriptionHint": "Add any extra details that might help us review this report",
+    "reportSubmit": "Submit Report",
+    "reasons": {
+      "spam": "Spam",
+      "harassment": "Harassment",
+      "inappropriate_content": "Inappropriate Content",
+      "fake_profile": "Fake Profile",
+      "other": "Other"
+    }
+  },
+  "tokens": {
+    "balance": "Balance",
+    "history": "Transaction History",
+    "historyHint": "See how you earned and spent your tokens",
+    "earned": "+{{amount}} tokens",
+    "spent": "-{{amount}} tokens",
+    "emptyHistory": "No transactions yet",
+    "emptyHistoryHint": "Check in to a venue to earn your first tokens!",
+    "howToEarn": "How to earn tokens",
+    "earnCheckin": "Check in to a venue → +10 tokens",
+    "earnActivity": "Participate in activities → +5-20 tokens",
+    "earnReferral": "Invite a friend → +50 tokens",
+    "whatToSpend": "What to spend on",
+    "spendBoost": "Boost your visibility for 1 hour",
+    "spendExtend": "Extend a micro-chat",
+    "spendActivity": "Join premium activities",
+    "types": {
+      "checkin_reward": "Check-in reward",
+      "activity_reward": "Activity reward",
+      "activity_cost": "Activity entry",
+      "vote_cost": "Vote",
+      "boost": "Visibility boost",
+      "referral": "Referral bonus",
+      "venue_bonus": "Venue bonus",
+      "purchase": "Purchase"
+    }
+  },
+  "microChat": {
+    "timeLeft": "{{minutes}}:{{seconds}} left",
+    "messagesLeft": "{{count}} messages left",
+    "expired": "Micro-chat expired",
+    "expiredHint": "Want to keep talking? Extend the chat with tokens",
+    "extend": "Extend for {{cost}} tokens",
+    "extended": "Chat extended!",
+    "extendedHint": "You have 5 more minutes and 10 more messages"
+  },
+  "icebreakers": {
+    "title": "Break the ice!",
+    "hint": "Pick a question to start the conversation — it's easier than \"hey\"",
+    "q1": "What brings you here tonight?",
+    "q2": "What's your go-to drink?",
+    "q3": "Been here before or first time?"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "privacy": "Privacy",
+    "stealthMode": "Stealth Mode",
+    "stealthModeHint": "Dims the screen to minimum — use the app without drawing attention",
+    "appearance": "Appearance",
+    "support": "Support",
+    "faq": "FAQ",
+    "faqHint": "Answers to the most common questions",
+    "guidelines": "Community Guidelines",
+    "guidelinesHint": "Our rules for keeping EyesTalk safe and fun for everyone",
+    "version": "Version",
+    "signOutHint": "You'll need to sign in again to use the app",
+    "deleteHint": "Permanently delete your account and all associated data"
+  },
+  "onboarding": {
+    "welcome": "Welcome to EyesTalk",
+    "step1Title": "Find your venue",
+    "step1Desc": "See what's happening at bars, clubs, and hangout spots near you",
+    "step2Title": "Meet interesting people",
+    "step2Desc": "See who's around and what they're up for — all anonymous until you connect",
+    "step3Title": "Start chatting",
+    "step3Desc": "Send a wave, break the ice, and start a conversation in seconds",
+    "step4Title": "Join the fun",
+    "step4Desc": "Participate in venue activities — karaoke bids, games, and challenges",
+    "getStarted": "Get Started",
+    "skipOnboarding": "Skip intro"
+  },
+  "match": {
+    "title": "It's a Match! 👀",
+    "subtitle": "You're both at {{venue}}",
+    "hint": "You both waved at each other — start a conversation!",
+    "startChat": "Start Chat",
+    "later": "Maybe later"
+  },
+  "qrScan": {
+    "title": "Scan to Check In",
+    "hint": "Point your camera at the QR code at the venue entrance or on your table",
+    "scanning": "Looking for QR code...",
+    "verifying": "Verifying your location...",
+    "success": "You're in! 🎉",
+    "error": "Couldn't verify your presence — are you at the venue?",
+    "retryHint": "Make sure you're at the venue and try scanning again",
+    "manualCode": "Enter venue code manually"
+  },
+  "people": {
+    "title": "People Here",
+    "filterAll": "All",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "emptyTitle": "No one here yet",
+    "emptyHint": "You're the first! Others will appear as they check in",
+    "waveBtn": "Wave",
+    "waveSent": "Wave sent! 👋",
+    "waveSentHint": "If they wave back, you'll get a match and can start chatting",
+    "mutualInterest": "You have things in common",
+    "longPressHint": "Long press on a person to report or block"
+  },
+  "activities": {
+    "title": "Activities",
+    "emptyTitle": "No activities yet",
+    "emptyHint": "Activities will appear when the venue or other users start them",
+    "joinHint": "Join to participate — some activities cost tokens",
+    "participants": "{{count}} participating",
+    "timeLeft": "{{time}} left",
+    "tokenCost": "{{cost}} tokens to join",
+    "free": "Free to join",
+    "types": {
+      "poll": "Poll — vote and see what everyone thinks",
+      "contest": "Contest — compete for tokens and bragging rights",
+      "tournament": "Tournament — bracket-style competition",
+      "challenge": "Challenge — dare someone to do something fun",
+      "quest": "Quest — complete tasks to earn rewards",
+      "auction": "Auction — bid tokens on prizes"
+    }
   }
 }

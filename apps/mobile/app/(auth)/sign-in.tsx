@@ -1,9 +1,12 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { Link, router } from 'expo-router';
 import { useState } from 'react';
+import { View, Text, Image, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '@/stores/auth.store';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { colors, typography, spacing, shadows } from '@/theme';
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -11,142 +14,150 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const setSession = useAuthStore((s) => s.setSession);
 
   const handleSignIn = async () => {
-    if (!email || !password) return;
     setLoading(true);
     setError('');
-
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      setError(signInError.message);
-      setLoading(false);
-      return;
-    }
-
-    setSession(data.session);
-    router.replace('/(app)/(tabs)/map');
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) setError(err.message);
+    else router.replace('/(app)/map');
     setLoading(false);
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        <Text style={styles.logo}>EyesTalk</Text>
-        <Text style={styles.subtitle}>{t('auth.signInSubtitle')}</Text>
+    <View style={styles.container}>
+      {/* Ambient glow */}
+      <LinearGradient
+        colors={['rgba(124,111,247,0.12)', 'transparent']}
+        style={styles.ambientGlow}
+        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+      />
 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.inner}
+      >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/logo-purple.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.appName}>EyesTalk</Text>
+          <Text style={styles.tagline}>{t('auth.signInSubtitle')}</Text>
+          <Text style={styles.hint}>{t('auth.signInHint')}</Text>
+        </View>
+
+        {/* Form */}
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <Input
             placeholder={t('auth.emailPlaceholder')}
-            placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
-            autoCapitalize="none"
             keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
           />
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder={t('auth.passwordPlaceholder')}
-            placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title={t('auth.signIn')}
             onPress={handleSignIn}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? t('common.loading') : t('auth.signIn')}
-            </Text>
-          </TouchableOpacity>
+            loading={loading}
+            disabled={!email || !password}
+          />
         </View>
 
-        <Link href="/(auth)/sign-up" asChild>
-          <TouchableOpacity style={styles.linkButton}>
-            <Text style={styles.linkText}>{t('auth.noAccount')}</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </KeyboardAvoidingView>
+        {/* Footer */}
+        <TouchableOpacity
+          style={styles.footer}
+          onPress={() => router.push('/(auth)/sign-up')}
+        >
+          <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0E17',
+    backgroundColor: colors.bg.primary,
   },
-  content: {
+  ambientGlow: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 300,
+  },
+  inner: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
-  logo: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: '#FFFFFE',
-    textAlign: 'center',
-    marginBottom: 8,
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: spacing['4xl'],
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#A7A9BE',
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: spacing.lg,
+  },
+  appName: {
+    fontSize: typography.size.displayXl,
+    fontWeight: typography.weight.extrabold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.display,
+    marginBottom: spacing.sm,
+  },
+  tagline: {
+    fontSize: typography.size.bodyMd,
+    color: colors.text.secondary,
+  },
+  hint: {
+    fontSize: typography.size.bodySm,
+    color: colors.text.tertiary,
     textAlign: 'center',
-    marginBottom: 48,
+    marginTop: spacing.sm,
+    lineHeight: typography.size.bodySm * 1.5,
+    paddingHorizontal: spacing['3xl'],
   },
   form: {
-    gap: 16,
+    gap: spacing.xs,
   },
-  input: {
-    backgroundColor: '#1A1929',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#FFFFFE',
+  errorBanner: {
+    backgroundColor: 'rgba(255,71,87,0.1)',
     borderWidth: 1,
-    borderColor: '#2A2940',
+    borderColor: 'rgba(255,71,87,0.3)',
+    borderRadius: 14,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  button: {
-    backgroundColor: '#6C5CE7',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFE',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  error: {
-    color: '#FF6B6B',
-    fontSize: 14,
+  errorText: {
+    color: colors.accent.error,
+    fontSize: typography.size.bodySm,
     textAlign: 'center',
   },
-  linkButton: {
-    marginTop: 24,
+  footer: {
+    marginTop: spacing['3xl'],
     alignItems: 'center',
   },
-  linkText: {
-    color: '#6C5CE7',
-    fontSize: 14,
-    fontWeight: '600',
+  footerText: {
+    color: colors.accent.primaryLight,
+    fontSize: typography.size.bodyMd,
+    fontWeight: typography.weight.medium,
   },
 });

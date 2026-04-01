@@ -11,27 +11,53 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6C5CE7"
+      "backgroundColor": "#0F0F1A"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.eyestalk.app",
+      "associatedDomains": [
+        "applinks:eyestalk.app"
+      ],
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "EyesTalk needs your location to find venues near you and verify check-ins.",
-        "NSCameraUsageDescription": "EyesTalk needs camera access to scan QR codes for venue check-in."
+        "NSCameraUsageDescription": "EyesTalk needs camera access to scan QR codes for venue check-in.",
+        "NSPhotoLibraryUsageDescription": "EyesTalk needs photo library access to set your profile picture."
       }
     },
     "android": {
       "package": "com.eyestalk.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6C5CE7"
+        "backgroundColor": "#0F0F1A"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "eyestalk.app",
+              "pathPrefix": "/venue"
+            },
+            {
+              "scheme": "https",
+              "host": "eyestalk.app",
+              "pathPrefix": "/chat"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "plugins": [
@@ -48,7 +74,22 @@
         {
           "cameraPermission": "EyesTalk needs camera access to scan QR codes."
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#6C5CE7"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "EyesTalk needs photo library access to set your profile picture."
+        }
+      ],
+      "expo-font",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

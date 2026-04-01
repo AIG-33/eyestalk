@@ -1,1 +1,65 @@
 @import "tailwindcss";
+
+:root {
+  --bg-primary: #0D0D1A;
+  --bg-secondary: #161630;
+  --bg-tertiary: #1E1E3F;
+  --surface: #2A2A5A;
+  --text-primary: #E8E8F0;
+  --text-secondary: #A0A0B8;
+  --text-tertiary: #5A5A78;
+  --accent-primary: #7C6FF7;
+  --accent-light: #A29BFE;
+  --accent-success: #00E5A0;
+  --accent-pink: #FF6B9D;
+  --accent-warning: #FFD93D;
+  --accent-error: #FF4757;
+  --accent-info: #00D4FF;
+  --glow-primary: 0 0 15px rgba(124,111,247,0.4), 0 0 30px rgba(124,111,247,0.15);
+  --glow-success: 0 0 12px rgba(0,229,160,0.4);
+  --glass-bg: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+::selection {
+  background-color: rgba(124,111,247,0.3);
+  color: var(--text-primary);
+}
+
+input, textarea, select {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-radius: 14px;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--glow-primary);
+  outline: none;
+}
+
+.input-field {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--surface);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--accent-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.glow-primary {
+  box-shadow: var(--glow-primary);
+}

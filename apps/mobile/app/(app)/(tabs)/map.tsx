@@ -1,264 +1,332 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
-import { useTranslation } from 'react-i18next';
+import { useState, useRef } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocation } from '@/hooks/use-location';
 import { useNearbyVenues } from '@/hooks/use-venues';
 import { useActiveCheckin } from '@/hooks/use-checkin';
-import { VenueTypeIcon } from '@/components/venue/venue-type-icon';
+import { colors, typography, spacing, shadows, radius, venueAmbient } from '@/theme';
+import { Card } from '@/components/ui/card';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH * 0.72;
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#0D0D1A' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0D0D1A' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#5A5A78' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#161630' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#5A5A78' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0a14' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#161630' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#5A5A78' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+];
+
+const VENUE_EMOJI: Record<string, string> = {
+  karaoke: '🎤', nightclub: '🪩', sports_bar: '⚽', bowling: '🎳',
+  billiards: '🎱', hookah: '💨', board_games: '🎲', arcade: '🕹️',
+  standup: '🎭', live_music: '🎵', other: '📍',
+};
 
 export default function MapScreen() {
   const { t } = useTranslation();
-  const { location, loading: locationLoading } = useLocation();
-  const { data: venues, isLoading: venuesLoading } = useNearbyVenues(
-    location?.latitude ?? null,
-    location?.longitude ?? null,
-  );
+  const { location } = useLocation();
+  const { data: venues } = useNearbyVenues(location?.latitude ?? null, location?.longitude ?? null);
   const { data: activeCheckin } = useActiveCheckin();
-
-  if (locationLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#6C5CE7" />
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
-      </View>
-    );
-  }
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+  const mapRef = useRef<MapView>(null);
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>EyesTalk</Text>
-        {activeCheckin && (
+      {/* Top bar */}
+      <View style={styles.topBar}>
+        <View style={styles.logoRow}>
+          <Image
+            source={require('@/assets/logo-purple.png')}
+            style={styles.logoIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.logo}>EyesTalk</Text>
+        </View>
+        <View style={styles.topActions}>
+          {activeCheckin && (
+            <TouchableOpacity
+              style={styles.activeBadge}
+              onPress={() => router.push(`/(app)/venue/${activeCheckin.venue_id}` as any)}
+            >
+              <View style={[styles.liveDot, shadows.glowSuccess]} />
+              <Text style={styles.activeBadgeText} numberOfLines={1}>
+                {(activeCheckin as any).venues?.name}
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.activeCheckinBadge}
-            onPress={() => router.push(`/(app)/venue/${activeCheckin.venue_id}` as any)}
+            style={styles.scanButton}
+            onPress={() => router.push('/(app)/venue/check-in' as any)}
           >
-            <View style={styles.activeDot} />
-            <Text style={styles.activeCheckinText}>
-              {(activeCheckin as any).venues?.name}
-            </Text>
+            <Ionicons name="qr-code-outline" size={22} color={colors.accent.primary} />
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
+      {/* Map */}
       {location && (
         <MapView
-          style={styles.map}
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
           provider={PROVIDER_GOOGLE}
+          customMapStyle={DARK_MAP_STYLE}
           initialRegion={{
             latitude: location.latitude,
             longitude: location.longitude,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.015,
           }}
           showsUserLocation
-          showsMyLocationButton
+          showsMyLocationButton={false}
+          showsCompass={false}
         >
-          {venues?.map((venue) => (
-            <Marker
-              key={venue.id}
-              coordinate={{
-                latitude: Number(venue.latitude),
-                longitude: Number(venue.longitude),
-              }}
-              title={venue.name}
-              description={
-                venue.active_checkins > 0
-                  ? t('map.peopleInside', { count: venue.active_checkins })
-                  : undefined
-              }
-              onCalloutPress={() => router.push(`/(app)/venue/${venue.id}` as any)}
-            >
-              <VenueTypeIcon type={venue.type} count={venue.active_checkins} />
-            </Marker>
-          ))}
+          {venues?.map((venue) => {
+            const ambient = venueAmbient[venue.type] || venueAmbient.other;
+            return (
+              <Marker
+                key={venue.id}
+                coordinate={{
+                  latitude: Number(venue.latitude),
+                  longitude: Number(venue.longitude),
+                }}
+                onPress={() => setSelectedVenue(venue.id)}
+              >
+                <View style={[styles.markerContainer, selectedVenue === venue.id && styles.markerSelected]}>
+                  <View style={[styles.marker, { shadowColor: ambient[0] }]}>
+                    <Text style={styles.markerEmoji}>
+                      {VENUE_EMOJI[venue.type] || '📍'}
+                    </Text>
+                  </View>
+                  {venue.active_checkins > 0 && (
+                    <View style={[styles.markerBadge, shadows.glowSuccess]}>
+                      <Text style={styles.markerBadgeText}>{venue.active_checkins}</Text>
+                    </View>
+                  )}
+                </View>
+              </Marker>
+            );
+          })}
         </MapView>
       )}
 
-      {venuesLoading && (
-        <View style={styles.venueLoadingOverlay}>
-          <ActivityIndicator size="small" color="#6C5CE7" />
+      {/* Bottom gradient */}
+      <LinearGradient
+        colors={['transparent', colors.bg.primary]}
+        style={styles.bottomGradient}
+        pointerEvents="none"
+      />
+
+      {/* No venues hint */}
+      {venues && venues.length === 0 && (
+        <View style={styles.emptyOverlay}>
+          <Text style={styles.emptyTitle}>{t('map.noVenues')}</Text>
+          <Text style={styles.emptyHint}>{t('map.noVenuesHint')}</Text>
         </View>
       )}
 
-      <TouchableOpacity
-        style={styles.scanButton}
-        onPress={() => router.push('/(app)/venue/check-in' as any)}
-      >
-        <Text style={styles.scanButtonIcon}>📷</Text>
-        <Text style={styles.scanButtonText}>{t('venue.scanQR')}</Text>
-      </TouchableOpacity>
+      {/* Scroll hint */}
+      {venues && venues.length > 0 && !activeCheckin && (
+        <View style={styles.tapHintContainer} pointerEvents="none">
+          <Text style={styles.tapHint}>{t('map.scrollVenuesHint')}</Text>
+        </View>
+      )}
 
+      {/* Venue carousel */}
       {venues && venues.length > 0 && (
-        <View style={styles.venueList}>
-          {venues.slice(0, 3).map((venue) => (
-            <TouchableOpacity
-              key={venue.id}
-              style={styles.venueCard}
-              onPress={() => router.push(`/(app)/venue/${venue.id}` as any)}
-            >
-              <View style={styles.venueCardLeft}>
-                <Text style={styles.venueCardName}>{venue.name}</Text>
-                <Text style={styles.venueCardType}>
-                  {t(`venueTypes.${venue.type}`, { defaultValue: venue.type })}
-                </Text>
-              </View>
-              <View style={styles.venueCardRight}>
-                {venue.active_checkins > 0 && (
-                  <View style={styles.peopleBadge}>
-                    <Text style={styles.peopleBadgeText}>
-                      {venue.active_checkins} 👤
+        <View style={styles.carouselContainer}>
+          <FlatList
+            data={venues}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={CARD_WIDTH + 12}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal: spacing.xl }}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const ambient = venueAmbient[item.type] || venueAmbient.other;
+              return (
+                <TouchableOpacity
+                  style={styles.venueCard}
+                  onPress={() => router.push(`/(app)/venue/${item.id}` as any)}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={[`${ambient[0]}20`, `${ambient[1]}10`]}
+                    style={styles.venueCardGradient}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  >
+                    <View style={styles.venueCardHeader}>
+                      <Text style={styles.venueEmoji}>{VENUE_EMOJI[item.type] || '📍'}</Text>
+                      {item.active_checkins > 0 && (
+                        <View style={styles.liveIndicator}>
+                          <View style={[styles.liveIndicatorDot, shadows.glowSuccess]} />
+                          <Text style={styles.liveIndicatorText}>
+                            {item.active_checkins}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.venueName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.venueType}>
+                      {item.type.replace('_', ' ')}
                     </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            }}
+          />
         </View>
       )}
+
+      {/* My location button */}
+      <TouchableOpacity
+        style={[styles.myLocationBtn, shadows.lg]}
+        onPress={() => {
+          if (location && mapRef.current) {
+            mapRef.current.animateToRegion({
+              latitude: location.latitude,
+              longitude: location.longitude,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.015,
+            });
+          }
+        }}
+      >
+        <Ionicons name="locate-outline" size={22} color={colors.accent.primary} />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0E17',
+  container: { flex: 1, backgroundColor: colors.bg.primary },
+  topBar: {
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
-  centered: {
-    flex: 1,
-    backgroundColor: '#0F0E17',
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
-  loadingText: {
-    color: '#A7A9BE',
-    marginTop: 12,
-    fontSize: 14,
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  logoIcon: {
+    width: 28, height: 28,
   },
   logo: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFE',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    fontSize: typography.size.headingLg, fontWeight: typography.weight.extrabold,
+    color: colors.text.primary, letterSpacing: typography.letterSpacing.heading,
   },
-  activeCheckinBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(108, 92, 231, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  activeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,229,160,0.1)', paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: radius.full, borderWidth: 1, borderColor: 'rgba(0,229,160,0.2)',
+    maxWidth: 160,
   },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#00FF88',
+  liveDot: {
+    width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent.success,
   },
-  activeCheckinText: {
-    color: '#FFFFFE',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  map: {
-    flex: 1,
-  },
-  venueLoadingOverlay: {
-    position: 'absolute',
-    top: 120,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(15,14,23,0.8)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  activeBadgeText: {
+    color: colors.accent.success, fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
   },
   scanButton: {
-    position: 'absolute',
-    right: 16,
-    bottom: 200,
-    backgroundColor: '#6C5CE7',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
-    elevation: 4,
-    shadowColor: '#6C5CE7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(124,111,247,0.2)',
   },
-  scanButtonIcon: {
-    fontSize: 18,
+  markerContainer: { alignItems: 'center' },
+  markerSelected: { transform: [{ scale: 1.2 }] },
+  marker: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 12,
+    elevation: 6,
   },
-  scanButtonText: {
-    color: '#FFFFFE',
-    fontSize: 14,
-    fontWeight: '700',
+  markerEmoji: { fontSize: 22 },
+  markerBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.accent.success, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
   },
-  venueList: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    gap: 8,
+  markerBadgeText: {
+    color: '#0D0D1A', fontSize: 10, fontWeight: '800',
+  },
+  bottomGradient: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 200,
+  },
+  carouselContainer: {
+    position: 'absolute', bottom: spacing['4xl'], left: 0, right: 0,
   },
   venueCard: {
-    flexDirection: 'row',
+    width: CARD_WIDTH, marginRight: 12,
+  },
+  venueCardGradient: {
+    borderRadius: radius['2xl'], padding: spacing.xl,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    minHeight: 130,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(26, 25, 41, 0.95)',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2940',
   },
-  venueCardLeft: {
-    flex: 1,
+  venueCardHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  venueCardName: {
-    color: '#FFFFFE',
-    fontSize: 16,
-    fontWeight: '700',
+  venueEmoji: { fontSize: 32 },
+  liveIndicator: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,229,160,0.15)', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: radius.full,
   },
-  venueCardType: {
-    color: '#A7A9BE',
-    fontSize: 12,
-    marginTop: 2,
+  liveIndicatorDot: {
+    width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.accent.success,
+  },
+  liveIndicatorText: {
+    color: colors.accent.success, fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
+  },
+  venueName: {
+    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+    color: colors.text.primary, marginBottom: 4,
+  },
+  venueType: {
+    fontSize: typography.size.bodySm, color: colors.text.secondary,
     textTransform: 'capitalize',
   },
-  venueCardRight: {
-    marginLeft: 12,
+  emptyOverlay: {
+    position: 'absolute', top: '40%', left: spacing['3xl'], right: spacing['3xl'],
+    alignItems: 'center',
   },
-  peopleBadge: {
-    backgroundColor: '#6C5CE7',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  emptyTitle: {
+    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+    color: colors.text.primary, marginBottom: spacing.sm, textAlign: 'center',
   },
-  peopleBadgeText: {
-    color: '#FFFFFE',
-    fontSize: 12,
-    fontWeight: '600',
+  emptyHint: {
+    fontSize: typography.size.bodyMd, color: colors.text.secondary,
+    textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
+  },
+  tapHintContainer: {
+    position: 'absolute', bottom: spacing['4xl'] + 150, alignSelf: 'center',
+  },
+  tapHint: {
+    fontSize: typography.size.bodySm, color: colors.text.tertiary,
+    backgroundColor: 'rgba(13,13,26,0.7)', paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs, borderRadius: radius.sm, overflow: 'hidden',
+  },
+  myLocationBtn: {
+    position: 'absolute', right: spacing.xl, bottom: 240,
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
 });
