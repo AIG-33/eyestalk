@@ -172,7 +172,7 @@ function ReportAction({
   const handleAction = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    await (supabase.from('reports') as any).update({ status: action, resolved_by: user?.id }).eq('id', reportId);
+    await supabase.from('reports').update({ status: action, resolved_by: user?.id }).eq('id', reportId);
     onDone();
   };
   const cls = color === 'green' ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-400 hover:bg-gray-500/10';
@@ -271,7 +271,7 @@ function ChatSection({ venueId, venueName }: { venueId: string; venueName: strin
     setSending(true);
 
     const supabase = createClient();
-    await (supabase.from('messages') as any).insert({
+    await supabase.from('messages').insert({
       chat_id: chatId,
       sender_id: userId,
       content: text.trim(),

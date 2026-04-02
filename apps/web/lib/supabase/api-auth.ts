@@ -1,7 +1,6 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { createClient } from './server';
-import type { Database } from '@eyestalk/shared/types/database';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -14,7 +13,7 @@ export async function getApiUser(
   const authHeader = request.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    const supabaseWithToken = createSupabaseClient<Database>(
+    const supabaseWithToken = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );

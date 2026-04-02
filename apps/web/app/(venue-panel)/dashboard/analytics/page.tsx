@@ -39,8 +39,7 @@ export default function AnalyticsPage() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: checkins } = await supabase
-      .from('checkins')
+    const { data: checkins } = await supabase.from('checkins')
       .select('created_at')
       .eq('venue_id', venueId)
       .gte('created_at', thirtyDaysAgo.toISOString());
@@ -63,8 +62,7 @@ export default function AnalyticsPage() {
     const hourly = Object.entries(hourlyMap)
       .map(([hour, count]) => ({ hour: Number(hour), count }));
 
-    const { data: activities } = await supabase
-      .from('activities')
+    const { data: activities } = await supabase.from('activities')
       .select('type')
       .eq('venue_id', venueId);
 

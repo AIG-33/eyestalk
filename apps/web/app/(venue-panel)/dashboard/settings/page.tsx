@@ -72,7 +72,7 @@ export default function SettingsPage() {
     setSaving(true);
 
     const supabase = createClient();
-    await (supabase.from('venues') as any)
+    await supabase.from('venues')
       .update({
         name: form.name,
         type: form.type,
@@ -110,7 +110,7 @@ export default function SettingsPage() {
 
     const newUrl = `${publicUrl}?t=${Date.now()}`;
 
-    await (supabase.from('venues') as any)
+    await supabase.from('venues')
       .update({ logo_url: newUrl })
       .eq('id', venue.id);
 
@@ -134,7 +134,7 @@ export default function SettingsPage() {
         .remove(files.map((f) => `${venue.id}/${f.name}`));
     }
 
-    await (supabase.from('venues') as any)
+    await supabase.from('venues')
       .update({ logo_url: null })
       .eq('id', venue.id);
 
