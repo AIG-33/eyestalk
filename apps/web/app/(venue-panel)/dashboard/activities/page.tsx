@@ -133,7 +133,7 @@ export default function ActivitiesPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('activities').insert({
+    await (supabase.from('activities') as any).insert({
       venue_id: venueId,
       created_by: user.id,
       title: form.title,

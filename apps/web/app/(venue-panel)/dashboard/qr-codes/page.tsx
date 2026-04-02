@@ -53,7 +53,7 @@ export default function QrCodesPage() {
     const supabase = createClient();
     const code = `EYESTALK-${venueId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
-    await supabase.from('qr_codes').insert({
+    await (supabase.from('qr_codes') as any).insert({
       venue_id: venueId,
       code,
       type: 'permanent',

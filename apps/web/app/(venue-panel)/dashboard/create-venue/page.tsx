@@ -82,8 +82,7 @@ export default function CreateVenuePage() {
 
       console.log('Creating venue:', payload);
 
-      const { data, error: insertError } = await supabase
-        .from('venues')
+      const { data, error: insertError } = await (supabase.from('venues') as any)
         .insert(payload)
         .select()
         .single();
