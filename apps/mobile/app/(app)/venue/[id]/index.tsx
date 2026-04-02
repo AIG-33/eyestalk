@@ -37,8 +37,6 @@ export default function VenueDetailScreen() {
       return;
     }
 
-    Alert.alert('Debug', `venue_id: ${id}\nlat: ${location.latitude}\nlng: ${location.longitude}`);
-
     checkinMutation.mutate(
       { venue_id: id, lat: location.latitude, lng: location.longitude },
       {
@@ -120,11 +118,25 @@ export default function VenueDetailScreen() {
 
           {/* Checked-in banner */}
           {isCheckedInHere && (
-            <View style={[s.checkedInBanner, shadows.glowSuccess]}>
-              <View style={s.checkedInDot} />
+            <View style={s.checkedInBanner}>
+              <LinearGradient
+                colors={isDark
+                  ? ['rgba(0,229,160,0.12)', 'rgba(0,229,160,0.04)']
+                  : ['rgba(0,201,141,0.1)', 'rgba(0,201,141,0.03)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.checkedInGradient}
+              />
+              <View style={s.checkedInIconWrap}>
+                <Ionicons name="checkmark-circle" size={22} color={c.accent.success} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.checkedInText}>{t('venue.checkedIn')}</Text>
                 <Text style={s.checkedInHint}>{t('venue.checkedInHint')}</Text>
+              </View>
+              <View style={s.checkedInLive}>
+                <View style={s.checkedInDot} />
+                <Text style={s.checkedInLiveText}>LIVE</Text>
               </View>
             </View>
           )}
@@ -320,21 +332,40 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       lineHeight: typography.size.bodyMd * 1.5, marginBottom: spacing.xl,
     },
     checkedInBanner: {
-      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-      backgroundColor: isDark ? 'rgba(0,229,160,0.08)' : 'rgba(0,201,141,0.08)',
-      borderRadius: radius.lg,
-      padding: spacing.md, marginBottom: spacing.lg,
-      borderWidth: 1, borderColor: isDark ? 'rgba(0,229,160,0.2)' : 'rgba(0,201,141,0.2)',
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      borderRadius: radius.xl,
+      padding: spacing.lg, marginBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(0,229,160,0.18)' : 'rgba(0,201,141,0.18)',
+      overflow: 'hidden',
     },
-    checkedInDot: {
-      width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent.success,
+    checkedInGradient: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    checkedInIconWrap: {
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: isDark ? 'rgba(0,229,160,0.12)' : 'rgba(0,201,141,0.1)',
+      alignItems: 'center', justifyContent: 'center',
     },
     checkedInText: {
-      color: c.accent.success, fontSize: typography.size.bodyMd,
-      fontWeight: typography.weight.semibold,
+      color: c.text.primary, fontSize: typography.size.bodyMd,
+      fontWeight: typography.weight.bold,
     },
     checkedInHint: {
       color: c.text.secondary, fontSize: typography.size.bodySm, marginTop: 2,
+    },
+    checkedInLive: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: isDark ? 'rgba(0,229,160,0.12)' : 'rgba(0,201,141,0.1)',
+      paddingHorizontal: spacing.sm, paddingVertical: 3,
+      borderRadius: radius.full,
+    },
+    checkedInDot: {
+      width: 6, height: 6, borderRadius: 3, backgroundColor: c.accent.success,
+    },
+    checkedInLiveText: {
+      color: c.accent.success, fontSize: 10,
+      fontWeight: typography.weight.bold, letterSpacing: 1,
     },
     hintCard: {
       backgroundColor: c.glow.primarySubtle, borderRadius: radius.lg,

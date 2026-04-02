@@ -50,6 +50,7 @@ const VenueMarker = React.memo(function VenueMarker({
         longitude: Number(venue.longitude),
       }}
       onPress={() => onPress(venue)}
+      onSelect={() => onPress(venue)}
       tracksViewChanges={!captured || (hasLogo && !imgLoaded)}
     >
       <View
@@ -176,7 +177,7 @@ export default function MapScreen() {
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
-          provider={PROVIDER_GOOGLE}
+          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
           customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
           initialRegion={{
             latitude: location.latitude,

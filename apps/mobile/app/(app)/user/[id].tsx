@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity, Dimensions, StyleSheet,
+  Modal, Pressable, ActivityIndicator, Alert, Animated, PanResponder,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useProfilePhotos, usePhotoAccessStatus } from '@/hooks/use-photos';
 import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/avatar';
@@ -21,13 +23,14 @@ const PHOTO_COLS = 3;
 const PHOTO_SIZE = (SCREEN_WIDTH - spacing.xl * 2 - PHOTO_GAP * (PHOTO_COLS - 1)) / PHOTO_COLS;
 
 export default function UserProfileScreen() {
-  const { id: userId } = useLocalSearchParams<{ id: string }>();
+  const { id: userId, venueId } = useLocalSearchParams<{ id: string; venueId?: string }>();
   const { t, i18n } = useTranslation();
   const session = useAuthStore((s) => s.session);
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const isRu = i18n.language === 'ru';
   const isOwnProfile = userId === session?.user.id;
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['user-profile', userId],
@@ -50,6 +53,23 @@ export default function UserProfileScreen() {
   const privatePhotos = photos.filter((p) => !p.is_public);
   const visiblePrivatePhotos = hasAccess ? privatePhotos : [];
   const hiddenCount = hasAccess ? 0 : privatePhotos.length;
+
+  const startChat = useMutation({
+    mutationFn: async () => {
+      const res = await api.post<{ chat: any }>('/chats', {
+        target_user_id: userId,
+        venue_id: venueId,
+      });
+      return res.chat;
+    },
+    onSuccess: (chat) => {
+      router.push(`/(app)/chat/${chat.id}` as any);
+    },
+    onError: (err: any) => {
+      const msg = err?.message || err?.error || 'Unknown error';
+      Alert.alert(isRu ? 'Ошибка' : 'Error', msg);
+    },
+  });
 
   return (
     <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 60 }}>
@@ -74,7 +94,9 @@ export default function UserProfileScreen() {
           style={s.avatarGradient}
         >
           {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={s.avatar} />
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setFullscreenPhoto(profile.avatar_url)}>
+              <Image source={{ uri: profile.avatar_url }} style={s.avatar} />
+            </TouchableOpacity>
           ) : (
             <View style={[s.avatar, { backgroundColor: c.bg.secondary, alignItems: 'center', justifyContent: 'center' }]}>
               <Text style={s.avatarInitial}>
@@ -97,6 +119,29 @@ export default function UserProfileScreen() {
             ))}
           </View>
         )}
+
+        {!isOwnProfile && (
+          <TouchableOpacity
+            style={s.chatBtn}
+            onPress={() => {
+              if (!venueId) {
+                Alert.alert(isRu ? 'Ошибка' : 'Error', isRu ? 'Нет контекста venue' : 'No venue context');
+                return;
+              }
+              startChat.mutate();
+            }}
+            disabled={startChat.isPending}
+          >
+            {startChat.isPending ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <Ionicons name="chatbubble" size={18} color="#FFF" />
+                <Text style={s.chatBtnText}>{isRu ? 'Написать' : 'Chat'}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Photos */}
@@ -108,18 +153,18 @@ export default function UserProfileScreen() {
 
           <View style={s.grid}>
             {publicPhotos.map((photo) => (
-              <View key={photo.id} style={s.photoCard}>
+              <TouchableOpacity key={photo.id} style={s.photoCard} activeOpacity={0.8} onPress={() => setFullscreenPhoto(photo.photo_url)}>
                 <Image source={{ uri: photo.photo_url }} style={s.photoImage} />
-              </View>
+              </TouchableOpacity>
             ))}
 
             {visiblePrivatePhotos.map((photo) => (
-              <View key={photo.id} style={s.photoCard}>
+              <TouchableOpacity key={photo.id} style={s.photoCard} activeOpacity={0.8} onPress={() => setFullscreenPhoto(photo.photo_url)}>
                 <Image source={{ uri: photo.photo_url }} style={s.photoImage} />
                 <View style={s.privateBadge}>
                   <Ionicons name="lock-open" size={10} color="#FFF" />
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
 
             {hiddenCount > 0 && (
@@ -134,7 +179,108 @@ export default function UserProfileScreen() {
           </View>
         </View>
       )}
+
+      <Modal visible={!!fullscreenPhoto} transparent animationType="fade" onRequestClose={() => setFullscreenPhoto(null)}>
+        <View style={s.fullscreenOverlay}>
+          <TouchableOpacity style={s.fullscreenClose} onPress={() => setFullscreenPhoto(null)}>
+            <Ionicons name="close" size={28} color="#FFF" />
+          </TouchableOpacity>
+          {fullscreenPhoto && (
+            <ZoomableImage uri={fullscreenPhoto} onClose={() => setFullscreenPhoto(null)} />
+          )}
+          <Text style={s.zoomHint}>Pinch to zoom</Text>
+        </View>
+      </Modal>
     </ScrollView>
+  );
+}
+
+function ZoomableImage({ uri, onClose }: { uri: string; onClose: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastScale = useRef(1);
+  const lastDist = useRef(0);
+  const lastTranslateX = useRef(0);
+  const lastTranslateY = useRef(0);
+  const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const getDistance = (touches: any[]) => {
+    const dx = touches[0].pageX - touches[1].pageX;
+    const dy = touches[0].pageY - touches[1].pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        if (evt.nativeEvent.touches.length === 2) {
+          lastDist.current = getDistance(evt.nativeEvent.touches);
+        }
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (evt.nativeEvent.touches.length === 2) {
+          const dist = getDistance(evt.nativeEvent.touches);
+          if (lastDist.current > 0) {
+            const newScale = Math.max(1, Math.min(5, lastScale.current * (dist / lastDist.current)));
+            scale.setValue(newScale);
+          }
+        } else if (lastScale.current > 1) {
+          translateX.setValue(lastTranslateX.current + gestureState.dx);
+          translateY.setValue(lastTranslateY.current + gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const currentScale = (scale as any).__getValue?.() ?? lastScale.current;
+
+        if (evt.nativeEvent.touches.length === 0 && lastDist.current > 0) {
+          lastScale.current = currentScale;
+          lastDist.current = 0;
+          lastTranslateX.current = (translateX as any).__getValue?.() ?? 0;
+          lastTranslateY.current = (translateY as any).__getValue?.() ?? 0;
+        }
+
+        if (currentScale <= 1.05 && Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) {
+          if (tapTimeout.current) {
+            clearTimeout(tapTimeout.current);
+            tapTimeout.current = null;
+            Animated.spring(scale, { toValue: 2.5, friction: 5, useNativeDriver: true }).start();
+            lastScale.current = 2.5;
+          } else {
+            tapTimeout.current = setTimeout(() => {
+              tapTimeout.current = null;
+              onClose();
+            }, 250);
+          }
+        }
+
+        if (currentScale <= 1) {
+          lastScale.current = 1;
+          lastTranslateX.current = 0;
+          lastTranslateY.current = 0;
+          Animated.parallel([
+            Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
+            Animated.spring(translateX, { toValue: 0, friction: 5, useNativeDriver: true }),
+            Animated.spring(translateY, { toValue: 0, friction: 5, useNativeDriver: true }),
+          ]).start();
+        }
+      },
+    }),
+  ).current;
+
+  return (
+    <Animated.Image
+      source={{ uri }}
+      style={{
+        width: SCREEN_WIDTH,
+        height: SCREEN_WIDTH,
+        transform: [{ scale }, { translateX }, { translateY }],
+      }}
+      resizeMode="contain"
+      {...panResponder.panHandlers}
+    />
   );
 }
 
@@ -208,6 +354,35 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     },
     hiddenHint: {
       color: c.text.tertiary, fontSize: typography.size.micro,
+    },
+    chatBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      backgroundColor: c.accent.primary,
+      paddingHorizontal: spacing['2xl'], paddingVertical: spacing.md,
+      borderRadius: radius.full, marginTop: spacing.xl,
+      minWidth: 140, justifyContent: 'center',
+    },
+    chatBtnText: {
+      color: '#FFF', fontSize: typography.size.bodyLg,
+      fontWeight: typography.weight.bold,
+    },
+    fullscreenOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    fullscreenClose: {
+      position: 'absolute', top: 56, right: 20, zIndex: 10,
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    fullscreenImage: {
+      width: SCREEN_WIDTH, height: SCREEN_WIDTH,
+    },
+    zoomHint: {
+      position: 'absolute', bottom: 50,
+      color: 'rgba(255,255,255,0.45)', fontSize: 12,
+      letterSpacing: 1,
     },
   });
 }

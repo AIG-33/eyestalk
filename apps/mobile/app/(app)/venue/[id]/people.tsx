@@ -76,7 +76,7 @@ export default function PeopleScreen() {
       <TouchableOpacity
         style={s.gridCard}
         activeOpacity={0.85}
-        onPress={() => router.push(`/(app)/user/${item.user_id}` as any)}
+        onPress={() => router.push({ pathname: '/(app)/user/[id]' as any, params: { id: item.user_id, venueId } })}
         onLongPress={() => {
           Alert.alert(profile.nickname, '', [
             { text: t('safety.report'), onPress: () => setReportTarget(item.user_id) },

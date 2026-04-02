@@ -98,13 +98,15 @@ export function useUploadAvatar() {
       }
 
       const asset = result.assets[0];
-      const ext = asset.uri.split('.').pop() || 'jpg';
+      const rawExt = (asset.uri.split('.').pop() || 'jpg').toLowerCase();
+      const ext = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
+      const mimeType = asset.mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
       const filePath = `${session!.user.id}/avatar.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, decode(asset.base64), {
-          contentType: `image/${ext}`,
+          contentType: mimeType,
           upsert: true,
         });
 

@@ -94,7 +94,30 @@ export function useUserChats() {
         .is('left_at', null);
 
       if (error) throw error;
-      return data || [];
+      const items = data || [];
+
+      const directChats = items.filter((i: any) => i.chats?.type === 'direct');
+      if (directChats.length > 0) {
+        const chatIds = directChats.map((i: any) => i.chat_id);
+        const { data: peers } = await supabase
+          .from('chat_participants')
+          .select('chat_id, user_id, profiles:user_id(nickname, avatar_url)')
+          .in('chat_id', chatIds)
+          .neq('user_id', session!.user.id)
+          .is('left_at', null);
+
+        const peerMap: Record<string, any> = {};
+        (peers || []).forEach((p: any) => {
+          peerMap[p.chat_id] = p.profiles;
+        });
+
+        return items.map((item: any) => ({
+          ...item,
+          peer: peerMap[item.chat_id] || null,
+        }));
+      }
+
+      return items;
     },
     enabled: !!session,
   });

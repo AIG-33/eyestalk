@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getApiUser } from '@/lib/supabase/api-auth';
 import { z } from 'zod';
 
 const createChatSchema = z.object({
@@ -11,10 +11,9 @@ const createChatSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
   const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getApiUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   const { target_user_id, venue_id, initial_message } = parsed.data;
 
-  const { data: blocked } = await supabase
+  const { data: blocked } = await admin
     .from('blocks')
     .select('id')
     .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${target_user_id}),and(blocker_id.eq.${target_user_id},blocked_id.eq.${user.id})`)
@@ -37,28 +36,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Cannot chat with this user' }, { status: 403 });
   }
 
-  const { data: mutual } = await supabase
-    .from('mutual_interests')
-    .select('id')
-    .eq('is_mutual', true)
-    .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${target_user_id}),and(from_user_id.eq.${target_user_id},to_user_id.eq.${user.id})`)
-    .eq('venue_id', venue_id)
-    .maybeSingle();
+  const { data: existingParticipants } = await admin
+    .from('chat_participants')
+    .select('chat_id')
+    .eq('user_id', user.id)
+    .is('left_at', null);
 
-  if (!mutual) {
-    return NextResponse.json({ error: 'Mutual interest required to start a chat' }, { status: 403 });
+  if (existingParticipants && existingParticipants.length > 0) {
+    const chatIds = existingParticipants.map((p: any) => p.chat_id);
+    const { data: existingChat } = await admin
+      .from('chat_participants')
+      .select('chat_id, chats!inner(id, venue_id, type, is_active)')
+      .eq('user_id', target_user_id)
+      .in('chat_id', chatIds)
+      .is('left_at', null);
+
+    const directChat = existingChat?.find((p: any) => p.chats?.type === 'direct' && p.chats?.is_active);
+    if (directChat) {
+      const { data: chat } = await admin
+        .from('chats')
+        .select()
+        .eq('id', directChat.chat_id)
+        .single();
+      return NextResponse.json({ chat });
+    }
   }
-
-  const microChatExpiry = new Date();
-  microChatExpiry.setMinutes(microChatExpiry.getMinutes() + 5);
 
   const { data: chat, error: chatError } = await admin
     .from('chats')
-    .insert({
-      venue_id,
-      type: 'direct',
-      expires_at: microChatExpiry.toISOString(),
-    })
+    .insert({ venue_id, type: 'direct' })
     .select()
     .single();
 
@@ -83,15 +89,15 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ chat });
 }
 
-export async function GET() {
-  const supabase = await createClient();
+export async function GET(request: NextRequest) {
+  const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getApiUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('chat_participants')
     .select(`
       chat_id,

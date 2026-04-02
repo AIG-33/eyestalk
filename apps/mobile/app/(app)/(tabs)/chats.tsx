@@ -16,8 +16,13 @@ export default function ChatsScreen() {
   const renderChat = ({ item }: { item: any }) => {
     const chat = item.chats;
     const venueName = chat?.venues?.name || '';
-    const chatName = chat?.name || venueName || 'Chat';
     const isVenueChat = chat?.type === 'venue_general';
+    const isDirectChat = chat?.type === 'direct';
+    const peer = item.peer;
+
+    const displayName = isDirectChat
+      ? (peer?.nickname || 'Chat')
+      : venueName;
 
     return (
       <TouchableOpacity
@@ -32,19 +37,29 @@ export default function ChatsScreen() {
         }}
       >
         <Avatar
-          uri={null}
-          name={isVenueChat ? '🏠' : chatName}
+          uri={isDirectChat ? (peer?.avatar_url ?? null) : null}
+          name={isVenueChat ? '🏠' : (peer?.nickname || 'C')}
           size="md"
-          status={isVenueChat ? 'inVenue' : 'online'}
+          status={isDirectChat ? 'online' : 'inVenue'}
         />
         <View style={styles.chatInfo}>
-          <View style={styles.chatTop}>
-            <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>{chatName}</Text>
-            <Text style={styles.chatTime}>now</Text>
-          </View>
-          <Text style={styles.chatPreview} numberOfLines={1}>
-            {isVenueChat ? `🏠 ${venueName}` : 'Tap to open'}
-          </Text>
+          {isVenueChat ? (
+            <>
+              <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>
+                {venueName}
+              </Text>
+              <Text style={[styles.chatSubLabel, { color: c.text.tertiary }]}>General</Text>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={[styles.chatPreview, { color: c.text.secondary }]} numberOfLines={1}>
+                Tap to open
+              </Text>
+            </>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -135,11 +150,17 @@ const styles = StyleSheet.create({
     color: colors.text.primary, fontSize: typography.size.headingSm,
     fontWeight: typography.weight.semibold, flex: 1,
   },
+  chatSubLabel: {
+    fontSize: typography.size.bodySm,
+    color: colors.text.tertiary,
+    marginTop: 2,
+  },
   chatTime: {
     color: colors.text.tertiary, fontSize: typography.size.bodySm,
     marginLeft: spacing.sm,
   },
   chatPreview: {
     color: colors.text.secondary, fontSize: typography.size.bodyMd,
+    marginTop: 2,
   },
 });
