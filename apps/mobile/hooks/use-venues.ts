@@ -14,41 +14,26 @@ interface Venue {
   is_active: boolean;
 }
 
-interface VenueWithStats extends Venue {
+export interface VenueWithStats extends Venue {
   active_checkins: number;
   open_to_chat: number;
 }
 
-export function useNearbyVenues(lat: number | null, lng: number | null) {
+export function useAllVenues() {
   return useQuery({
-    queryKey: ['venues', 'nearby', lat, lng],
+    queryKey: ['venues', 'all'],
     queryFn: async (): Promise<VenueWithStats[]> => {
-      if (!lat || !lng) return [];
+      const { data: venues, error } = await supabase
+        .from('venues')
+        .select('*')
+        .eq('is_active', true);
 
-      let venues: Venue[] | null = null;
+      console.log('[useAllVenues] result:', { count: venues?.length, error: error?.message });
 
-      // Try PostGIS-based RPC first
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('nearby_venues', {
-          user_lat: lat,
-          user_lng: lng,
-          radius_km: 5,
-        });
-
-      if (!rpcError && rpcData) {
-        venues = rpcData;
-      } else {
-        // Fallback: fetch all active venues (PostGIS may not be set up)
-        console.warn('nearby_venues RPC failed, falling back to direct query:', rpcError?.message);
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('venues')
-          .select('*')
-          .eq('is_active', true);
-
-        if (fallbackError) throw fallbackError;
-        venues = fallbackData;
+      if (error) {
+        console.error('[useAllVenues] Supabase error:', error);
+        throw error;
       }
-
       if (!venues || venues.length === 0) return [];
 
       const venueIds = venues.map((v: Venue) => v.id);
@@ -60,7 +45,6 @@ export function useNearbyVenues(lat: number | null, lng: number | null) {
         .eq('status', 'active');
 
       const countMap: Record<string, number> = {};
-      const openMap: Record<string, number> = {};
 
       checkinCounts?.forEach((c: { venue_id: string }) => {
         countMap[c.venue_id] = (countMap[c.venue_id] || 0) + 1;
@@ -69,12 +53,16 @@ export function useNearbyVenues(lat: number | null, lng: number | null) {
       return venues.map((v: Venue) => ({
         ...v,
         active_checkins: countMap[v.id] || 0,
-        open_to_chat: openMap[v.id] || 0,
+        open_to_chat: 0,
       }));
     },
-    enabled: lat !== null && lng !== null,
     staleTime: 30_000,
   });
+}
+
+/** @deprecated Use useAllVenues instead */
+export function useNearbyVenues(lat: number | null, lng: number | null, _radiusKm: number = 5) {
+  return useAllVenues();
 }
 
 export function useVenueDetail(venueId: string) {

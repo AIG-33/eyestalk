@@ -9,6 +9,7 @@ interface Profile {
   nickname: string;
   age_range: string;
   avatar_url: string | null;
+  bio: string | null;
   interests: string[];
   is_verified: boolean;
   is_banned: boolean;
@@ -46,13 +47,31 @@ export function useUpdateProfile() {
       age_range?: string;
       interests?: string[];
       avatar_url?: string | null;
+      bio?: string | null;
     }) => {
-      const { error } = await supabase
+      const userId = session!.user.id;
+
+      const { data, error, count, status, statusText } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', session!.user.id);
+        .eq('id', userId)
+        .select()
+        .single();
 
-      if (error) throw error;
+      console.log('[updateProfile]', { data, error, count, status, statusText, userId });
+
+      if (error) throw new Error(`Profile update failed: ${error.message} (code: ${error.code})`);
+      if (!data) throw new Error('Profile update returned no data — RLS may be blocking the operation');
+
+      const { data: verify } = await supabase
+        .from('profiles')
+        .select('nickname, age_range, interests')
+        .eq('id', userId)
+        .single();
+
+      console.log('[updateProfile] verify after save:', verify);
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });

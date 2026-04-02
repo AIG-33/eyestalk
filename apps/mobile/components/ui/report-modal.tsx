@@ -9,10 +9,11 @@ import { REPORT_REASONS } from '@eyestalk/shared/constants';
 interface Props {
   targetUserId: string;
   venueId: string;
+  reportedMessageId?: string;
   onClose: () => void;
 }
 
-export function ReportModal({ targetUserId, venueId, onClose }: Props) {
+export function ReportModal({ targetUserId, venueId, reportedMessageId, onClose }: Props) {
   const { t } = useTranslation();
   const session = useAuthStore((s) => s.session);
   const [reason, setReason] = useState<string>('');
@@ -23,6 +24,7 @@ export function ReportModal({ targetUserId, venueId, onClose }: Props) {
       const { error } = await supabase.from('reports').insert({
         reporter_id: session!.user.id,
         reported_user_id: targetUserId,
+        reported_message_id: reportedMessageId || null,
         venue_id: venueId,
         reason,
         description: description || null,

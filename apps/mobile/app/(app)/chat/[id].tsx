@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChatMessages, useSendMessage } from '@/hooks/use-chat';
+import { useGrantPhotoAccess, useRevokePhotoAccess, useProfilePhotos } from '@/hooks/use-photos';
 import { useAuthStore } from '@/stores/auth.store';
 import { supabase } from '@/lib/supabase';
 import { Avatar } from '@/components/ui/avatar';
@@ -21,7 +22,11 @@ export default function DirectChatScreen() {
   const { t } = useTranslation();
   const session = useAuthStore((s) => s.session);
   const { data: messages = [] } = useChatMessages(chatId);
-  const sendMessage = useSendMessage();
+  const sendMessage = useSendMessage(chatId);
+  const grantAccess = useGrantPhotoAccess();
+  const revokeAccess = useRevokePhotoAccess();
+  const { data: myPhotos = [] } = useProfilePhotos(session?.user.id);
+  const hasPrivatePhotos = myPhotos.some((p) => !p.is_public);
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
@@ -38,18 +43,102 @@ export default function DirectChatScreen() {
     enabled: !!chatId,
   });
 
+  const { data: peer } = useQuery({
+    queryKey: ['chat-peer', chatId],
+    queryFn: async () => {
+      const { data: participants } = await supabase
+        .from('chat_participants')
+        .select('user_id')
+        .eq('chat_id', chatId)
+        .neq('user_id', session!.user.id);
+      if (!participants || participants.length === 0) return null;
+      const peerId = participants[0].user_id;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar_url')
+        .eq('id', peerId)
+        .single();
+      return profile;
+    },
+    enabled: !!chatId && !!session,
+  });
+
+  const { data: accessGranted } = useQuery({
+    queryKey: ['photo-access', session?.user.id, peer?.id],
+    queryFn: async () => {
+      if (!peer) return false;
+      const { data } = await supabase
+        .from('photo_access_grants')
+        .select('id')
+        .eq('owner_id', session!.user.id)
+        .eq('granted_to_id', peer.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!peer && !!session,
+  });
+
   const isMicroChat = chatMeta?.type === 'micro';
   const isFirstMessage = messages.length === 0;
   const myId = session?.user.id;
 
   const handleSend = () => {
     if (!text.trim()) return;
-    sendMessage.mutate({ chatId, content: text.trim() });
+    sendMessage.mutate(text.trim());
     setText('');
   };
 
   const handleIcebreaker = (question: string) => {
-    sendMessage.mutate({ chatId, content: question });
+    sendMessage.mutate(question);
+  };
+
+  const handlePhotoAccess = () => {
+    if (!peer) return;
+    const isRu = t('common.cancel') === 'Отмена';
+    if (accessGranted) {
+      Alert.alert(
+        isRu ? 'Закрыть доступ к фото?' : 'Revoke photo access?',
+        isRu
+          ? `${peer.nickname} больше не сможет видеть ваши приватные фото`
+          : `${peer.nickname} will no longer see your private photos`,
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: isRu ? 'Закрыть' : 'Revoke', style: 'destructive', onPress: () => revokeAccess.mutate(peer.id) },
+        ],
+      );
+    } else {
+      Alert.alert(
+        isRu ? 'Открыть доступ к фото?' : 'Share private photos?',
+        isRu
+          ? `${peer.nickname} сможет видеть ваши приватные фото`
+          : `${peer.nickname} will be able to see your private photos`,
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: isRu ? 'Открыть' : 'Share', onPress: () => grantAccess.mutate(peer.id) },
+        ],
+      );
+    }
+  };
+
+  const handleOptions = () => {
+    if (!peer) return;
+    const isRu = t('common.cancel') === 'Отмена';
+    const options: any[] = [
+      {
+        text: isRu ? 'Посмотреть профиль' : 'View profile',
+        onPress: () => router.push(`/(app)/user/${peer.id}` as any),
+      },
+    ];
+    if (hasPrivatePhotos) {
+      options.push({
+        text: accessGranted
+          ? (isRu ? '🔒 Закрыть доступ к фото' : '🔒 Revoke photo access')
+          : (isRu ? '🔓 Открыть доступ к фото' : '🔓 Share private photos'),
+        onPress: handlePhotoAccess,
+      });
+    }
+    options.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(peer.nickname, '', options);
   };
 
   const renderMessage = ({ item }: { item: any }) => {
@@ -93,12 +182,18 @@ export default function DirectChatScreen() {
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Avatar uri={null} name="C" size="sm" status="inVenue" />
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>Chat</Text>
-          <Text style={styles.headerStatus}>{t('map.activeNow')}</Text>
-        </View>
-        <TouchableOpacity>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: spacing.md }}
+          onPress={() => peer && router.push(`/(app)/user/${peer.id}` as any)}
+          activeOpacity={0.7}
+        >
+          <Avatar uri={peer?.avatar_url ?? null} name={peer?.nickname || 'C'} size="sm" status="inVenue" />
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerName}>{peer?.nickname || 'Chat'}</Text>
+            <Text style={styles.headerStatus}>{t('map.activeNow')}</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleOptions}>
           <Ionicons name="ellipsis-vertical" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>

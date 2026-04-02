@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useCheckin } from '@/hooks/use-checkin';
 import { useLocation } from '@/hooks/use-location';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { colors, typography, spacing, radius, shadows } from '@/theme';
 
 export default function CheckInScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const { checkinMutation } = useCheckin();
   const { location } = useLocation();
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
 
@@ -26,10 +29,25 @@ export default function CheckInScreen() {
       return;
     }
 
+    const qrCode = extractQrCode(data);
+
+    const { data: qrRecord, error: qrError } = await supabase
+      .from('qr_codes')
+      .select('venue_id')
+      .eq('code', qrCode)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (qrError || !qrRecord) {
+      Alert.alert(t('common.error'), t('qrScan.invalidCode'));
+      setScanned(false);
+      return;
+    }
+
     checkinMutation.mutate(
       {
-        venue_id: extractVenueId(data),
-        qr_code: data,
+        venue_id: qrRecord.venue_id,
+        qr_code: qrCode,
         lat: location.latitude,
         lng: location.longitude,
       },
@@ -44,7 +62,7 @@ export default function CheckInScreen() {
             [{ text: t('common.ok'), onPress: () => router.canGoBack() ? router.back() : router.replace('/(app)/map') }],
           );
         },
-        onError: (error) => {
+        onError: () => {
           Alert.alert(t('qrScan.error'), t('qrScan.retryHint'));
           setScanned(false);
         },
@@ -76,7 +94,7 @@ export default function CheckInScreen() {
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
       >
-        <View style={styles.overlay}>
+        <View style={[styles.overlay, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, spacing['4xl']) }]}>
           {/* Close */}
           <TouchableOpacity style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}>
             <Ionicons name="close" size={24} color={colors.text.primary} />
@@ -118,10 +136,15 @@ export default function CheckInScreen() {
   );
 }
 
-function extractVenueId(qrData: string): string {
+function extractQrCode(qrData: string): string {
+  // QR contains "eyestalk://checkin/EYESTALK-XXXX-XXXX" or just the code
+  const match = qrData.match(/EYESTALK-[A-Z0-9-]+/i);
+  if (match) return match[0];
+
   try {
     const url = new URL(qrData);
-    return url.searchParams.get('venue') || qrData;
+    const parts = url.pathname.split('/').filter(Boolean);
+    return parts[parts.length - 1] || qrData;
   } catch {
     return qrData;
   }
@@ -150,7 +173,6 @@ const styles = StyleSheet.create({
   camera: { flex: 1 },
   overlay: {
     flex: 1, justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: 56, paddingBottom: spacing['4xl'],
   },
   closeBtn: {
     alignSelf: 'flex-end', marginRight: spacing.xl,

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
+import { useVenue } from '@/components/dashboard/venue-context';
 
 interface AnalyticsData {
   daily: { date: string; checkins: number }[];
@@ -14,28 +15,26 @@ interface AnalyticsData {
   topActivities: { type: string; count: number }[];
 }
 
+function emptyHourly(): { hour: number; count: number }[] {
+  return Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
+}
+
 export default function AnalyticsPage() {
   const t = useTranslations('dashboard');
+  const { current } = useVenue();
   const [data, setData] = useState<AnalyticsData | null>(null);
-  const [venueId, setVenueId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
+  const fetchAnalytics = useCallback(async () => {
+    const venueId = current?.id;
+    if (!venueId) {
+      setData({ daily: [], hourly: emptyHourly(), topActivities: [] });
+      setLoading(false);
+      return;
+    }
 
-  const fetchAnalytics = async () => {
+    setLoading(true);
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: venue } = await supabase
-      .from('venues')
-      .select('id')
-      .eq('owner_id', user.id)
-      .single();
-
-    if (!venue) return;
-    setVenueId(venue.id);
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -43,7 +42,7 @@ export default function AnalyticsPage() {
     const { data: checkins } = await supabase
       .from('checkins')
       .select('created_at')
-      .eq('venue_id', venue.id)
+      .eq('venue_id', venueId)
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     const dailyMap: Record<string, number> = {};
@@ -67,7 +66,7 @@ export default function AnalyticsPage() {
     const { data: activities } = await supabase
       .from('activities')
       .select('type')
-      .eq('venue_id', venue.id);
+      .eq('venue_id', venueId);
 
     const actMap: Record<string, number> = {};
     (activities || []).forEach((a) => {
@@ -78,9 +77,14 @@ export default function AnalyticsPage() {
       .map(([type, count]) => ({ type, count }));
 
     setData({ daily, hourly, topActivities });
-  };
+    setLoading(false);
+  }, [current?.id]);
 
-  if (!data) {
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  if (loading || !data) {
     return (
       <div className="p-8">
         <h1 className="text-3xl font-bold text-white mb-8">{t('analytics')}</h1>
@@ -89,10 +93,39 @@ export default function AnalyticsPage() {
     );
   }
 
+  if (!current) {
+    return (
+      <div className="p-8">
+        <h1 className="text-3xl font-bold text-white mb-8">{t('analytics')}</h1>
+        <p className="text-gray-400">No venue selected.</p>
+      </div>
+    );
+  }
+
+  const hasCheckinData = data.daily.length > 0;
+  const hasActivityData = data.topActivities.length > 0;
+  const isEmpty = !hasCheckinData && !hasActivityData;
+
   return (
     <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold text-white">{t('analytics')}</h1>
+      <div>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('analytics')}</h1>
+        <p className="text-gray-400 max-w-2xl">
+          Track your venue performance over the last 30 days. See check-in trends, identify peak hours to optimize staffing and events, and understand which activity types your guests enjoy most.
+        </p>
+      </div>
 
+      {isEmpty && (
+        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-12 text-center">
+          <p className="text-4xl mb-4">📈</p>
+          <p className="text-white font-semibold text-lg mb-2">No data yet</p>
+          <p className="text-gray-400 max-w-md mx-auto">
+            Analytics will appear once guests start checking in and participating in activities at your venue. Share your QR code to get started.
+          </p>
+        </div>
+      )}
+
+      {hasCheckinData && (
       <ChartCard title={t('checkinsOverTime')}>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={data.daily}>
@@ -110,7 +143,9 @@ export default function AnalyticsPage() {
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
+      )}
 
+      {hasCheckinData && (
       <ChartCard title={t('peakHours')}>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={data.hourly}>
@@ -126,8 +161,9 @@ export default function AnalyticsPage() {
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
+      )}
 
-      {data.topActivities.length > 0 && (
+      {hasActivityData && (
         <ChartCard title={t('topActivities')}>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={data.topActivities} layout="vertical">

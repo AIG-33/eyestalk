@@ -1,19 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-
-interface SidebarProps {
-  venue: {
-    id: string;
-    name: string;
-    type: string;
-    logo_url: string | null;
-  } | null;
-}
+import { useVenue } from './venue-context';
 
 const navItems = [
   { href: '/dashboard', icon: '📊', labelKey: 'title', hintKey: 'titleHint' },
@@ -25,11 +18,14 @@ const navItems = [
   { href: '/dashboard/settings', icon: '⚙️', labelKey: 'settings', hintKey: 'settingsHint' },
 ];
 
-export function DashboardSidebar({ venue }: SidebarProps) {
+export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations('dashboard');
   const tAuth = useTranslations('auth');
+  const tVenues = useTranslations('venues');
+  const { venues, current, switchVenue } = useVenue();
+  const [showSwitcher, setShowSwitcher] = useState(false);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -53,15 +49,85 @@ export function DashboardSidebar({ venue }: SidebarProps) {
             EyesTalk
           </h1>
         </div>
-        {venue && (
-          <p className="text-sm mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>
-            {venue.name}
-          </p>
+      </div>
+
+      {/* Venue Selector */}
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {current ? (
+          <button
+            onClick={() => setShowSwitcher(!showSwitcher)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors hover:bg-white/5"
+          >
+            {current.logo_url ? (
+              <Image src={current.logo_url} alt="" width={28} height={28} className="rounded-lg object-cover" unoptimized style={{ width: 28, height: 28 }} />
+            ) : (
+              <span className="text-lg">{getVenueEmoji(current.type)}</span>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                {current.name}
+              </p>
+              {venues.length > 1 && (
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {venues.length} venues
+                </p>
+              )}
+            </div>
+            <svg className={`w-4 h-4 transition-transform ${showSwitcher ? 'rotate-180' : ''}`} style={{ color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        ) : (
+          <Link
+            href="/dashboard/create-venue"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors hover:bg-white/5"
+          >
+            <span className="text-lg">➕</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--accent-primary)' }}>
+              {tVenues('createVenue')}
+            </span>
+          </Link>
+        )}
+
+        {/* Dropdown */}
+        {showSwitcher && (
+          <div className="mt-1 rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {venues.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => { switchVenue(v.id); setShowSwitcher(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-white/5"
+              >
+                {v.logo_url ? (
+                  <Image src={v.logo_url} alt="" width={20} height={20} className="rounded object-cover" unoptimized style={{ width: 20, height: 20 }} />
+                ) : (
+                  <span className="text-sm">{getVenueEmoji(v.type)}</span>
+                )}
+                <span className="text-sm truncate flex-1" style={{ color: v.id === current?.id ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                  {v.name}
+                </span>
+                {v.id === current?.id && (
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
+                )}
+              </button>
+            ))}
+            <Link
+              href="/dashboard/create-venue"
+              onClick={() => setShowSwitcher(false)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-white/5"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <span className="text-sm">➕</span>
+              <span className="text-sm" style={{ color: 'var(--accent-primary)' }}>
+                {tVenues('addVenue')}
+              </span>
+            </Link>
+          </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -101,4 +167,14 @@ export function DashboardSidebar({ venue }: SidebarProps) {
       </div>
     </aside>
   );
+}
+
+const VENUE_EMOJI: Record<string, string> = {
+  karaoke: '🎤', nightclub: '🪩', sports_bar: '⚽', bowling: '🎳',
+  billiards: '🎱', hookah: '💨', board_games: '🎲', arcade: '🕹️',
+  standup: '🎭', live_music: '🎵', other: '📍',
+};
+
+function getVenueEmoji(type: string): string {
+  return VENUE_EMOJI[type] || '📍';
 }

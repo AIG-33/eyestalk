@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { appStorage } from '@/lib/storage';
 import { useAuthStore } from '@/stores/auth.store';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const ONBOARDING_KEY = 'eyestalk_onboarding_seen';
 
@@ -16,7 +17,7 @@ export default function Index() {
     });
   }, []);
 
-  if (isLoading || onboardingSeen === null) return null;
+  if (isLoading || onboardingSeen === null) return <LoadingScreen />;
 
   if (session) {
     return <Redirect href="/(app)/map" />;

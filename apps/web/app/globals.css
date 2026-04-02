@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #0D0D1A;
   --bg-secondary: #161630;
   --bg-tertiary: #1E1E3F;
@@ -19,6 +20,29 @@
   --glow-success: 0 0 12px rgba(0,229,160,0.4);
   --glass-bg: rgba(255,255,255,0.08);
   --glass-border: rgba(255,255,255,0.08);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg-primary: #F5F5FA;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #EEEEF5;
+  --surface: #DDDDE8;
+  --text-primary: #1A1A2E;
+  --text-secondary: #555570;
+  --text-tertiary: #8888A0;
+  --accent-primary: #6C5CE7;
+  --accent-light: #7C6FF7;
+  --accent-success: #00C98D;
+  --accent-pink: #FF6B9D;
+  --accent-warning: #E6B800;
+  --accent-error: #E63946;
+  --accent-info: #00B4D8;
+  --glow-primary: 0 2px 8px rgba(108,92,231,0.15);
+  --glow-success: 0 2px 8px rgba(0,201,141,0.15);
+  --glass-bg: rgba(0,0,0,0.03);
+  --glass-border: rgba(0,0,0,0.08);
+  color-scheme: light;
 }
 
 body {
@@ -62,4 +86,35 @@ input:focus, textarea:focus, select:focus {
 
 .glow-primary {
   box-shadow: var(--glow-primary);
+}
+
+/* Light theme overrides for Tailwind utility classes used in dashboard */
+[data-theme="light"] {
+  .bg-gray-900 { background-color: #FFFFFF !important; }
+  .bg-gray-900\/60 { background-color: rgba(255,255,255,0.85) !important; }
+  .bg-gray-800 { background-color: #EEEEF5 !important; }
+  .bg-gray-800\/50 { background-color: rgba(238,238,245,0.5) !important; }
+  .bg-gray-700 { background-color: #DDDDE8 !important; }
+  .bg-gray-600 { background-color: #CCCCDD !important; }
+  .bg-gray-950 { background-color: #F5F5FA !important; }
+  .bg-black { background-color: var(--bg-primary) !important; }
+  .bg-black\/70 { background-color: rgba(0,0,0,0.25) !important; }
+  .bg-gray-900\/50 { background-color: rgba(255,255,255,0.75) !important; }
+  .bg-gray-800\/40 { background-color: rgba(238,238,245,0.4) !important; }
+  .border-gray-800 { border-color: #DDDDE8 !important; }
+  .border-gray-700 { border-color: #CCCCDD !important; }
+  .border-gray-700\/50 { border-color: rgba(204,204,221,0.5) !important; }
+  .text-white { color: #1A1A2E !important; }
+  .text-gray-200 { color: #3A3A55 !important; }
+  .text-gray-300 { color: #3A3A55 !important; }
+  .text-gray-400 { color: #555570 !important; }
+  .text-gray-500 { color: #6E6E88 !important; }
+  .text-gray-600 { color: #8888A0 !important; }
+
+  body { background-color: var(--bg-primary); color: var(--text-primary); }
+  input, textarea, select {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--surface) !important;
+    color: var(--text-primary) !important;
+  }
 }

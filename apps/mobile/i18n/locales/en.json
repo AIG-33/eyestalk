@@ -110,7 +110,12 @@
     "waveExplain": "A wave lets them know you're interested — if they wave back, you can chat!",
     "activitiesEmpty": "No activities yet",
     "activitiesEmptyHint": "Activities will appear here when the venue or other users create them",
-    "checkoutConfirm": "Are you sure you want to leave? Your venue chats will expire in 24 hours."
+    "checkoutConfirm": "Are you sure you want to leave? Your venue chats will expire in 24 hours.",
+    "checkinRequired": "Check-in required",
+    "checkinRequiredChat": "Check in to this venue to join the chat and start conversations",
+    "checkinRequiredActivities": "Check in to this venue to participate in activities and challenges",
+    "checkinToChat": "Check in to join the chat",
+    "checkinToJoin": "Check in to participate"
   },
   "chats": {
     "empty": "No chats yet",
@@ -242,6 +247,10 @@
     "faqHint": "Answers to the most common questions",
     "guidelines": "Community Guidelines",
     "guidelinesHint": "Our rules for keeping EyesTalk safe and fun for everyone",
+    "searchRadius": "Search Radius",
+    "searchRadiusLabel": "Venue search radius",
+    "searchRadiusHint": "How far to look for venues around you",
+    "km": "km",
     "version": "Version",
     "signOutHint": "You'll need to sign in again to use the app",
     "deleteHint": "Permanently delete your account and all associated data"
@@ -273,6 +282,7 @@
     "verifying": "Verifying your location...",
     "success": "You're in! 🎉",
     "error": "Couldn't verify your presence — are you at the venue?",
+    "invalidCode": "This QR code is not recognized or has been deactivated",
     "retryHint": "Make sure you're at the venue and try scanning again",
     "manualCode": "Enter venue code manually"
   },

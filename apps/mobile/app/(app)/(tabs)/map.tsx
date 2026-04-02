@@ -1,18 +1,85 @@
-import { useState, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Alert, Modal, Pressable, PixelRatio, Platform, Linking } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocation } from '@/hooks/use-location';
-import { useNearbyVenues } from '@/hooks/use-venues';
-import { useActiveCheckin } from '@/hooks/use-checkin';
-import { colors, typography, spacing, shadows, radius, venueAmbient } from '@/theme';
-import { Card } from '@/components/ui/card';
+import { useAllVenues, type VenueWithStats } from '@/hooks/use-venues';
+import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
+import { supabase } from '@/lib/supabase';
+import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.72;
+
+// Android react-native-maps 1.20.1 captures marker bitmap at a fixed 100px.
+// Marker dp size must satisfy: size * PixelRatio <= 100, otherwise it clips.
+const MAX_BITMAP_PX = 96;
+const MARKER_SIZE =
+  Platform.OS === 'android'
+    ? Math.min(44, Math.floor(MAX_BITMAP_PX / PixelRatio.get()))
+    : 44;
+const EMOJI_FONT = Math.max(14, Math.floor(MARKER_SIZE * 0.45));
+
+const VenueMarker = React.memo(function VenueMarker({
+  venue,
+  isSelected,
+  onPress,
+}: {
+  venue: VenueWithStats;
+  isSelected: boolean;
+  onPress: (v: VenueWithStats) => void;
+}) {
+  const [captured, setCaptured] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const hasLogo = !!venue.logo_url;
+
+  useEffect(() => {
+    const delay = hasLogo ? 2000 : 1200;
+    const t = setTimeout(() => setCaptured(true), delay);
+    return () => clearTimeout(t);
+  }, [hasLogo]);
+
+  const emoji = VENUE_EMOJI[venue.type] || '📍';
+
+  return (
+    <Marker
+      coordinate={{
+        latitude: Number(venue.latitude),
+        longitude: Number(venue.longitude),
+      }}
+      onPress={() => onPress(venue)}
+      tracksViewChanges={!captured || (hasLogo && !imgLoaded)}
+    >
+      <View
+        collapsable={false}
+        style={{
+          width: MARKER_SIZE,
+          height: MARKER_SIZE,
+          borderRadius: MARKER_SIZE / 2,
+          backgroundColor: '#7C6FF7',
+          borderWidth: isSelected ? 2.5 : 1.5,
+          borderColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {hasLogo ? (
+          <Image
+            source={{ uri: venue.logo_url! }}
+            style={{ width: MARKER_SIZE - 2, height: MARKER_SIZE - 2, borderRadius: MARKER_SIZE / 2 }}
+            resizeMode="cover"
+            onLoad={() => setImgLoaded(true)}
+          />
+        ) : (
+          <Text style={{ fontSize: EMOJI_FONT }}>{emoji}</Text>
+        )}
+      </View>
+    </Marker>
+  );
+});
 
 const DARK_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#0D0D1A' }] },
@@ -32,43 +99,74 @@ const VENUE_EMOJI: Record<string, string> = {
   standup: '🎭', live_music: '🎵', other: '📍',
 };
 
+const LIGHT_MAP_STYLE: any[] = [];
+
 export default function MapScreen() {
   const { t } = useTranslation();
+  const { c, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { location } = useLocation();
-  const { data: venues } = useNearbyVenues(location?.latitude ?? null, location?.longitude ?? null);
+  const { data: venues, error: venuesError, isLoading: venuesLoading } = useAllVenues();
   const { data: activeCheckin } = useActiveCheckin();
-  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+  const { checkinMutation } = useCheckin();
+  const [selectedVenue, setSelectedVenue] = useState<VenueWithStats | null>(null);
+  const [markersReady, setMarkersReady] = useState(false);
   const mapRef = useRef<MapView>(null);
 
+  const handleMarkerPress = useCallback((venue: VenueWithStats) => {
+    setSelectedVenue(venue);
+  }, []);
+
+  const handleCheckin = useCallback(() => {
+    if (!selectedVenue || !location) return;
+    checkinMutation.mutate(
+      { venue_id: selectedVenue.id, lat: location.latitude, lng: location.longitude },
+      {
+        onSuccess: (result) => {
+          setSelectedVenue(null);
+          Alert.alert('Checked in!', `You earned ${result.tokens_earned} tokens`);
+        },
+        onError: (err: any) => {
+          Alert.alert('Check-in failed', err.message || 'Unknown error');
+        },
+      },
+    );
+  }, [selectedVenue, location, checkinMutation]);
+
+  const isCheckedInHere = activeCheckin?.venue_id === selectedVenue?.id;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.bg.primary }]}>
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <View style={styles.logoRow}>
           <Image
             source={require('@/assets/logo-purple.png')}
             style={styles.logoIcon}
             resizeMode="contain"
           />
-          <Text style={styles.logo}>EyesTalk</Text>
+          <Text style={[styles.logo, { color: c.text.primary }]}>EyesTalk</Text>
         </View>
         <View style={styles.topActions}>
           {activeCheckin && (
             <TouchableOpacity
-              style={styles.activeBadge}
+              style={[styles.activeBadge, {
+                backgroundColor: isDark ? 'rgba(0,229,160,0.1)' : 'rgba(0,180,130,0.12)',
+                borderColor: isDark ? 'rgba(0,229,160,0.2)' : 'rgba(0,160,120,0.25)',
+              }]}
               onPress={() => router.push(`/(app)/venue/${activeCheckin.venue_id}` as any)}
             >
               <View style={[styles.liveDot, shadows.glowSuccess]} />
-              <Text style={styles.activeBadgeText} numberOfLines={1}>
+              <Text style={[styles.activeBadgeText, { color: isDark ? c.accent.success : '#00795A' }]} numberOfLines={1}>
                 {(activeCheckin as any).venues?.name}
               </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={styles.scanButton}
+            style={[styles.scanButton, { backgroundColor: c.bg.secondary, borderColor: isDark ? 'rgba(124,111,247,0.2)' : 'rgba(108,92,231,0.15)' }]}
             onPress={() => router.push('/(app)/venue/check-in' as any)}
           >
-            <Ionicons name="qr-code-outline" size={22} color={colors.accent.primary} />
+            <Ionicons name="qr-code-outline" size={26} color={c.accent.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -79,148 +177,198 @@ export default function MapScreen() {
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
           provider={PROVIDER_GOOGLE}
-          customMapStyle={DARK_MAP_STYLE}
+          customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
           initialRegion={{
             latitude: location.latitude,
             longitude: location.longitude,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.015,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
           }}
           showsUserLocation
           showsMyLocationButton={false}
           showsCompass={false}
+          onPress={() => setSelectedVenue(null)}
+          onMapReady={() => {
+            setTimeout(() => setMarkersReady(true), 300);
+          }}
         >
-          {venues?.map((venue) => {
-            const ambient = venueAmbient[venue.type] || venueAmbient.other;
-            return (
-              <Marker
+          {markersReady && venues?.map((venue) => (
+              <VenueMarker
                 key={venue.id}
-                coordinate={{
-                  latitude: Number(venue.latitude),
-                  longitude: Number(venue.longitude),
-                }}
-                onPress={() => setSelectedVenue(venue.id)}
-              >
-                <View style={[styles.markerContainer, selectedVenue === venue.id && styles.markerSelected]}>
-                  <View style={[styles.marker, { shadowColor: ambient[0] }]}>
-                    <Text style={styles.markerEmoji}>
-                      {VENUE_EMOJI[venue.type] || '📍'}
-                    </Text>
-                  </View>
-                  {venue.active_checkins > 0 && (
-                    <View style={[styles.markerBadge, shadows.glowSuccess]}>
-                      <Text style={styles.markerBadgeText}>{venue.active_checkins}</Text>
-                    </View>
-                  )}
-                </View>
-              </Marker>
-            );
-          })}
+                venue={venue}
+                isSelected={selectedVenue?.id === venue.id}
+                onPress={handleMarkerPress}
+              />
+          ))}
         </MapView>
       )}
 
-      {/* Bottom gradient */}
-      <LinearGradient
-        colors={['transparent', colors.bg.primary]}
-        style={styles.bottomGradient}
-        pointerEvents="none"
-      />
-
       {/* No venues hint */}
-      {venues && venues.length === 0 && (
+      {venues && venues.length === 0 && !venuesLoading && (
         <View style={styles.emptyOverlay}>
-          <Text style={styles.emptyTitle}>{t('map.noVenues')}</Text>
-          <Text style={styles.emptyHint}>{t('map.noVenuesHint')}</Text>
-        </View>
-      )}
-
-      {/* Scroll hint */}
-      {venues && venues.length > 0 && !activeCheckin && (
-        <View style={styles.tapHintContainer} pointerEvents="none">
-          <Text style={styles.tapHint}>{t('map.scrollVenuesHint')}</Text>
-        </View>
-      )}
-
-      {/* Venue carousel */}
-      {venues && venues.length > 0 && (
-        <View style={styles.carouselContainer}>
-          <FlatList
-            data={venues}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={CARD_WIDTH + 12}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: spacing.xl }}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-              const ambient = venueAmbient[item.type] || venueAmbient.other;
-              return (
-                <TouchableOpacity
-                  style={styles.venueCard}
-                  onPress={() => router.push(`/(app)/venue/${item.id}` as any)}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={[`${ambient[0]}20`, `${ambient[1]}10`]}
-                    style={styles.venueCardGradient}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  >
-                    <View style={styles.venueCardHeader}>
-                      <Text style={styles.venueEmoji}>{VENUE_EMOJI[item.type] || '📍'}</Text>
-                      {item.active_checkins > 0 && (
-                        <View style={styles.liveIndicator}>
-                          <View style={[styles.liveIndicatorDot, shadows.glowSuccess]} />
-                          <Text style={styles.liveIndicatorText}>
-                            {item.active_checkins}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.venueName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.venueType}>
-                      {item.type.replace('_', ' ')}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              );
-            }}
-          />
+          <Text style={[styles.emptyTitle, { color: c.text.primary }]}>{t('map.noVenues')}</Text>
+          <Text style={[styles.emptyHint, { color: c.text.secondary }]}>{t('map.noVenuesHint')}</Text>
         </View>
       )}
 
       {/* My location button */}
       <TouchableOpacity
-        style={[styles.myLocationBtn, shadows.lg]}
+        style={[styles.myLocationBtn, shadows.lg, { backgroundColor: c.bg.secondary, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
         onPress={() => {
           if (location && mapRef.current) {
             mapRef.current.animateToRegion({
               latitude: location.latitude,
               longitude: location.longitude,
-              latitudeDelta: 0.015,
-              longitudeDelta: 0.015,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
             });
           }
         }}
       >
-        <Ionicons name="locate-outline" size={22} color={colors.accent.primary} />
+        <Ionicons name="locate-outline" size={22} color={c.accent.primary} />
       </TouchableOpacity>
+
+      {/* Venue popup bottom sheet */}
+      {selectedVenue && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible={!!selectedVenue}
+          onRequestClose={() => setSelectedVenue(null)}
+        >
+          <Pressable style={styles.sheetBackdrop} onPress={() => setSelectedVenue(null)} />
+          <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 20), backgroundColor: c.bg.secondary, borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }]} />
+
+            {/* Venue header */}
+            <View style={styles.sheetHeader}>
+              <View style={[styles.sheetEmojiWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
+                {selectedVenue.logo_url ? (
+                  <Image source={{ uri: selectedVenue.logo_url }} style={styles.sheetLogo} resizeMode="cover" />
+                ) : (
+                  <Text style={styles.sheetEmoji}>{VENUE_EMOJI[selectedVenue.type] || '📍'}</Text>
+                )}
+              </View>
+              <View style={styles.sheetHeaderInfo}>
+                <Text style={[styles.sheetName, { color: c.text.primary }]} numberOfLines={1}>{selectedVenue.name}</Text>
+                <View style={styles.sheetMeta}>
+                  <Text style={[styles.sheetType, { color: c.text.secondary }]}>{selectedVenue.type.replace('_', ' ')}</Text>
+                  {selectedVenue.active_checkins > 0 && (
+                    <View style={styles.sheetLive}>
+                      <View style={styles.sheetLiveDot} />
+                      <Text style={styles.sheetLiveText}>
+                        {selectedVenue.active_checkins} {t('map.activeNow', { defaultValue: 'active' })}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Address */}
+            {selectedVenue.address && (
+              <View style={styles.sheetRow}>
+                <Ionicons name="location-outline" size={16} color={c.text.tertiary} />
+                <Text style={[styles.sheetAddress, { color: c.text.tertiary }]} numberOfLines={2}>{selectedVenue.address}</Text>
+              </View>
+            )}
+
+            {/* Navigation buttons */}
+            <View style={styles.navRow}>
+              <TouchableOpacity
+                style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(124,111,247,0.1)' : 'rgba(108,92,231,0.08)', borderColor: isDark ? 'rgba(124,111,247,0.2)' : 'rgba(108,92,231,0.15)' }]}
+                onPress={() => {
+                  const lat = Number(selectedVenue.latitude);
+                  const lng = Number(selectedVenue.longitude);
+                  const url = Platform.select({
+                    ios: `maps:?daddr=${lat},${lng}&dirflg=w`,
+                    android: `google.navigation:q=${lat},${lng}&mode=w`,
+                  });
+                  if (url) Linking.openURL(url);
+                }}
+              >
+                <Ionicons name="navigate-outline" size={18} color={c.accent.primary} />
+                <Text style={[styles.navBtnText, { color: c.accent.primary }]}>
+                  {t('common.cancel') === 'Отмена' ? 'Маршрут' : 'Directions'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.navBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+                onPress={() => {
+                  const lat = Number(selectedVenue.latitude);
+                  const lng = Number(selectedVenue.longitude);
+                  const label = encodeURIComponent(selectedVenue.name);
+                  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${label}`);
+                }}
+              >
+                <Ionicons name="map-outline" size={18} color={c.text.secondary} />
+                <Text style={[styles.navBtnText, { color: c.text.secondary }]}>Google Maps</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Description */}
+            {selectedVenue.description && (
+              <Text style={[styles.sheetDesc, { color: c.text.secondary }]} numberOfLines={3}>{selectedVenue.description}</Text>
+            )}
+
+            {/* Actions */}
+            <View style={styles.sheetActions}>
+              {isCheckedInHere ? (
+                <TouchableOpacity
+                  style={styles.sheetBtnCheckedIn}
+                  onPress={() => {
+                    setSelectedVenue(null);
+                    router.push(`/(app)/venue/${selectedVenue.id}` as any);
+                  }}
+                >
+                  <View style={styles.sheetCheckedDot} />
+                  <Text style={styles.sheetBtnCheckedInText}>{t('venue.checkedIn', { defaultValue: 'Checked In' })}</Text>
+                </TouchableOpacity>
+              ) : activeCheckin ? (
+                <View style={[styles.sheetBtnDisabled, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.sheetBtnDisabledText, { color: c.text.tertiary }]}>{t('venue.checkedInElsewhereHint', { defaultValue: 'Checked in elsewhere' })}</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.sheetBtnCheckin, { backgroundColor: c.accent.primary }]}
+                  onPress={handleCheckin}
+                  disabled={checkinMutation.isPending}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                  <Text style={styles.sheetBtnCheckinText}>
+                    {checkinMutation.isPending ? t('common.loading') : t('venue.checkin', { defaultValue: 'Check In' })}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.sheetBtnDetails}
+                onPress={() => {
+                  setSelectedVenue(null);
+                  router.push(`/(app)/venue/${selectedVenue.id}` as any);
+                }}
+              >
+                <Text style={[styles.sheetBtnDetailsText, { color: c.accent.primaryLight }]}>{t('map.viewDetails', { defaultValue: 'View Details' })}</Text>
+                <Ionicons name="chevron-forward" size={16} color={c.accent.primaryLight} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
+
   topBar: {
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl, paddingBottom: spacing.sm,
   },
-  logoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-  },
-  logoIcon: {
-    width: 28, height: 28,
-  },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  logoIcon: { width: 34, height: 34 },
   logo: {
     fontSize: typography.size.headingLg, fontWeight: typography.weight.extrabold,
     color: colors.text.primary, letterSpacing: typography.letterSpacing.heading,
@@ -228,81 +376,22 @@ const styles = StyleSheet.create({
   topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   activeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(0,229,160,0.1)', paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: radius.full, borderWidth: 1, borderColor: 'rgba(0,229,160,0.2)',
-    maxWidth: 160,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.full, borderWidth: 1,
+    maxWidth: 180,
   },
-  liveDot: {
-    width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent.success,
-  },
+  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.accent.success },
   activeBadgeText: {
-    color: colors.accent.success, fontSize: typography.size.bodySm,
+    fontSize: typography.size.bodyMd,
     fontWeight: typography.weight.semibold,
   },
   scanButton: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 50, height: 50, borderRadius: 25,
     backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: 'rgba(124,111,247,0.2)',
   },
-  markerContainer: { alignItems: 'center' },
-  markerSelected: { transform: [{ scale: 1.2 }] },
-  marker: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
-    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 12,
-    elevation: 6,
-  },
-  markerEmoji: { fontSize: 22 },
-  markerBadge: {
-    position: 'absolute', top: -4, right: -4,
-    minWidth: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.accent.success, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  markerBadgeText: {
-    color: '#0D0D1A', fontSize: 10, fontWeight: '800',
-  },
-  bottomGradient: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 200,
-  },
-  carouselContainer: {
-    position: 'absolute', bottom: spacing['4xl'], left: 0, right: 0,
-  },
-  venueCard: {
-    width: CARD_WIDTH, marginRight: 12,
-  },
-  venueCardGradient: {
-    borderRadius: radius['2xl'], padding: spacing.xl,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-    minHeight: 130,
-    justifyContent: 'space-between',
-  },
-  venueCardHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  venueEmoji: { fontSize: 32 },
-  liveIndicator: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(0,229,160,0.15)', paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: radius.full,
-  },
-  liveIndicatorDot: {
-    width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.accent.success,
-  },
-  liveIndicatorText: {
-    color: colors.accent.success, fontSize: typography.size.micro,
-    fontWeight: typography.weight.bold,
-  },
-  venueName: {
-    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
-    color: colors.text.primary, marginBottom: 4,
-  },
-  venueType: {
-    fontSize: typography.size.bodySm, color: colors.text.secondary,
-    textTransform: 'capitalize',
-  },
+
+
   emptyOverlay: {
     position: 'absolute', top: '40%', left: spacing['3xl'], right: spacing['3xl'],
     alignItems: 'center',
@@ -315,18 +404,123 @@ const styles = StyleSheet.create({
     fontSize: typography.size.bodyMd, color: colors.text.secondary,
     textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
   },
-  tapHintContainer: {
-    position: 'absolute', bottom: spacing['4xl'] + 150, alignSelf: 'center',
-  },
-  tapHint: {
-    fontSize: typography.size.bodySm, color: colors.text.tertiary,
-    backgroundColor: 'rgba(13,13,26,0.7)', paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs, borderRadius: radius.sm, overflow: 'hidden',
-  },
+
   myLocationBtn: {
-    position: 'absolute', right: spacing.xl, bottom: 240,
+    position: 'absolute', right: spacing.xl, bottom: 100,
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+
+  // Bottom sheet popup
+  sheetBackdrop: {
+    flex: 1,
+  },
+  sheetContainer: {
+    backgroundColor: colors.bg.secondary,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center', marginBottom: spacing.lg,
+  },
+  sheetHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  sheetEmojiWrap: {
+    width: 52, height: 52, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  sheetEmoji: { fontSize: 28 },
+  sheetLogo: { width: 48, height: 48, borderRadius: 14 },
+  sheetHeaderInfo: { flex: 1 },
+  sheetName: {
+    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  sheetMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 3 },
+  sheetType: {
+    fontSize: typography.size.bodySm, color: colors.text.secondary,
+    textTransform: 'capitalize',
+  },
+  sheetLive: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,229,160,0.1)', paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  sheetLiveDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.accent.success },
+  sheetLiveText: {
+    color: colors.accent.success, fontSize: typography.size.micro || 10,
+    fontWeight: typography.weight.bold,
+  },
+
+  navRow: {
+    flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md,
+  },
+  navBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: 10, borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  navBtnText: {
+    fontSize: typography.size.bodySm, fontWeight: typography.weight.semibold,
+  },
+  sheetRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sheetAddress: {
+    flex: 1, color: colors.text.tertiary, fontSize: typography.size.bodySm,
+    lineHeight: typography.size.bodySm * 1.4,
+  },
+  sheetDesc: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+    lineHeight: typography.size.bodyMd * 1.5, marginBottom: spacing.md,
+  },
+
+  sheetActions: { gap: spacing.sm, marginTop: spacing.sm },
+  sheetBtnCheckin: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.accent.primary, borderRadius: radius.lg,
+    paddingVertical: 14,
+  },
+  sheetBtnCheckinText: {
+    color: '#FFFFFF', fontSize: typography.size.bodyLg,
+    fontWeight: typography.weight.bold,
+  },
+  sheetBtnCheckedIn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: 'rgba(0,229,160,0.1)', borderRadius: radius.lg,
+    paddingVertical: 14, borderWidth: 1, borderColor: 'rgba(0,229,160,0.2)',
+  },
+  sheetCheckedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent.success },
+  sheetBtnCheckedInText: {
+    color: colors.accent.success, fontSize: typography.size.bodyLg,
+    fontWeight: typography.weight.bold,
+  },
+  sheetBtnDisabled: {
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.lg,
+    paddingVertical: 14,
+  },
+  sheetBtnDisabledText: {
+    color: colors.text.tertiary, fontSize: typography.size.bodyMd,
+  },
+  sheetBtnDetails: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: 12,
+  },
+  sheetBtnDetailsText: {
+    color: colors.accent.primaryLight, fontSize: typography.size.bodyMd,
+    fontWeight: typography.weight.semibold,
   },
 });

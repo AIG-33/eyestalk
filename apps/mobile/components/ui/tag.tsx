@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, radius, typography } from '@/theme';
+import { useTheme, typography, radius } from '@/theme';
 
 type Variant = 'intention' | 'venue' | 'filter' | 'status';
 
@@ -12,23 +12,24 @@ interface Props {
 }
 
 export function Tag({ label, variant = 'intention', active, onPress, color }: Props) {
+  const { c } = useTheme();
   const Wrapper = onPress ? TouchableOpacity : View;
 
   const bg = (() => {
-    if (variant === 'filter') return active ? colors.tag.filterActive.bg : colors.tag.filter.bg;
-    if (variant === 'status') return color || colors.accent.primary;
-    if (variant === 'venue') return colors.tag.venue.bg;
-    return colors.tag.intention.bg;
+    if (variant === 'filter') return active ? c.tag.filterActive.bg : c.tag.filter.bg;
+    if (variant === 'status') return color || c.accent.primary;
+    if (variant === 'venue') return c.tag.venue.bg;
+    return c.tag.intention.bg;
   })();
 
   const textColor = (() => {
-    if (variant === 'filter') return active ? colors.tag.filterActive.text : colors.tag.filter.text;
+    if (variant === 'filter') return active ? c.tag.filterActive.text : c.tag.filter.text;
     if (variant === 'status') return '#FFFFFF';
-    if (variant === 'venue') return colors.tag.venue.text;
-    return colors.tag.intention.text;
+    if (variant === 'venue') return c.tag.venue.text;
+    return c.tag.intention.text;
   })();
 
-  const borderColor = variant === 'filter' && !active ? colors.tag.filter.border : 'transparent';
+  const borderColor = variant === 'filter' && !active ? c.tag.filter.border : 'transparent';
 
   return (
     <Wrapper

@@ -1,9 +1,10 @@
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '@/lib/haptics';
-import { colors, component, typography, shadows } from '@/theme';
+import { useTheme, component, typography, shadows } from '@/theme';
 
 const TAB_ICONS: Record<string, { outline: keyof typeof Ionicons.glyphMap; filled: keyof typeof Ionicons.glyphMap }> = {
   map: { outline: 'map-outline', filled: 'map' },
@@ -14,15 +15,16 @@ const TAB_ICONS: Record<string, { outline: keyof typeof Ionicons.glyphMap; fille
 };
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+  const { c } = useTheme();
   const icons = TAB_ICONS[name] || TAB_ICONS.map;
   const iconName = focused ? icons.filled : icons.outline;
-  const iconColor = focused ? colors.accent.primary : colors.text.tertiary;
+  const iconColor = focused ? c.accent.primary : c.text.tertiary;
 
   return (
     <View style={styles.iconContainer}>
       <Ionicons name={iconName} size={focused ? 26 : 24} color={iconColor} />
       {focused && (
-        <View style={[styles.glowDot, shadows.glowPrimary]} />
+        <View style={[styles.glowDot, shadows.glowPrimary, { backgroundColor: c.accent.primary }]} />
       )}
     </View>
   );
@@ -30,21 +32,29 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const { c, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bg.primary,
+          backgroundColor: c.bg.secondary,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.04)',
-          height: component.tabBar.height,
+          borderTopColor: isDark ? 'rgba(124,111,247,0.12)' : 'rgba(0,0,0,0.06)',
+          height: 60 + bottomPadding,
           paddingTop: 8,
-          paddingBottom: 34,
+          paddingBottom: bottomPadding,
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDark ? 0.3 : 0.08,
+          shadowRadius: 12,
         },
-        tabBarActiveTintColor: colors.accent.primary,
-        tabBarInactiveTintColor: colors.text.tertiary,
+        tabBarActiveTintColor: c.accent.primary,
+        tabBarInactiveTintColor: c.text.tertiary,
         tabBarLabelStyle: {
           fontSize: typography.size.micro,
           fontWeight: typography.weight.semibold,
@@ -90,7 +100,6 @@ const styles = StyleSheet.create({
     width: component.tabBar.dotSize,
     height: component.tabBar.dotSize,
     borderRadius: component.tabBar.dotSize / 2,
-    backgroundColor: colors.accent.primary,
     marginTop: 4,
   },
 });

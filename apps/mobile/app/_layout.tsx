@@ -11,6 +11,7 @@ import { useMatchStore } from '@/stores/match.store';
 import { useUIStore } from '@/stores/ui.store';
 import { MatchNotification } from '@/components/ui/match-notification';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { ThemeProvider, useTheme } from '@/theme';
 import '@/i18n';
 
 SplashScreen.preventAutoHideAsync();
@@ -28,10 +29,10 @@ function GlobalListeners({ children }: { children: React.ReactNode }) {
   useAuthListener();
   usePushNotifications();
   useMatchListener();
-  const loadStealth = useUIStore((s) => s.loadStealth);
+  const loadSettings = useUIStore((s) => s.loadSettings);
   const stealthMode = useUIStore((s) => s.stealthMode);
 
-  React.useEffect(() => { loadStealth(); }, []);
+  React.useEffect(() => { loadSettings(); }, []);
 
   return (
     <>
@@ -48,6 +49,11 @@ function GlobalListeners({ children }: { children: React.ReactNode }) {
       )}
     </>
   );
+}
+
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }
 
 function MatchToast() {
@@ -106,15 +112,17 @@ export default function RootLayout() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
-          <GlobalListeners>
-            <StatusBar style="light" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(app)" />
-            </Stack>
-            <MatchToast />
-          </GlobalListeners>
+          <ThemeProvider>
+            <GlobalListeners>
+              <ThemedStatusBar />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(app)" />
+              </Stack>
+              <MatchToast />
+            </GlobalListeners>
+          </ThemeProvider>
         </ErrorBoundary>
       </QueryClientProvider>
     </View>

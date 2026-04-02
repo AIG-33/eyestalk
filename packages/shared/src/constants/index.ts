@@ -63,7 +63,7 @@ export type MessageType = (typeof MESSAGE_TYPES)[number];
 export const CHAT_TYPES = ['venue_general', 'zone', 'direct', 'group'] as const;
 export type ChatType = (typeof CHAT_TYPES)[number];
 
-export const ACTIVITY_TYPES = ['poll', 'contest', 'tournament', 'challenge', 'quest', 'auction'] as const;
+export const ACTIVITY_TYPES = ['poll', 'event', 'auction'] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export const ACTIVITY_STATUSES = ['draft', 'active', 'completed', 'cancelled'] as const;
@@ -107,3 +107,4 @@ export const MICRO_CHAT_MESSAGE_LIMIT = 10;
 export const DEFAULT_GEOFENCE_RADIUS_METERS = 50;
 export const MAX_INTERESTS = 5;
 export const MAX_NICKNAME_LENGTH = 30;
+export const MAX_PROFILE_PHOTOS = 6;

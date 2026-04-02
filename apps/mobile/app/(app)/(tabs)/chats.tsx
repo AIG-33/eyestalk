@@ -5,11 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUserChats } from '@/hooks/use-chat';
 import { Avatar } from '@/components/ui/avatar';
 import { ChatListSkeleton } from '@/components/ui/skeleton';
-import { colors, typography, spacing, radius, shadows } from '@/theme';
+import { colors, typography, spacing, radius, shadows, useTheme } from '@/theme';
 
 export default function ChatsScreen() {
   const { t } = useTranslation();
+  const { c, isDark } = useTheme();
   const { data: chats = [], isLoading } = useUserChats();
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   const renderChat = ({ item }: { item: any }) => {
     const chat = item.chats;
@@ -19,7 +21,7 @@ export default function ChatsScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.chatCard}
+        style={[styles.chatCard, { backgroundColor: c.bg.secondary, borderColor }]}
         activeOpacity={0.7}
         onPress={() => {
           if (isVenueChat) {
@@ -37,7 +39,7 @@ export default function ChatsScreen() {
         />
         <View style={styles.chatInfo}>
           <View style={styles.chatTop}>
-            <Text style={styles.chatName} numberOfLines={1}>{chatName}</Text>
+            <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>{chatName}</Text>
             <Text style={styles.chatTime}>now</Text>
           </View>
           <Text style={styles.chatPreview} numberOfLines={1}>
@@ -49,9 +51,9 @@ export default function ChatsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.bg.primary }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('tabs.chats')}</Text>
+        <Text style={[styles.title, { color: c.text.primary }]}>{t('tabs.chats')}</Text>
       </View>
 
       {isLoading ? (
@@ -70,11 +72,11 @@ export default function ChatsScreen() {
       ) : (
         <View style={styles.centered}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.text.tertiary} />
+            <Ionicons name="chatbubbles-outline" size={64} color={c.text.tertiary} />
           </View>
-          <Text style={styles.emptyText}>{t('chats.empty')}</Text>
-          <Text style={styles.emptySubtext}>{t('chats.emptyHint')}</Text>
-          <View style={styles.stepsContainer}>
+          <Text style={[styles.emptyText, { color: c.text.primary }]}>{t('chats.empty')}</Text>
+          <Text style={[styles.emptySubtext, { color: c.text.secondary }]}>{t('chats.emptyHint')}</Text>
+          <View style={[styles.stepsContainer, { backgroundColor: c.bg.secondary, borderColor }]}>
             <Text style={styles.stepText}>{t('chats.emptyStep1')}</Text>
             <Text style={styles.stepText}>{t('chats.emptyStep2')}</Text>
             <Text style={styles.stepText}>{t('chats.emptyStep3')}</Text>

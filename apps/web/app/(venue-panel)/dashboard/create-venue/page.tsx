@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { VENUE_TYPES } from '@eyestalk/shared/constants';
+import { useVenue } from '@/components/dashboard/venue-context';
 
 const VenueMapPicker = dynamic(
   () => import('@/components/venue-map-picker').then((m) => m.VenueMapPicker),
@@ -25,6 +26,7 @@ export default function CreateVenuePage() {
   const t = useTranslations('venues');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const { addVenue } = useVenue();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -50,7 +52,7 @@ export default function CreateVenuePage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.latitude || !form.longitude) {
+    if (form.latitude === null || form.longitude === null) {
       setError(t('coordsRequired'));
       return;
     }
@@ -58,29 +60,55 @@ export default function CreateVenuePage() {
     setLoading(true);
     setError('');
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Not authenticated. Please sign in again.');
+        setLoading(false);
+        return;
+      }
 
-    const { error: insertError } = await supabase.from('venues').insert({
-      owner_id: user.id,
-      name: form.name,
-      type: form.type,
-      description: form.description || null,
-      address: form.address,
-      latitude: form.latitude,
-      longitude: form.longitude,
-      geofence_radius: form.geofence_radius,
-    });
+      const payload = {
+        owner_id: user.id,
+        name: form.name,
+        type: form.type,
+        description: form.description || null,
+        address: form.address,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        geofence_radius: form.geofence_radius,
+      };
 
-    if (insertError) {
-      setError(insertError.message);
+      console.log('Creating venue:', payload);
+
+      const { data, error: insertError } = await supabase
+        .from('venues')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        setError(`${insertError.message} (code: ${insertError.code})`);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Venue created:', data);
+      addVenue({
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        logo_url: data.logo_url,
+      });
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err: any) {
+      console.error('Unexpected error:', err);
+      setError(err.message || 'Unexpected error');
       setLoading(false);
-      return;
     }
-
-    router.push('/dashboard');
-    router.refresh();
   };
 
   const coordsDisplay = useMemo(() => {

@@ -62,17 +62,53 @@ export const reportSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
+const pollOptionSchema = z.object({
+  key: z.string().min(1).max(100),
+  label: z.string().min(1).max(200),
+});
+
+const pollConfigSchema = z.object({
+  question: z.string().min(1).max(500),
+  options: z.array(pollOptionSchema).min(2).max(20),
+});
+
+const auctionConfigSchema = z.object({
+  item_name: z.string().min(1).max(200),
+  item_description: z.string().max(1000).optional(),
+  starting_price: z.number().int().min(1),
+  min_increment: z.number().int().min(1),
+});
+
+const activityConfigSchema = z.record(z.unknown());
+
 export const createActivitySchema = z.object({
   venue_id: z.string().uuid(),
   zone_id: z.string().uuid().optional().nullable(),
   type: z.enum(ACTIVITY_TYPES),
   title: z.string().min(2).max(200),
   description: z.string().max(1000).optional(),
-  config: z.record(z.unknown()),
+  config: activityConfigSchema,
   max_participants: z.number().int().positive().optional().nullable(),
   token_cost: z.number().int().min(0).default(0),
   starts_at: z.string().datetime(),
   ends_at: z.string().datetime(),
+}).superRefine((data, ctx) => {
+  if (data.type === 'poll') {
+    const result = pollConfigSchema.safeParse(data.config);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        ctx.addIssue({ ...issue, path: ['config', ...issue.path] });
+      });
+    }
+  }
+  if (data.type === 'auction') {
+    const result = auctionConfigSchema.safeParse(data.config);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        ctx.addIssue({ ...issue, path: ['config', ...issue.path] });
+      });
+    }
+  }
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;
@@ -81,4 +117,40 @@ export type CheckinInput = z.infer<typeof checkinSchema>;
 export type MessageInput = z.infer<typeof messageSchema>;
 export type SendInterestInput = z.infer<typeof sendInterestSchema>;
 export type ReportInput = z.infer<typeof reportSchema>;
+export const updateActivitySchema = z.object({
+  title: z.string().min(2).max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  type: z.enum(ACTIVITY_TYPES).optional(),
+  zone_id: z.string().uuid().optional().nullable(),
+  config: activityConfigSchema.optional(),
+  status: z.enum(['draft', 'active', 'completed', 'cancelled'] as const).optional(),
+  max_participants: z.number().int().positive().optional().nullable(),
+  token_cost: z.number().int().min(0).optional(),
+  starts_at: z.string().datetime().optional(),
+  ends_at: z.string().datetime().optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === 'poll' && data.config) {
+    const result = pollConfigSchema.safeParse(data.config);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        ctx.addIssue({ ...issue, path: ['config', ...issue.path] });
+      });
+    }
+  }
+  if (data.type === 'auction' && data.config) {
+    const result = auctionConfigSchema.safeParse(data.config);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        ctx.addIssue({ ...issue, path: ['config', ...issue.path] });
+      });
+    }
+  }
+});
+
+export const placeBidSchema = z.object({
+  amount: z.number().int().min(1),
+});
+
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;
+export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
+export type PlaceBidInput = z.infer<typeof placeBidSchema>;

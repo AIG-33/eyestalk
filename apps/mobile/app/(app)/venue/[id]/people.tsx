@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Dimensions } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Dimensions, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +13,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { ReportModal, useBlockUser } from '@/components/ui/report-modal';
 import { PersonCardSkeleton } from '@/components/ui/skeleton';
-import { colors, typography, spacing, shadows, radius } from '@/theme';
+import { useTheme, typography, spacing, shadows, radius, type ThemeColors } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_GAP = 10;
@@ -24,11 +25,14 @@ const FILTERS = ['all', 'wantToChat', 'lookingForCompany', 'playing', 'lookingFo
 export default function PeopleScreen() {
   const { id: venueId } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const session = useAuthStore((s) => s.session);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState('all');
   const [reportTarget, setReportTarget] = useState<string | null>(null);
   const blockUser = useBlockUser();
+  const { c, isDark } = useTheme();
+  const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ['venue-people', venueId],
@@ -70,8 +74,9 @@ export default function PeopleScreen() {
     const profile = item.profiles;
     return (
       <TouchableOpacity
-        style={styles.gridCard}
+        style={s.gridCard}
         activeOpacity={0.85}
+        onPress={() => router.push(`/(app)/user/${item.user_id}` as any)}
         onLongPress={() => {
           Alert.alert(profile.nickname, '', [
             { text: t('safety.report'), onPress: () => setReportTarget(item.user_id) },
@@ -81,11 +86,11 @@ export default function PeopleScreen() {
         }}
       >
         <LinearGradient
-          colors={[colors.bg.secondary, colors.bg.primary]}
-          style={styles.gridCardInner}
+          colors={[c.bg.secondary, c.bg.primary]}
+          style={s.gridCardInner}
         >
           <Avatar uri={profile.avatar_url} name={profile.nickname} size="lg" status="inVenue" />
-          <Text style={styles.gridName} numberOfLines={1}>{profile.nickname}</Text>
+          <Text style={s.gridName} numberOfLines={1}>{profile.nickname}</Text>
           {item.status_tag && (
             <Tag
               label={t(`status.${item.status_tag}`, { defaultValue: item.status_tag })}
@@ -93,16 +98,16 @@ export default function PeopleScreen() {
             />
           )}
           {profile.interests?.slice(0, 2).map((interest: string) => (
-            <Text key={interest} style={styles.gridInterest}>
+            <Text key={interest} style={s.gridInterest}>
               {t(`interests.${interest}`, { defaultValue: interest })}
             </Text>
           ))}
 
           <TouchableOpacity
-            style={[styles.waveButton, shadows.glowPrimary]}
+            style={[s.waveButton, shadows.glowPrimary]}
             onPress={() => sendInterest.mutate(item.user_id)}
           >
-            <Text style={styles.waveIcon}>👋</Text>
+            <Text style={s.waveIcon}>👋</Text>
           </TouchableOpacity>
         </LinearGradient>
       </TouchableOpacity>
@@ -112,11 +117,11 @@ export default function PeopleScreen() {
   const renderListItem = ({ item }: { item: any }) => {
     const profile = item.profiles;
     return (
-      <View style={styles.listItem}>
+      <View style={s.listItem}>
         <Avatar uri={profile.avatar_url} name={profile.nickname} size="md" status="inVenue" />
-        <View style={styles.listInfo}>
-          <Text style={styles.listName}>{profile.nickname}</Text>
-          <View style={styles.listTags}>
+        <View style={s.listInfo}>
+          <Text style={s.listName}>{profile.nickname}</Text>
+          <View style={s.listTags}>
             {item.status_tag && (
               <Tag
                 label={t(`status.${item.status_tag}`, { defaultValue: item.status_tag })}
@@ -125,9 +130,9 @@ export default function PeopleScreen() {
             )}
           </View>
         </View>
-        <View style={styles.listActions}>
+        <View style={s.listActions}>
           <TouchableOpacity
-            style={styles.listWaveBtn}
+            style={s.listWaveBtn}
             onPress={() => sendInterest.mutate(item.user_id)}
           >
             <Text style={{ fontSize: 20 }}>👋</Text>
@@ -141,7 +146,7 @@ export default function PeopleScreen() {
               ]);
             }}
           >
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.text.tertiary} />
+            <Ionicons name="ellipsis-horizontal" size={20} color={c.text.tertiary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -149,60 +154,67 @@ export default function PeopleScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('venue.people')}</Text>
-        <View style={styles.headerRight}>
-          <Text style={styles.count}>{filteredPeople.length}</Text>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}
+          style={s.backBtn}
+        >
+          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
+        </TouchableOpacity>
+        <Text style={s.title}>{t('venue.people')}</Text>
+        <View style={s.headerRight}>
+          <Text style={s.count}>{filteredPeople.length}</Text>
           <TouchableOpacity
-            style={styles.viewToggle}
+            style={s.viewToggle}
             onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
           >
             <Ionicons
               name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'}
-              size={20} color={colors.text.secondary}
+              size={20} color={c.text.secondary}
             />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Filters */}
-      <FlatList
-        data={FILTERS}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        keyExtractor={(item) => item}
-        renderItem={({ item: f }) => (
+        contentContainerStyle={s.filterRow}
+        style={s.filterScroll}
+      >
+        {FILTERS.map((f) => (
           <Tag
-            label={f === 'all' ? 'All' : t(`status.${f}`, { defaultValue: f })}
+            key={f}
+            label={f === 'all' ? (t('common.cancel') === 'Отмена' ? 'Все' : 'All') : t(`status.${f}`, { defaultValue: f })}
             variant="filter"
             active={filter === f}
             onPress={() => setFilter(f)}
           />
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* People */}
       {/* Wave explanation */}
-      <View style={styles.waveExplain}>
-        <Text style={styles.waveExplainText}>{t('venue.waveExplain')}</Text>
+      <View style={s.waveExplain}>
+        <Text style={s.waveExplainText}>{t('venue.waveExplain')}</Text>
       </View>
 
       {isLoading ? (
-        <View style={styles.gridContainer}>
-          <View style={styles.gridRow}>
+        <View style={s.gridContainer}>
+          <View style={s.gridRow}>
             {[1, 2, 3, 4].map((i) => (
               <PersonCardSkeleton key={i} />
             ))}
           </View>
         </View>
       ) : filteredPeople.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>👀</Text>
-          <Text style={styles.emptyTitle}>{t('people.emptyTitle')}</Text>
-          <Text style={styles.emptyText}>{t('people.emptyHint')}</Text>
+        <View style={s.empty}>
+          <Text style={s.emptyEmoji}>👀</Text>
+          <Text style={s.emptyTitle}>{t('people.emptyTitle')}</Text>
+          <Text style={s.emptyText}>{t('people.emptyHint')}</Text>
         </View>
       ) : viewMode === 'grid' ? (
         <FlatList
@@ -210,15 +222,15 @@ export default function PeopleScreen() {
           numColumns={GRID_COLS}
           keyExtractor={(item: any) => item.id}
           renderItem={renderGridItem}
-          columnWrapperStyle={styles.gridRow}
-          contentContainerStyle={styles.gridContainer}
+          columnWrapperStyle={s.gridRow}
+          contentContainerStyle={s.gridContainer}
         />
       ) : (
         <FlatList
           data={filteredPeople}
           keyExtractor={(item: any) => item.id}
           renderItem={renderListItem}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={s.listContainer}
         />
       )}
 
@@ -233,88 +245,104 @@ export default function PeopleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.primary },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
-  },
-  title: {
-    fontSize: typography.size.headingLg, fontWeight: typography.weight.extrabold,
-    color: colors.text.primary,
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  count: {
-    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
-    color: colors.accent.primary,
-  },
-  viewToggle: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.bg.secondary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  filterRow: { paddingHorizontal: spacing.xl, gap: spacing.sm, marginBottom: spacing.lg },
-  gridContainer: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
-  gridRow: { gap: GRID_GAP, marginBottom: GRID_GAP },
-  gridCard: {
-    width: GRID_ITEM, borderRadius: radius.xl, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  gridCardInner: {
-    alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md,
-    gap: spacing.sm, minHeight: 200,
-  },
-  gridName: {
-    fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  gridInterest: {
-    fontSize: typography.size.bodySm, color: colors.text.tertiary,
-  },
-  waveButton: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center',
-    marginTop: spacing.sm,
-  },
-  waveIcon: { fontSize: 22 },
-  listContainer: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
-  listItem: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.bg.secondary, borderRadius: radius.lg,
-    padding: spacing.lg, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  listInfo: { flex: 1, gap: 4 },
-  listName: {
-    fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  listTags: { flexDirection: 'row', gap: 6 },
-  listActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  listWaveBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(124,111,247,0.15)', alignItems: 'center', justifyContent: 'center',
-  },
-  waveExplain: {
-    marginHorizontal: spacing.xl, marginBottom: spacing.md,
-    backgroundColor: 'rgba(124,111,247,0.06)', borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: 'rgba(124,111,247,0.1)',
-  },
-  waveExplainText: {
-    color: colors.text.secondary, fontSize: typography.size.bodySm,
-    lineHeight: typography.size.bodySm * 1.5, textAlign: 'center',
-  },
-  empty: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['3xl'],
-  },
-  emptyEmoji: { fontSize: 56, marginBottom: spacing.lg },
-  emptyTitle: {
-    color: colors.text.primary, fontSize: typography.size.headingMd,
-    fontWeight: typography.weight.bold, marginBottom: spacing.sm, textAlign: 'center',
-  },
-  emptyText: {
-    color: colors.text.secondary, fontSize: typography.size.bodyMd,
-    textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
-  },
-});
+function createStyles(c: ThemeColors, isDark: boolean) {
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const waveExplainBg = `${c.accent.primary}0F`;
+  const waveExplainBorder = `${c.accent.primary}1A`;
+
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg.primary },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
+      borderBottomWidth: 1, borderBottomColor: borderColorFaint,
+      gap: spacing.sm,
+    },
+    backBtn: {
+      width: 40, height: 40, borderRadius: 20,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: borderColorFaint,
+    },
+    title: {
+      flex: 1,
+      fontSize: typography.size.headingMd, fontWeight: typography.weight.extrabold,
+      color: c.text.primary,
+    },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    count: {
+      fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+      color: c.accent.primary,
+    },
+    viewToggle: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: c.bg.secondary, alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1, borderColor: borderColor,
+    },
+    filterScroll: { flexGrow: 0, marginBottom: spacing.md },
+    filterRow: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, gap: spacing.sm },
+    gridContainer: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
+    gridRow: { gap: GRID_GAP, marginBottom: GRID_GAP },
+    gridCard: {
+      width: GRID_ITEM, borderRadius: radius.xl, overflow: 'hidden',
+      borderWidth: 1, borderColor: borderColor,
+    },
+    gridCardInner: {
+      alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md,
+      gap: spacing.sm, minHeight: 200,
+    },
+    gridName: {
+      fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
+      color: c.text.primary,
+    },
+    gridInterest: {
+      fontSize: typography.size.bodySm, color: c.text.tertiary,
+    },
+    waveButton: {
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: c.accent.primary, alignItems: 'center', justifyContent: 'center',
+      marginTop: spacing.sm,
+    },
+    waveIcon: { fontSize: 22 },
+    listContainer: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
+    listItem: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      backgroundColor: c.bg.secondary, borderRadius: radius.lg,
+      padding: spacing.lg, marginBottom: spacing.sm,
+      borderWidth: 1, borderColor: borderColor,
+    },
+    listInfo: { flex: 1, gap: 4 },
+    listName: {
+      fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
+      color: c.text.primary,
+    },
+    listTags: { flexDirection: 'row', gap: 6 },
+    listActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    listWaveBtn: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: c.glow.primarySubtle, alignItems: 'center', justifyContent: 'center',
+    },
+    waveExplain: {
+      marginHorizontal: spacing.xl, marginBottom: spacing.md,
+      backgroundColor: waveExplainBg, borderRadius: radius.md,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+      borderWidth: 1, borderColor: waveExplainBorder,
+    },
+    waveExplainText: {
+      color: c.text.secondary, fontSize: typography.size.bodySm,
+      lineHeight: typography.size.bodySm * 1.5, textAlign: 'center',
+    },
+    empty: {
+      flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['3xl'],
+    },
+    emptyEmoji: { fontSize: 56, marginBottom: spacing.lg },
+    emptyTitle: {
+      color: c.text.primary, fontSize: typography.size.headingMd,
+      fontWeight: typography.weight.bold, marginBottom: spacing.sm, textAlign: 'center',
+    },
+    emptyText: {
+      color: c.text.secondary, fontSize: typography.size.bodyMd,
+      textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
+    },
+  });
+}

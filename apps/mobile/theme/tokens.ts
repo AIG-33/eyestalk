@@ -66,6 +66,69 @@ export const colors = {
   },
 } as const;
 
+export const lightColors = {
+  bg: {
+    primary: '#F5F5FA',
+    secondary: '#FFFFFF',
+    tertiary: '#EEEEF5',
+    surface: '#DDDDE8',
+  },
+
+  text: {
+    primary: '#1A1A2E',
+    secondary: '#555570',
+    tertiary: '#8888A0',
+  },
+
+  accent: {
+    primary: '#6C5CE7',
+    primaryLight: '#7C6FF7',
+    success: '#00C98D',
+    pink: '#FF6B9D',
+    warning: '#E6B800',
+    error: '#E63946',
+    info: '#00B4D8',
+  },
+
+  glow: {
+    primary: 'rgba(108,92,231,0.2)',
+    primarySubtle: 'rgba(108,92,231,0.08)',
+    success: 'rgba(0,201,141,0.2)',
+    pink: 'rgba(255,107,157,0.2)',
+    warning: 'rgba(230,184,0,0.15)',
+    error: 'rgba(230,57,70,0.2)',
+    info: 'rgba(0,180,216,0.15)',
+  },
+
+  gradient: {
+    primary: ['#6C5CE7', '#A29BFE'] as const,
+    match: ['#FF6B9D', '#6C5CE7'] as const,
+    premium: ['#E6B800', '#FF6B9D'] as const,
+    surface: ['#FFFFFF', '#F5F5FA'] as const,
+  },
+
+  glass: {
+    bg: 'rgba(0,0,0,0.03)',
+    border: 'rgba(0,0,0,0.08)',
+    borderHover: 'rgba(0,0,0,0.12)',
+  },
+
+  tag: {
+    intention: { bg: 'rgba(108,92,231,0.1)', text: '#6C5CE7' },
+    venue: { bg: 'rgba(0,201,141,0.1)', text: '#00C98D' },
+    filter: { bg: 'transparent', text: '#555570', border: '#DDDDE8' },
+    filterActive: { bg: '#6C5CE7', text: '#FFFFFF' },
+  },
+
+  status: {
+    online: '#00C98D',
+    inVenue: '#6C5CE7',
+    away: '#8888A0',
+  },
+} as const;
+
+export type ThemeColors = typeof colors;
+
 // ─── Venue Ambient Palettes ──────────────────────────────
 export const venueAmbient: Record<string, readonly [string, string]> = {
   nightclub: ['#7C6FF7', '#FF6B9D'],
