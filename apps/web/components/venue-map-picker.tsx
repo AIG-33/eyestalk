@@ -33,7 +33,7 @@ export function VenueMapPicker({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const updateMarker = useCallback((lat: number, lng: number) => {
     const map = mapRef.current;
