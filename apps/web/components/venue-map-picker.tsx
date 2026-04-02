@@ -96,13 +96,14 @@ export function VenueMapPicker({
       maxZoom: 20,
     }).addTo(map);
 
-    const brand = L.control({ position: 'bottomleft' });
-    brand.onAdd = () => {
-      const div = L.DomUtil.create('div');
-      div.innerHTML = '<span style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:600;letter-spacing:0.5px;">EyesTalk</span>';
-      return div;
-    };
-    brand.addTo(map);
+    const BrandControl = L.Control.extend({
+      onAdd() {
+        const div = L.DomUtil.create('div');
+        div.innerHTML = '<span style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:600;letter-spacing:0.5px;">EyesTalk</span>';
+        return div;
+      },
+    });
+    new BrandControl({ position: 'bottomleft' }).addTo(map);
 
     map.on('click', (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
