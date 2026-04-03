@@ -182,12 +182,32 @@ export default function VenueChatScreen() {
   const isAdminMessage = (msg: Message) =>
     venueInfo?.owner_id != null && msg.sender_id === venueInfo.owner_id;
 
+  const isAnnouncement = (msg: Message) => msg.type === 'announcement';
+
   const renderMessage = ({ item }: { item: Message }) => {
     const own = isOwnMessage(item);
     const admin = isAdminMessage(item);
+    const announcement = isAnnouncement(item);
     const senderName = Array.isArray(item.sender)
       ? item.sender[0]?.nickname
       : (item.sender as any)?.nickname;
+
+    if (announcement) {
+      return (
+        <View style={s.announcementWrap}>
+          <View style={s.announcementBubble}>
+            <View style={s.announcementHeader}>
+              <Text style={s.announcementIcon}>📢</Text>
+              <Text style={s.announcementLabel}>{venueInfo?.name || 'Venue'}</Text>
+            </View>
+            <Text style={s.announcementText}>{item.content}</Text>
+            <Text style={s.announcementTime}>
+              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
+        </View>
+      );
+    }
 
     return (
       <TouchableOpacity
@@ -427,6 +447,43 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     },
     sendButtonDisabled: {
       backgroundColor: isDark ? 'rgba(124,111,247,0.3)' : 'rgba(108,92,231,0.25)',
+    },
+
+    announcementWrap: {
+      marginBottom: spacing.md,
+      alignItems: 'center',
+    },
+    announcementBubble: {
+      width: '95%',
+      borderRadius: radius.xl,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: isDark ? 'rgba(255,183,77,0.08)' : 'rgba(255,152,0,0.06)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(255,152,0,0.15)',
+    },
+    announcementHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      marginBottom: 4,
+    },
+    announcementIcon: { fontSize: 14 },
+    announcementLabel: {
+      color: isDark ? '#FFB74D' : '#E65100',
+      fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.bold,
+    },
+    announcementText: {
+      color: c.text.primary,
+      fontSize: typography.size.bodyMd,
+      lineHeight: typography.size.bodyMd * 1.45,
+    },
+    announcementTime: {
+      color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+      fontSize: 10,
+      alignSelf: 'flex-end' as const,
+      marginTop: 4,
     },
   });
 }

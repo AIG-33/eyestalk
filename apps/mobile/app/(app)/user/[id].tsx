@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity, Dimensions, StyleSheet,
-  Modal, Pressable, ActivityIndicator, Alert, Animated, PanResponder,
+  Modal, Pressable, ActivityIndicator, Alert, Animated, PanResponder, Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +37,7 @@ export default function UserProfileScreen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, nickname, age_range, avatar_url, interests, is_verified')
+        .select('id, nickname, age_range, avatar_url, bio, interests, is_verified, industry, hobbies, favorite_movie, favorite_band, about_me, instagram, telegram, linkedin')
         .eq('id', userId)
         .single();
       if (error) throw error;
@@ -143,6 +143,102 @@ export default function UserProfileScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* About & Details */}
+      {(profile?.about_me || profile?.bio || profile?.industry || profile?.hobbies || profile?.favorite_movie || profile?.favorite_band) && (
+        <View style={s.infoSection}>
+          {(profile?.about_me || profile?.bio) && (
+            <View style={s.infoBlock}>
+              <Text style={s.sectionTitle}>{isRu ? 'О себе' : 'About'}</Text>
+              <Text style={s.infoText}>{profile.about_me || profile.bio}</Text>
+            </View>
+          )}
+          {profile?.industry && (
+            <View style={s.infoRow}>
+              <Ionicons name="briefcase-outline" size={18} color={c.text.tertiary} />
+              <View style={s.infoRowContent}>
+                <Text style={s.infoRowLabel}>{isRu ? 'Сфера деятельности' : 'Industry'}</Text>
+                <Text style={s.infoRowValue}>{profile.industry}</Text>
+              </View>
+            </View>
+          )}
+          {profile?.hobbies && (
+            <View style={s.infoRow}>
+              <Ionicons name="heart-outline" size={18} color={c.text.tertiary} />
+              <View style={s.infoRowContent}>
+                <Text style={s.infoRowLabel}>{isRu ? 'Хобби' : 'Hobbies'}</Text>
+                <Text style={s.infoRowValue}>{profile.hobbies}</Text>
+              </View>
+            </View>
+          )}
+          {profile?.favorite_movie && (
+            <View style={s.infoRow}>
+              <Ionicons name="film-outline" size={18} color={c.text.tertiary} />
+              <View style={s.infoRowContent}>
+                <Text style={s.infoRowLabel}>{isRu ? 'Любимый фильм' : 'Favorite movie'}</Text>
+                <Text style={s.infoRowValue}>{profile.favorite_movie}</Text>
+              </View>
+            </View>
+          )}
+          {profile?.favorite_band && (
+            <View style={s.infoRow}>
+              <Ionicons name="musical-notes-outline" size={18} color={c.text.tertiary} />
+              <View style={s.infoRowContent}>
+                <Text style={s.infoRowLabel}>{isRu ? 'Любимая группа' : 'Favorite band'}</Text>
+                <Text style={s.infoRowValue}>{profile.favorite_band}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Social Links */}
+      {(profile?.instagram || profile?.telegram || profile?.linkedin) && (
+        <View style={s.infoSection}>
+          <Text style={s.sectionTitle}>{isRu ? 'Соцсети' : 'Social'}</Text>
+          {profile?.instagram && (
+            <TouchableOpacity
+              style={s.socialLink}
+              onPress={() => {
+                const handle = profile.instagram!.replace(/^@/, '');
+                Linking.openURL(`https://instagram.com/${handle}`);
+              }}
+            >
+              <Ionicons name="logo-instagram" size={20} color="#E1306C" />
+              <Text style={s.socialLinkText}>{profile.instagram}</Text>
+              <Ionicons name="open-outline" size={14} color={c.text.tertiary} />
+            </TouchableOpacity>
+          )}
+          {profile?.telegram && (
+            <TouchableOpacity
+              style={s.socialLink}
+              onPress={() => {
+                const handle = profile.telegram!.replace(/^@/, '');
+                Linking.openURL(`https://t.me/${handle}`);
+              }}
+            >
+              <Ionicons name="paper-plane-outline" size={20} color="#0088CC" />
+              <Text style={s.socialLinkText}>{profile.telegram}</Text>
+              <Ionicons name="open-outline" size={14} color={c.text.tertiary} />
+            </TouchableOpacity>
+          )}
+          {profile?.linkedin && (
+            <TouchableOpacity
+              style={s.socialLink}
+              onPress={() => {
+                const url = profile.linkedin!.startsWith('http')
+                  ? profile.linkedin!
+                  : `https://linkedin.com/in/${profile.linkedin}`;
+                Linking.openURL(url);
+              }}
+            >
+              <Ionicons name="logo-linkedin" size={20} color="#0A66C2" />
+              <Text style={s.socialLinkText}>{profile.linkedin}</Text>
+              <Ionicons name="open-outline" size={14} color={c.text.tertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Photos */}
       {(publicPhotos.length > 0 || visiblePrivatePhotos.length > 0 || hiddenCount > 0) && (
@@ -325,6 +421,38 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
       justifyContent: 'center', paddingHorizontal: spacing['3xl'],
     },
+    infoSection: {
+      paddingHorizontal: spacing.xl, marginBottom: spacing.xl,
+    },
+    infoBlock: { marginBottom: spacing.lg },
+    infoText: {
+      fontSize: typography.size.bodyMd, color: c.text.secondary,
+      lineHeight: typography.size.bodyMd * 1.6,
+    },
+    infoRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1, borderBottomColor: borderColor,
+    },
+    infoRowContent: { flex: 1 },
+    infoRowLabel: {
+      fontSize: typography.size.bodySm, color: c.text.tertiary,
+      marginBottom: 2,
+    },
+    infoRowValue: {
+      fontSize: typography.size.bodyMd, color: c.text.primary,
+      fontWeight: typography.weight.medium,
+    },
+    socialLink: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1, borderBottomColor: borderColor,
+    },
+    socialLinkText: {
+      flex: 1, fontSize: typography.size.bodyMd, color: c.text.primary,
+      fontWeight: typography.weight.medium,
+    },
+
     photosSection: { paddingHorizontal: spacing.xl },
     sectionTitle: {
       fontSize: typography.size.label, fontWeight: typography.weight.semibold,

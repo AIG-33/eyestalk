@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
-import { CHECKIN_REWARD_TOKENS, CHECKIN_DURATION_HOURS } from '@eyestalk/shared/constants';
+import { CHECKIN_REWARD_TOKENS, CHECKIN_DURATION_HOURS, CHECKIN_REWARD_COOLDOWN_HOURS } from '@eyestalk/shared/constants';
 
 const checkinSchema = z.object({
   venue_id: z.string().uuid(),
@@ -78,6 +78,20 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + CHECKIN_DURATION_HOURS);
 
+  const cooldownCutoff = new Date();
+  cooldownCutoff.setHours(cooldownCutoff.getHours() - CHECKIN_REWARD_COOLDOWN_HOURS);
+
+  const { data: recentRewarded } = await admin
+    .from('token_transactions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('type', 'checkin_reward')
+    .gte('created_at', cooldownCutoff.toISOString())
+    .limit(1);
+
+  const eligibleForReward = !recentRewarded || recentRewarded.length === 0;
+  const tokensEarned = eligibleForReward ? CHECKIN_REWARD_TOKENS : 0;
+
   const { data: checkin, error: checkinError } = await admin
     .from('checkins')
     .insert({
@@ -85,7 +99,7 @@ export async function POST(request: NextRequest) {
       venue_id,
       method: qr_code ? 'qr' : 'geofence',
       status: 'active',
-      tokens_earned: CHECKIN_REWARD_TOKENS,
+      tokens_earned: tokensEarned,
       expires_at: expiresAt.toISOString(),
     })
     .select()
@@ -95,17 +109,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: checkinError.message }, { status: 500 });
   }
 
-  await admin.rpc('add_tokens', {
-    p_user_id: user.id,
-    p_amount: CHECKIN_REWARD_TOKENS,
-    p_type: 'checkin_reward',
-    p_venue_id: venue_id,
-    p_description: `Check-in at ${venue.name}`,
-  });
+  if (eligibleForReward) {
+    await admin.rpc('add_tokens', {
+      p_user_id: user.id,
+      p_amount: CHECKIN_REWARD_TOKENS,
+      p_type: 'checkin_reward',
+      p_venue_id: venue_id,
+      p_description: `Check-in at ${venue.name}`,
+    });
+  }
+
+  checkAchievementsAsync(admin, user.id);
 
   return NextResponse.json({
     checkin,
-    tokens_earned: CHECKIN_REWARD_TOKENS,
+    tokens_earned: tokensEarned,
+    reward_cooldown: !eligibleForReward,
   });
 }
 
@@ -125,6 +144,23 @@ export async function GET() {
     .single();
 
   return NextResponse.json({ checkin: data });
+}
+
+async function checkAchievementsAsync(admin: any, userId: string) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      await fetch(`${supabaseUrl}/functions/v1/check-achievements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+      }).catch(() => {});
+    }
+  } catch {}
 }
 
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {

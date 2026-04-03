@@ -12,6 +12,8 @@ const navItems = [
   { href: '/dashboard', icon: '📊', labelKey: 'title', hintKey: 'titleHint' },
   { href: '/dashboard/analytics', icon: '📈', labelKey: 'analytics', hintKey: 'analyticsHint' },
   { href: '/dashboard/activities', icon: '🎯', labelKey: 'activities', hintKey: 'activitiesHint' },
+  { href: '/dashboard/announcements', icon: '📢', labelKey: 'announcements', hintKey: 'announcementsHint' },
+  { href: '/dashboard/loyalty', icon: '🏆', labelKey: 'loyalty', hintKey: 'loyaltyHint' },
   { href: '/dashboard/moderation', icon: '🛡️', labelKey: 'moderation', hintKey: 'moderationHint' },
   { href: '/dashboard/qr-codes', icon: '📱', labelKey: 'qrCodes', hintKey: 'qrCodesHint' },
   { href: '/dashboard/live-screen', icon: '📺', labelKey: 'liveScreen', hintKey: 'liveScreenHint' },
@@ -170,9 +172,12 @@ export function DashboardSidebar() {
 }
 
 const VENUE_EMOJI: Record<string, string> = {
-  karaoke: '🎤', nightclub: '🪩', sports_bar: '⚽', bowling: '🎳',
-  billiards: '🎱', hookah: '💨', board_games: '🎲', arcade: '🕹️',
-  standup: '🎭', live_music: '🎵', other: '📍',
+  restaurant: '🍽️', cafe: '☕', bar: '🍸', nightclub: '🪩',
+  sports_bar: '⚽', karaoke: '🎤', gym: '💪', coworking: '💻',
+  beauty_salon: '💅', hotel: '🏨', lounge: '🛋️', event_space: '🎪',
+  food_court: '🍔', bowling: '🎳', billiards: '🎱', hookah: '💨',
+  board_games: '🎲', arcade: '🕹️', standup: '🎭', live_music: '🎵',
+  other: '📍',
 };
 
 function getVenueEmoji(type: string): string {

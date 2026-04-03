@@ -81,7 +81,27 @@ export async function POST(request: NextRequest) {
       .eq('id', reverse.id);
   }
 
+  // Fire-and-forget achievement check
+  triggerAchievementCheck(user.id);
+
   return NextResponse.json({ interest, is_mutual: isMutual });
+}
+
+async function triggerAchievementCheck(userId: string) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      fetch(`${supabaseUrl}/functions/v1/check-achievements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+      }).catch(() => {});
+    }
+  } catch {}
 }
 
 export async function GET() {

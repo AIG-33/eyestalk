@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -186,6 +186,7 @@ export default function ProfileScreen() {
         <MenuItem icon="images-outline" label={i18n.language === 'ru' ? 'Мои фото' : 'My Photos'} hint={i18n.language === 'ru' ? 'Загрузите дополнительные фото' : 'Upload additional photos'} value={`${photos.length}`} onPress={() => router.push('/(app)/my-photos' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="create-outline" label={t('profile.editProfile')} hint={t('profile.editProfileHint')} onPress={() => router.push('/(app)/edit-profile' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="wallet-outline" label={t('profile.tokens')} hint={t('profile.tokenBalanceHint')} value={`${profile?.token_balance || 0}`} onPress={() => router.push('/(app)/tokens' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="trophy-outline" label={t('achievements.title', { defaultValue: i18n.language === 'ru' ? 'Достижения' : 'Achievements' })} hint={t('achievements.profileHint', { defaultValue: i18n.language === 'ru' ? 'Бейджи, стрики и прогресс' : 'Badges, streaks, and progress' })} onPress={() => router.push('/(app)/achievements' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem
           icon={isDark ? 'moon-outline' : 'sunny-outline'}
           label={i18n.language === 'ru' ? 'Тема' : 'Theme'}
@@ -195,6 +196,10 @@ export default function ProfileScreen() {
         />
         <MenuItem icon="globe-outline" label={t('profile.language')} hint={t('profile.languageHint')} value={i18n.language === 'ru' ? 'Русский' : 'English'} onPress={toggleLanguage} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="settings-outline" label={i18n.language === 'ru' ? 'Настройки' : 'Settings'} onPress={() => router.push('/(app)/settings' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="business-outline" label={t('profile.createVenue')} hint={t('profile.createVenueHint')} onPress={() => {
+          const baseUrl = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/api\/v1\/?$/, '');
+          Linking.openURL(`${baseUrl}/dashboard/create-venue`);
+        }} c={c} borderColor={borderColorFaint} />
       </View>
 
       <TouchableOpacity

@@ -75,10 +75,25 @@ export function useSendMessage(chatId: string) {
   });
 }
 
+export interface UserChat {
+  chat_id: string;
+  chats: {
+    id: string;
+    venue_id: string;
+    type: string;
+    name: string | null;
+    is_active: boolean;
+    created_at: string;
+    venues: { name: string; type: string } | null;
+  };
+  peer: { nickname: string; avatar_url: string | null } | null;
+  last_message: { content: string; created_at: string; sender_id: string; type: string } | null;
+}
+
 export function useUserChats() {
   const session = useAuthStore((s) => s.session);
 
-  return useQuery({
+  return useQuery<UserChat[]>({
     queryKey: ['chats'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -87,7 +102,7 @@ export function useUserChats() {
           chat_id,
           chats!inner(
             id, venue_id, type, name, is_active, created_at,
-            venues(name)
+            venues(name, type)
           )
         `)
         .eq('user_id', session!.user.id)
@@ -95,29 +110,48 @@ export function useUserChats() {
 
       if (error) throw error;
       const items = data || [];
+      if (!items.length) return [];
 
-      const directChats = items.filter((i: any) => i.chats?.type === 'direct');
-      if (directChats.length > 0) {
-        const chatIds = directChats.map((i: any) => i.chat_id);
-        const { data: peers } = await supabase
+      const allChatIds = items.map((i: any) => i.chat_id);
+
+      const [peersResult, lastMsgsResult] = await Promise.all([
+        supabase
           .from('chat_participants')
           .select('chat_id, user_id, profiles:user_id(nickname, avatar_url)')
-          .in('chat_id', chatIds)
+          .in('chat_id', allChatIds)
           .neq('user_id', session!.user.id)
-          .is('left_at', null);
+          .is('left_at', null),
+        supabase
+          .from('messages')
+          .select('chat_id, content, created_at, sender_id, type')
+          .in('chat_id', allChatIds)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false }),
+      ]);
 
-        const peerMap: Record<string, any> = {};
-        (peers || []).forEach((p: any) => {
-          peerMap[p.chat_id] = p.profiles;
-        });
+      const peerMap: Record<string, any> = {};
+      (peersResult.data || []).forEach((p: any) => {
+        if (!peerMap[p.chat_id]) peerMap[p.chat_id] = p.profiles;
+      });
 
-        return items.map((item: any) => ({
-          ...item,
-          peer: peerMap[item.chat_id] || null,
-        }));
-      }
+      const lastMsgMap: Record<string, any> = {};
+      (lastMsgsResult.data || []).forEach((m: any) => {
+        if (!lastMsgMap[m.chat_id]) lastMsgMap[m.chat_id] = m;
+      });
 
-      return items;
+      const enriched = items.map((item: any) => ({
+        ...item,
+        peer: peerMap[item.chat_id] || null,
+        last_message: lastMsgMap[item.chat_id] || null,
+      }));
+
+      enriched.sort((a: any, b: any) => {
+        const aTime = a.last_message?.created_at || a.chats?.created_at || '';
+        const bTime = b.last_message?.created_at || b.chats?.created_at || '';
+        return bTime.localeCompare(aTime);
+      });
+
+      return enriched as UserChat[];
     },
     enabled: !!session,
   });

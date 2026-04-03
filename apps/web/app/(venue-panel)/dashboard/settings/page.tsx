@@ -85,62 +85,66 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
+  const [logoError, setLogoError] = useState<string | null>(null);
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !venue) return;
 
     setUploadingLogo(true);
-    const supabase = createClient();
-    const ext = file.name.split('.').pop() || 'png';
-    const filePath = `${venue.id}/logo.${ext}`;
+    setLogoError(null);
 
-    const { error: uploadError } = await supabase.storage
-      .from('venue-logos')
-      .upload(filePath, file, { contentType: file.type, upsert: true });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    if (uploadError) {
-      console.error('Logo upload error:', uploadError);
+      const res = await fetch(`/api/v1/venue-admin/${venue.id}`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      setLogoUrl(data.logo_url);
+      updateVenue(venue.id, { logo_url: data.logo_url });
+    } catch (err: any) {
+      console.error('Logo upload error:', err);
+      setLogoError(err.message || 'Upload failed');
+    } finally {
       setUploadingLogo(false);
-      return;
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('venue-logos')
-      .getPublicUrl(filePath);
-
-    const newUrl = `${publicUrl}?t=${Date.now()}`;
-
-    await supabase.from('venues')
-      .update({ logo_url: newUrl })
-      .eq('id', venue.id);
-
-    setLogoUrl(newUrl);
-    updateVenue(venue.id, { logo_url: newUrl });
-    setUploadingLogo(false);
   };
 
   const handleLogoRemove = async () => {
     if (!venue) return;
     setUploadingLogo(true);
-    const supabase = createClient();
+    setLogoError(null);
 
-    const { data: files } = await supabase.storage
-      .from('venue-logos')
-      .list(venue.id);
+    try {
+      const res = await fetch(`/api/v1/venue-admin/${venue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove_logo' }),
+      });
 
-    if (files && files.length > 0) {
-      await supabase.storage
-        .from('venue-logos')
-        .remove(files.map((f) => `${venue.id}/${f.name}`));
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Remove failed');
+      }
+
+      setLogoUrl(null);
+      updateVenue(venue.id, { logo_url: null });
+    } catch (err: any) {
+      console.error('Logo remove error:', err);
+      setLogoError(err.message || 'Remove failed');
+    } finally {
+      setUploadingLogo(false);
     }
-
-    await supabase.from('venues')
-      .update({ logo_url: null })
-      .eq('id', venue.id);
-
-    setLogoUrl(null);
-    updateVenue(venue.id, { logo_url: null });
-    setUploadingLogo(false);
   };
 
   const handleDelete = async () => {
@@ -304,6 +308,11 @@ export default function SettingsPage() {
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
               JPG, PNG, WebP · max 2 MB
             </p>
+            {logoError && (
+              <p className="text-xs font-medium" style={{ color: 'var(--accent-error, #ef4444)' }}>
+                {logoError}
+              </p>
+            )}
           </div>
         </div>
       </div>

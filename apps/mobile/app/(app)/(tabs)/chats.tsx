@@ -1,100 +1,200 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useMemo } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useUserChats } from '@/hooks/use-chat';
+import { useUserChats, type UserChat } from '@/hooks/use-chat';
+import { useActiveCheckin } from '@/hooks/use-checkin';
+import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/avatar';
 import { ChatListSkeleton } from '@/components/ui/skeleton';
-import { colors, typography, spacing, radius, shadows, useTheme } from '@/theme';
+import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
+
+const VENUE_EMOJI: Record<string, string> = {
+  restaurant: '🍽️', cafe: '☕', bar: '🍸', nightclub: '🪩',
+  sports_bar: '⚽', karaoke: '🎤', gym: '💪', coworking: '💻',
+  beauty_salon: '💅', hotel: '🏨', lounge: '🛋️', event_space: '🎪',
+  food_court: '🍔', bowling: '🎳', billiards: '🎱', hookah: '💨',
+  board_games: '🎲', arcade: '🕹️', standup: '🎭', live_music: '🎵',
+  other: '📍',
+};
 
 export default function ChatsScreen() {
   const { t } = useTranslation();
   const { c, isDark } = useTheme();
+  const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const { data: chats = [], isLoading } = useUserChats();
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const { data: activeCheckin } = useActiveCheckin();
+  const session = useAuthStore((st) => st.session);
+  const myId = session?.user.id;
 
-  const renderChat = ({ item }: { item: any }) => {
+  const sections = useMemo(() => {
+    const venueChats: UserChat[] = [];
+    const directActive: UserChat[] = [];
+    const directOther: UserChat[] = [];
+
+    for (const chat of chats) {
+      const type = chat.chats?.type;
+      if (type === 'venue_general') {
+        venueChats.push(chat);
+      } else if (type === 'direct') {
+        const isAtSameVenue = activeCheckin &&
+          chat.chats?.venue_id === activeCheckin.venue_id;
+        if (isAtSameVenue) {
+          directActive.push(chat);
+        } else {
+          directOther.push(chat);
+        }
+      } else {
+        directOther.push(chat);
+      }
+    }
+
+    const result: { title: string; key: string; data: UserChat[] }[] = [];
+
+    if (directActive.length > 0) {
+      result.push({
+        title: t('chats.chatSections.active'),
+        key: 'active',
+        data: directActive,
+      });
+    }
+    if (directOther.length > 0) {
+      result.push({
+        title: t('chats.chatSections.recent'),
+        key: 'recent',
+        data: directOther,
+      });
+    }
+    if (venueChats.length > 0) {
+      result.push({
+        title: t('venue.chat'),
+        key: 'venue',
+        data: venueChats,
+      });
+    }
+
+    return result;
+  }, [chats, activeCheckin, t]);
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diffDays === 1) return t('common.yesterday', { defaultValue: 'Yesterday' });
+    if (diffDays < 7) {
+      return d.toLocaleDateString([], { weekday: 'short' });
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const getPreview = (chat: UserChat): string => {
+    const msg = chat.last_message;
+    if (!msg) return '';
+    if (msg.type === 'announcement') return '📢 ' + msg.content;
+    if (msg.type === 'system') return msg.content;
+    const isOwn = msg.sender_id === myId;
+    const prefix = isOwn ? (t('common.you', { defaultValue: 'You' }) + ': ') : '';
+    return prefix + msg.content;
+  };
+
+  const handlePress = (item: UserChat) => {
     const chat = item.chats;
+    if (chat?.type === 'venue_general') {
+      router.push(`/(app)/venue/${chat.venue_id}/chat` as any);
+    } else {
+      router.push(`/(app)/chat/${chat.id}` as any);
+    }
+  };
+
+  const renderItem = ({ item }: { item: UserChat }) => {
+    const chat = item.chats;
+    const isVenue = chat?.type === 'venue_general';
     const venueName = chat?.venues?.name || '';
-    const isVenueChat = chat?.type === 'venue_general';
-    const isDirectChat = chat?.type === 'direct';
+    const venueType = (chat?.venues as any)?.type || 'other';
+    const preview = getPreview(item);
+    const time = item.last_message?.created_at || chat?.created_at;
+
+    if (isVenue) {
+      return (
+        <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={() => handlePress(item)}>
+          <View style={s.venueIconWrap}>
+            <Text style={s.venueEmoji}>{VENUE_EMOJI[venueType] || '📍'}</Text>
+          </View>
+          <View style={s.body}>
+            <View style={s.topRow}>
+              <Text style={s.name} numberOfLines={1}>{venueName}</Text>
+              {time && <Text style={s.time}>{formatTime(time)}</Text>}
+            </View>
+            <Text style={s.preview} numberOfLines={1}>
+              {preview || t('venue.chatHint')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     const peer = item.peer;
-
-    const displayName = isDirectChat
-      ? (peer?.nickname || 'Chat')
-      : venueName;
-
     return (
-      <TouchableOpacity
-        style={[styles.chatCard, { backgroundColor: c.bg.secondary, borderColor }]}
-        activeOpacity={0.7}
-        onPress={() => {
-          if (isVenueChat) {
-            router.push(`/(app)/venue/${chat.venue_id}/chat` as any);
-          } else {
-            router.push(`/(app)/chat/${chat.id}` as any);
-          }
-        }}
-      >
+      <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={() => handlePress(item)}>
         <Avatar
-          uri={isDirectChat ? (peer?.avatar_url ?? null) : null}
-          name={isVenueChat ? '🏠' : (peer?.nickname || 'C')}
+          uri={peer?.avatar_url ?? null}
+          name={peer?.nickname || '?'}
           size="md"
-          status={isDirectChat ? 'online' : 'inVenue'}
         />
-        <View style={styles.chatInfo}>
-          {isVenueChat ? (
-            <>
-              <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>
-                {venueName}
-              </Text>
-              <Text style={[styles.chatSubLabel, { color: c.text.tertiary }]}>General</Text>
-            </>
-          ) : (
-            <>
-              <Text style={[styles.chatName, { color: c.text.primary }]} numberOfLines={1}>
-                {displayName}
-              </Text>
-              <Text style={[styles.chatPreview, { color: c.text.secondary }]} numberOfLines={1}>
-                Tap to open
-              </Text>
-            </>
-          )}
+        <View style={s.body}>
+          <View style={s.topRow}>
+            <Text style={s.name} numberOfLines={1}>{peer?.nickname || 'Chat'}</Text>
+            {time && <Text style={s.time}>{formatTime(time)}</Text>}
+          </View>
+          <Text style={s.preview} numberOfLines={1}>
+            {preview || t('chats.directChatHint')}
+          </Text>
         </View>
       </TouchableOpacity>
     );
   };
 
+  const renderSectionHeader = ({ section }: { section: { title: string; key: string } }) => (
+    <View style={s.sectionHeader}>
+      <Text style={s.sectionTitle}>{section.title}</Text>
+    </View>
+  );
+
   return (
-    <View style={[styles.container, { backgroundColor: c.bg.primary }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text.primary }]}>{t('tabs.chats')}</Text>
+    <View style={s.container}>
+      <View style={s.header}>
+        <Text style={s.title}>{t('tabs.chats')}</Text>
       </View>
 
       {isLoading ? (
-        <View style={styles.skeletonContainer}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <ChatListSkeleton key={i} />
-          ))}
+        <View style={s.skeletonWrap}>
+          {[1, 2, 3, 4, 5].map((i) => <ChatListSkeleton key={i} />)}
         </View>
-      ) : chats.length > 0 ? (
-        <FlatList
-          data={chats}
+      ) : sections.length > 0 ? (
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.chat_id}
-          renderItem={renderChat}
-          contentContainerStyle={styles.list}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          contentContainerStyle={s.list}
+          stickySectionHeadersEnabled={false}
+          ItemSeparatorComponent={() => <View style={s.separator} />}
+          SectionSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         />
       ) : (
-        <View style={styles.centered}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="chatbubbles-outline" size={64} color={c.text.tertiary} />
-          </View>
-          <Text style={[styles.emptyText, { color: c.text.primary }]}>{t('chats.empty')}</Text>
-          <Text style={[styles.emptySubtext, { color: c.text.secondary }]}>{t('chats.emptyHint')}</Text>
-          <View style={[styles.stepsContainer, { backgroundColor: c.bg.secondary, borderColor }]}>
-            <Text style={styles.stepText}>{t('chats.emptyStep1')}</Text>
-            <Text style={styles.stepText}>{t('chats.emptyStep2')}</Text>
-            <Text style={styles.stepText}>{t('chats.emptyStep3')}</Text>
+        <View style={s.empty}>
+          <Ionicons name="chatbubbles-outline" size={56} color={c.text.tertiary} />
+          <Text style={s.emptyTitle}>{t('chats.empty')}</Text>
+          <Text style={s.emptyHint}>{t('chats.emptyHint')}</Text>
+          <View style={s.steps}>
+            <StepRow icon="map-outline" text={t('chats.emptyStep1')} c={c} />
+            <StepRow icon="qr-code-outline" text={t('chats.emptyStep2')} c={c} />
+            <StepRow icon="hand-right-outline" text={t('chats.emptyStep3')} c={c} />
           </View>
         </View>
       )}
@@ -102,65 +202,103 @@ export default function ChatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.primary },
-  header: {
-    paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg,
-  },
-  title: {
-    fontSize: typography.size.displayLg, fontWeight: typography.weight.extrabold,
-    color: colors.text.primary, letterSpacing: typography.letterSpacing.display,
-  },
-  centered: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40,
-  },
-  skeletonContainer: { paddingTop: spacing.md },
-  emptyIcon: { marginBottom: spacing.xl },
-  emptyText: {
-    fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
-    color: colors.text.primary, marginBottom: spacing.sm, textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: typography.size.bodyMd, color: colors.text.secondary,
-    textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
-  },
-  stepsContainer: {
-    marginTop: spacing.xl, gap: spacing.sm,
-    backgroundColor: colors.bg.secondary, borderRadius: radius.lg,
-    padding: spacing.lg, width: '100%',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  stepText: {
-    fontSize: typography.size.bodyMd, color: colors.text.secondary,
-    lineHeight: typography.size.bodyMd * 1.6,
-  },
-  list: { paddingHorizontal: spacing.xl },
-  chatCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.bg.secondary, borderRadius: radius.xl,
-    padding: spacing.lg, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  chatInfo: { flex: 1 },
-  chatTop: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  chatName: {
-    color: colors.text.primary, fontSize: typography.size.headingSm,
-    fontWeight: typography.weight.semibold, flex: 1,
-  },
-  chatSubLabel: {
-    fontSize: typography.size.bodySm,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-  chatTime: {
-    color: colors.text.tertiary, fontSize: typography.size.bodySm,
-    marginLeft: spacing.sm,
-  },
-  chatPreview: {
-    color: colors.text.secondary, fontSize: typography.size.bodyMd,
-    marginTop: 2,
-  },
-});
+function StepRow({ icon, text, c }: { icon: string; text: string; c: ThemeColors }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+      <Ionicons name={icon as any} size={18} color={c.accent.primary} />
+      <Text style={{ color: c.text.secondary, fontSize: typography.size.bodyMd, flex: 1 }}>{text}</Text>
+    </View>
+  );
+}
+
+function createStyles(c: ThemeColors, isDark: boolean) {
+  const borderColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg.primary },
+    header: {
+      paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
+    },
+    title: {
+      fontSize: typography.size.displayLg, fontWeight: typography.weight.extrabold,
+      color: c.text.primary, letterSpacing: typography.letterSpacing.display,
+    },
+    skeletonWrap: { paddingTop: spacing.md },
+
+    list: { paddingBottom: 40 },
+
+    sectionHeader: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    sectionTitle: {
+      color: c.text.tertiary,
+      fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
+      textTransform: 'uppercase',
+      letterSpacing: typography.letterSpacing.caps,
+    },
+
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: 12,
+    },
+    venueIconWrap: {
+      width: 48, height: 48, borderRadius: 24,
+      backgroundColor: isDark ? 'rgba(124,111,247,0.1)' : 'rgba(108,92,231,0.06)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    venueEmoji: { fontSize: 22 },
+    body: { flex: 1, minWidth: 0 },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 3,
+    },
+    name: {
+      color: c.text.primary,
+      fontSize: typography.size.bodyLg,
+      fontWeight: typography.weight.semibold,
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    time: {
+      color: c.text.tertiary,
+      fontSize: typography.size.bodySm,
+      flexShrink: 0,
+    },
+    preview: {
+      color: c.text.secondary,
+      fontSize: typography.size.bodyMd,
+    },
+
+    separator: {
+      height: 1,
+      backgroundColor: borderColor,
+      marginLeft: spacing.xl + 48 + spacing.md,
+      marginRight: spacing.xl,
+    },
+
+    empty: {
+      flex: 1, alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 40, gap: spacing.md,
+    },
+    emptyTitle: {
+      fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
+      color: c.text.primary, textAlign: 'center',
+    },
+    emptyHint: {
+      fontSize: typography.size.bodyMd, color: c.text.secondary,
+      textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
+    },
+    steps: {
+      marginTop: spacing.md, gap: spacing.md, width: '100%',
+      backgroundColor: c.bg.secondary, borderRadius: radius.lg,
+      padding: spacing.lg, borderWidth: 1, borderColor,
+    },
+  });
+}

@@ -27,6 +27,14 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState('');
   const [ageRange, setAgeRange] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
+  const [industry, setIndustry] = useState('');
+  const [hobbies, setHobbies] = useState('');
+  const [favoriteMovie, setFavoriteMovie] = useState('');
+  const [favoriteBand, setFavoriteBand] = useState('');
+  const [aboutMe, setAboutMe] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [telegram, setTelegram] = useState('');
+  const [linkedin, setLinkedin] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -34,6 +42,14 @@ export default function EditProfileScreen() {
       setBio(profile.bio || '');
       setAgeRange(profile.age_range);
       setInterests(profile.interests || []);
+      setIndustry(profile.industry || '');
+      setHobbies(profile.hobbies || '');
+      setFavoriteMovie(profile.favorite_movie || '');
+      setFavoriteBand(profile.favorite_band || '');
+      setAboutMe(profile.about_me || '');
+      setInstagram(profile.instagram || '');
+      setTelegram(profile.telegram || '');
+      setLinkedin(profile.linkedin || '');
     }
   }, [profile]);
 
@@ -63,6 +79,14 @@ export default function EditProfileScreen() {
       age_range: ageRange,
       interests,
       bio: bio.trim() || null,
+      industry: industry.trim() || null,
+      hobbies: hobbies.trim() || null,
+      favorite_movie: favoriteMovie.trim() || null,
+      favorite_band: favoriteBand.trim() || null,
+      about_me: aboutMe.trim() || null,
+      instagram: instagram.trim() || null,
+      telegram: telegram.trim() || null,
+      linkedin: linkedin.trim() || null,
     };
     updateProfile.mutate(payload, {
       onSuccess: () => {
@@ -152,6 +176,121 @@ export default function EditProfileScreen() {
             textAlignVertical="top"
           />
           <Text style={s.charCount}>{bio.length}/{MAX_BIO}</Text>
+        </View>
+
+        {/* About Me */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'О себе' : 'About me'}</Text>
+          <TextInput
+            style={[s.input, s.textArea]}
+            value={aboutMe}
+            onChangeText={setAboutMe}
+            maxLength={500}
+            multiline
+            numberOfLines={4}
+            placeholderTextColor={c.text.tertiary}
+            placeholder={isRu ? 'Расскажите о себе подробнее...' : 'Tell more about yourself...'}
+            textAlignVertical="top"
+          />
+          <Text style={s.charCount}>{aboutMe.length}/500</Text>
+        </View>
+
+        {/* Industry */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'Сфера деятельности' : 'Industry'}</Text>
+          <TextInput
+            style={s.input}
+            value={industry}
+            onChangeText={setIndustry}
+            maxLength={100}
+            placeholderTextColor={c.text.tertiary}
+            placeholder={isRu ? 'Например: IT, Дизайн, Маркетинг' : 'e.g. IT, Design, Marketing'}
+          />
+        </View>
+
+        {/* Hobbies */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'Хобби' : 'Hobbies'}</Text>
+          <TextInput
+            style={s.input}
+            value={hobbies}
+            onChangeText={setHobbies}
+            maxLength={200}
+            placeholderTextColor={c.text.tertiary}
+            placeholder={isRu ? 'Чем увлекаетесь?' : 'What are your hobbies?'}
+          />
+        </View>
+
+        {/* Favorite Movie */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'Любимый фильм' : 'Favorite movie'}</Text>
+          <TextInput
+            style={s.input}
+            value={favoriteMovie}
+            onChangeText={setFavoriteMovie}
+            maxLength={150}
+            placeholderTextColor={c.text.tertiary}
+            placeholder={isRu ? 'Какой фильм вам нравится?' : 'What movie do you like?'}
+          />
+        </View>
+
+        {/* Favorite Band */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'Любимая группа' : 'Favorite band'}</Text>
+          <TextInput
+            style={s.input}
+            value={favoriteBand}
+            onChangeText={setFavoriteBand}
+            maxLength={150}
+            placeholderTextColor={c.text.tertiary}
+            placeholder={isRu ? 'Какую музыку слушаете?' : 'What music do you listen to?'}
+          />
+        </View>
+
+        {/* Social Links */}
+        <View style={s.section}>
+          <Text style={s.label}>{isRu ? 'Социальные сети' : 'Social links'}</Text>
+          <Text style={s.fieldHint}>
+            {isRu
+              ? 'Добавьте ссылки, чтобы другие могли найти вас'
+              : 'Add links so others can find you'}
+          </Text>
+          <View style={s.socialRow}>
+            <Ionicons name="logo-instagram" size={20} color="#E1306C" style={s.socialIcon} />
+            <TextInput
+              style={[s.input, s.socialInput]}
+              value={instagram}
+              onChangeText={setInstagram}
+              maxLength={100}
+              placeholderTextColor={c.text.tertiary}
+              placeholder="@username"
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={s.socialRow}>
+            <Ionicons name="paper-plane-outline" size={20} color="#0088CC" style={s.socialIcon} />
+            <TextInput
+              style={[s.input, s.socialInput]}
+              value={telegram}
+              onChangeText={setTelegram}
+              maxLength={100}
+              placeholderTextColor={c.text.tertiary}
+              placeholder="@username"
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={s.socialRow}>
+            <Ionicons name="logo-linkedin" size={20} color="#0A66C2" style={s.socialIcon} />
+            <TextInput
+              style={[s.input, s.socialInput]}
+              value={linkedin}
+              onChangeText={setLinkedin}
+              maxLength={200}
+              placeholderTextColor={c.text.tertiary}
+              placeholder={isRu ? 'Ссылка на профиль' : 'Profile URL'}
+              autoCapitalize="none"
+            />
+          </View>
         </View>
 
         {/* Age Range */}
@@ -274,6 +413,15 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     charCount: {
       fontSize: typography.size.micro, color: c.text.tertiary,
       textAlign: 'right', marginTop: spacing.xs,
+    },
+    socialRow: {
+      flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md,
+    },
+    socialIcon: {
+      width: 36, textAlign: 'center',
+    },
+    socialInput: {
+      flex: 1,
     },
     chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     chip: {

@@ -14,6 +14,14 @@ interface Profile {
   is_verified: boolean;
   is_banned: boolean;
   token_balance: number;
+  industry: string | null;
+  hobbies: string | null;
+  favorite_movie: string | null;
+  favorite_band: string | null;
+  about_me: string | null;
+  instagram: string | null;
+  telegram: string | null;
+  linkedin: string | null;
 }
 
 export function useProfile() {
@@ -48,6 +56,14 @@ export function useUpdateProfile() {
       interests?: string[];
       avatar_url?: string | null;
       bio?: string | null;
+      industry?: string | null;
+      hobbies?: string | null;
+      favorite_movie?: string | null;
+      favorite_band?: string | null;
+      about_me?: string | null;
+      instagram?: string | null;
+      telegram?: string | null;
+      linkedin?: string | null;
     }) => {
       const userId = session!.user.id;
 

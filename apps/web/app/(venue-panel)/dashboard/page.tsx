@@ -187,6 +187,26 @@ function DashboardContent({
           <p style={{ color: 'var(--text-tertiary)' }}>{t('moderationHint')}</p>
         </Link>
         <Link
+          href="/dashboard/announcements"
+          className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            📢 {t('announcements')}
+          </h2>
+          <p style={{ color: 'var(--text-tertiary)' }}>{t('announcementsHint')}</p>
+        </Link>
+        <Link
+          href="/dashboard/loyalty"
+          className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            🏆 {t('loyalty')}
+          </h2>
+          <p style={{ color: 'var(--text-tertiary)' }}>{t('loyaltyHint')}</p>
+        </Link>
+        <Link
           href="/dashboard/qr-codes"
           className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
           style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}

@@ -15,10 +15,19 @@ export interface Database {
           nickname: string;
           age_range: string;
           avatar_url: string | null;
+          bio: string | null;
           interests: string[];
           is_verified: boolean;
           is_banned: boolean;
           token_balance: number;
+          industry: string | null;
+          hobbies: string | null;
+          favorite_movie: string | null;
+          favorite_band: string | null;
+          about_me: string | null;
+          instagram: string | null;
+          telegram: string | null;
+          linkedin: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -27,10 +36,19 @@ export interface Database {
           nickname: string;
           age_range: string;
           avatar_url?: string | null;
+          bio?: string | null;
           interests?: string[];
           is_verified?: boolean;
           is_banned?: boolean;
           token_balance?: number;
+          industry?: string | null;
+          hobbies?: string | null;
+          favorite_movie?: string | null;
+          favorite_band?: string | null;
+          about_me?: string | null;
+          instagram?: string | null;
+          telegram?: string | null;
+          linkedin?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -39,10 +57,19 @@ export interface Database {
           nickname?: string;
           age_range?: string;
           avatar_url?: string | null;
+          bio?: string | null;
           interests?: string[];
           is_verified?: boolean;
           is_banned?: boolean;
           token_balance?: number;
+          industry?: string | null;
+          hobbies?: string | null;
+          favorite_movie?: string | null;
+          favorite_band?: string | null;
+          about_me?: string | null;
+          instagram?: string | null;
+          telegram?: string | null;
+          linkedin?: string | null;
           updated_at?: string;
         };
       };
@@ -506,6 +533,82 @@ export interface Database {
         Update: {
           is_active?: boolean;
           expires_at?: string | null;
+        };
+      };
+      achievements: {
+        Row: {
+          id: string;
+          slug: string;
+          category: string;
+          icon: string;
+          threshold: number;
+          token_reward: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          category: string;
+          icon?: string;
+          threshold?: number;
+          token_reward?: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          icon?: string;
+          threshold?: number;
+          token_reward?: number;
+          sort_order?: number;
+        };
+      };
+      user_achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          achievement_id: string;
+          progress: number;
+          unlocked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          achievement_id: string;
+          progress?: number;
+          unlocked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          progress?: number;
+          unlocked_at?: string | null;
+        };
+      };
+      venue_loyalty_tiers: {
+        Row: {
+          id: string;
+          venue_id: string;
+          name: string;
+          min_checkins: number;
+          token_reward: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          venue_id: string;
+          name: string;
+          min_checkins?: number;
+          token_reward?: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          min_checkins?: number;
+          token_reward?: number;
+          sort_order?: number;
         };
       };
     };

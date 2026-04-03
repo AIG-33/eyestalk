@@ -1,9 +1,19 @@
 export const APP_NAME = 'EyesTalk';
 
 export const VENUE_TYPES = [
-  'karaoke',
+  'restaurant',
+  'cafe',
+  'bar',
   'nightclub',
   'sports_bar',
+  'karaoke',
+  'gym',
+  'coworking',
+  'beauty_salon',
+  'hotel',
+  'lounge',
+  'event_space',
+  'food_court',
   'bowling',
   'billiards',
   'hookah',
@@ -57,7 +67,7 @@ export type CheckinMethod = (typeof CHECKIN_METHODS)[number];
 export const CHECKIN_STATUSES = ['active', 'expired', 'manual_checkout'] as const;
 export type CheckinStatus = (typeof CHECKIN_STATUSES)[number];
 
-export const MESSAGE_TYPES = ['text', 'emoji', 'sticker', 'image', 'wave', 'compliment', 'system'] as const;
+export const MESSAGE_TYPES = ['text', 'emoji', 'sticker', 'image', 'wave', 'compliment', 'system', 'announcement'] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
 export const CHAT_TYPES = ['venue_general', 'zone', 'direct', 'group'] as const;
@@ -84,6 +94,7 @@ export const TOKEN_TRANSACTION_TYPES = [
   'referral',
   'venue_bonus',
   'purchase',
+  'achievement_reward',
 ] as const;
 export type TokenTransactionType = (typeof TOKEN_TRANSACTION_TYPES)[number];
 
@@ -99,9 +110,23 @@ export type QrCodeType = (typeof QR_CODE_TYPES)[number];
 export const LEADERBOARD_TYPES = ['daily', 'weekly', 'event', 'activity'] as const;
 export type LeaderboardType = (typeof LEADERBOARD_TYPES)[number];
 
+export const ACHIEVEMENT_CATEGORIES = ['social', 'explorer', 'loyalty', 'activity'] as const;
+export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
+
+export const ACHIEVEMENT_SLUGS = [
+  'first_checkin', 'venues_5', 'venues_10', 'venues_25', 'venues_50',
+  'regular_5', 'regular_10', 'regular_25', 'streak_3', 'streak_7',
+  'first_wave', 'matches_5', 'matches_10', 'messages_50', 'messages_200',
+  'first_activity', 'activities_10', 'first_poll_vote',
+] as const;
+export type AchievementSlug = (typeof ACHIEVEMENT_SLUGS)[number];
+
+export const MAX_ANNOUNCEMENTS_PER_DAY = 5;
+
 // Defaults
 export const CHECKIN_DURATION_HOURS = 4;
 export const CHECKIN_REWARD_TOKENS = 10;
+export const CHECKIN_REWARD_COOLDOWN_HOURS = 12;
 export const MICRO_CHAT_DURATION_MINUTES = 5;
 export const MICRO_CHAT_MESSAGE_LIMIT = 10;
 export const DEFAULT_GEOFENCE_RADIUS_METERS = 50;

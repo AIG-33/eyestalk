@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useCheckinStore } from '@/stores/checkin.store';
 import { useAuthStore } from '@/stores/auth.store';
 
 const CHECKIN_DURATION_HOURS = 4;
 const CHECKIN_REWARD_TOKENS = 10;
+const CHECKIN_REWARD_COOLDOWN_HOURS = 12;
 
 export function useActiveCheckin() {
   const session = useAuthStore((s) => s.session);
@@ -98,7 +100,21 @@ export function useCheckin() {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + CHECKIN_DURATION_HOURS);
 
-      console.log('[checkin] Step 5: inserting checkin');
+      const cooldownCutoff = new Date();
+      cooldownCutoff.setHours(cooldownCutoff.getHours() - CHECKIN_REWARD_COOLDOWN_HOURS);
+
+      const { data: recentRewarded } = await supabase
+        .from('token_transactions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('type', 'checkin_reward')
+        .gte('created_at', cooldownCutoff.toISOString())
+        .limit(1);
+
+      const eligibleForReward = !recentRewarded || recentRewarded.length === 0;
+      const tokensEarned = eligibleForReward ? CHECKIN_REWARD_TOKENS : 0;
+
+      console.log('[checkin] Step 5: inserting checkin, eligible for reward:', eligibleForReward);
       const { data: checkin, error: checkinError } = await supabase
         .from('checkins')
         .insert({
@@ -106,7 +122,7 @@ export function useCheckin() {
           venue_id: params.venue_id,
           method: params.qr_code ? 'qr' : 'geofence',
           status: 'active',
-          tokens_earned: CHECKIN_REWARD_TOKENS,
+          tokens_earned: tokensEarned,
           expires_at: expiresAt.toISOString(),
         })
         .select()
@@ -115,11 +131,12 @@ export function useCheckin() {
       if (checkinError) throw new Error(`Checkin insert: ${checkinError.message} (code: ${checkinError.code})`);
       console.log('[checkin] Step 6: success!', checkin);
 
-      return { checkin, tokens_earned: CHECKIN_REWARD_TOKENS };
+      return { checkin, tokens_earned: tokensEarned };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkin'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
+      api.post('/achievements', { action: 'check' }).catch(() => {});
     },
   });
 
