@@ -51,7 +51,7 @@ const VenueMarker = React.memo(function VenueMarker({
       }}
       onPress={() => onPress(venue)}
       onSelect={() => onPress(venue)}
-      tracksViewChanges={!captured || (hasLogo && !imgLoaded)}
+      tracksViewChanges={Platform.OS === 'ios' || !captured || (hasLogo && !imgLoaded)}
     >
       <View
         collapsable={false}
