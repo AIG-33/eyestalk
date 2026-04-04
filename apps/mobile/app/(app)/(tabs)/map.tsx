@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   cluster: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Platform.OS === 'android' ? 10 : 20,
     backgroundColor: '#7C6FF7',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
