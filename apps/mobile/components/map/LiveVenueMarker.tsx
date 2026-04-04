@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Platform, PixelRatio } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, Image, Platform } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import { VENUE_EMOJI } from '@/lib/venue-constants';
 
-const MAX_BITMAP_PX = 96;
-const BASE_MARKER_SIZE =
-  Platform.OS === 'android'
-    ? Math.min(44, Math.floor(MAX_BITMAP_PX / PixelRatio.get()))
-    : 44;
+// Even logical sizes; Android snapshots custom markers to a bitmap — keep layout flat.
+const BASE_MARKER_SIZE = Platform.OS === 'android' ? 48 : 44;
 const EMOJI_FONT = Math.max(14, Math.floor(BASE_MARKER_SIZE * 0.45));
 
 interface Props {
@@ -24,19 +21,45 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
   recentlyActive,
   onPress,
 }: Props) {
-  const [captured, setCaptured] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  /** Android: after layout + optional image load, wait two frames then stop tracksViewChanges */
+  const [laidOut, setLaidOut] = useState(false);
+  const [snapshotDone, setSnapshotDone] = useState(false);
+
   const hasLogo = !!venue.logo_url;
   const hasActivity = venue.active_checkins > 0;
 
+  const resetSnapshotState = useCallback(() => {
+    setImgLoaded(false);
+    setLaidOut(false);
+    setSnapshotDone(false);
+  }, []);
+
   useEffect(() => {
-    const delay = hasLogo ? 2000 : 1200;
-    const t = setTimeout(() => setCaptured(true), delay);
-    return () => clearTimeout(t);
-  }, [hasLogo]);
+    resetSnapshotState();
+  }, [venue.id, venue.logo_url, resetSnapshotState]);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios' || snapshotDone) return;
+    if (!laidOut) return;
+    if (hasLogo && !imgLoaded) return;
+
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) setSnapshotDone(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [laidOut, imgLoaded, hasLogo, snapshotDone]);
 
   const emoji = VENUE_EMOJI[venue.type] || '📍';
   const markerSize = BASE_MARKER_SIZE;
+  const pad = 12;
+  const outer = markerSize + pad * 2;
 
   const borderColor = isSelected
     ? '#FFFFFF'
@@ -48,34 +71,74 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
 
   const borderWidth = isSelected ? 2.5 : hasActivity ? 2 : 1.5;
 
+  const tracksViewChanges =
+    Platform.OS === 'ios' ||
+    !snapshotDone ||
+    (hasLogo && !imgLoaded);
+
+  const onRootLayout = useCallback(() => {
+    setLaidOut(true);
+  }, []);
+
+  const logoImageStyle = useMemo(
+    () => ({
+      width: markerSize,
+      height: markerSize,
+      borderRadius: markerSize / 2,
+      borderWidth,
+      borderColor,
+      backgroundColor: '#7C6FF7' as const,
+    }),
+    [markerSize, borderWidth, borderColor],
+  );
+
+  /**
+   * iOS: overflow hidden clips image to circle. Android: overflow:hidden on custom Marker
+   * children often snapshots as a wedge/¼ circle — omit it; View bg still respects borderRadius.
+   */
+  const circleShellStyle = useMemo(
+    () => ({
+      width: markerSize,
+      height: markerSize,
+      borderRadius: markerSize / 2,
+      backgroundColor: '#7C6FF7' as const,
+      borderWidth,
+      borderColor,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      ...(Platform.OS === 'ios' ? { overflow: 'hidden' as const } : {}),
+    }),
+    [markerSize, borderWidth, borderColor],
+  );
+
   return (
     <Marker
       coordinate={{
         latitude: Number(venue.latitude),
         longitude: Number(venue.longitude),
       }}
+      anchor={{ x: 0.5, y: 0.5 }}
       onPress={() => onPress(venue)}
-      onSelect={() => onPress(venue)}
-      tracksViewChanges={
-        Platform.OS === 'ios' || !captured || (hasLogo && !imgLoaded)
-      }
+      tracksViewChanges={tracksViewChanges}
     >
       <View
         collapsable={false}
+        onLayout={onRootLayout}
         style={{
-          width: markerSize + 20,
-          height: markerSize + 20,
+          width: outer,
+          height: outer,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {hasActivity && (
+        {hasActivity && Platform.OS === 'ios' && (
           <View
+            pointerEvents="none"
             style={{
               position: 'absolute',
-              width: markerSize + 10,
-              height: markerSize + 10,
-              borderRadius: (markerSize + 10) / 2,
+              width: markerSize + 8,
+              height: markerSize + 8,
+              borderRadius: (markerSize + 8) / 2,
               backgroundColor: recentlyActive
                 ? 'rgba(0,229,160,0.25)'
                 : 'rgba(0,229,160,0.12)',
@@ -87,41 +150,39 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
           />
         )}
 
-        <View
-          style={{
-            width: markerSize,
-            height: markerSize,
-            borderRadius: markerSize / 2,
-            backgroundColor: '#7C6FF7',
-            borderWidth,
-            borderColor,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          {hasLogo ? (
+        {hasLogo ? (
+          Platform.OS === 'android' ? (
             <Image
               source={{ uri: venue.logo_url! }}
-              style={{
-                width: markerSize - 2,
-                height: markerSize - 2,
-                borderRadius: markerSize / 2,
-              }}
+              style={logoImageStyle}
               resizeMode="cover"
               onLoad={() => setImgLoaded(true)}
             />
           ) : (
+            <View style={circleShellStyle}>
+              <Image
+                source={{ uri: venue.logo_url! }}
+                style={{
+                  width: markerSize,
+                  height: markerSize,
+                }}
+                resizeMode="cover"
+                onLoad={() => setImgLoaded(true)}
+              />
+            </View>
+          )
+        ) : (
+          <View style={circleShellStyle}>
             <Text style={{ fontSize: EMOJI_FONT }}>{emoji}</Text>
-          )}
-        </View>
+          </View>
+        )}
 
         {hasActivity && (
           <View
             style={{
               position: 'absolute',
-              top: 0,
-              right: 0,
+              top: pad - 4,
+              right: pad - 4,
               backgroundColor: '#00E5A0',
               minWidth: 18,
               height: 18,

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { subscribeToActivityUpdates, unsubscribe } from '@/lib/realtime';
 import { useAuthStore } from '@/stores/auth.store';
 import type { ThemeColors } from '@/theme';
@@ -93,15 +94,14 @@ export default function PollScreen() {
 
   const castVote = useMutation({
     mutationFn: async (optionKey: string) => {
-      const { error } = await supabase.from('votes').insert({
-        activity_id: activityId,
-        user_id: session!.user.id,
-        option_key: optionKey,
-      });
-      if (error) throw error;
+      await api.post<{ tokens_earned?: number }>(
+        `/activities/${activityId}/vote`,
+        { option_key: optionKey },
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['poll-votes', activityId] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
     onError: (err: any) => {
       const msg = err.message || 'Vote failed';

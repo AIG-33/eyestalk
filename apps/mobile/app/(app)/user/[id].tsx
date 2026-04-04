@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSendWave } from '@/hooks/use-send-wave';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
@@ -14,7 +15,8 @@ import { useProfilePhotos, usePhotoAccessStatus } from '@/hooks/use-photos';
 import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
-import { useTheme, typography, spacing, radius, component } from '@/theme';
+import { ReportModal, useBlockUser, useUnblockUser, blockRelationQueryKey } from '@/components/ui/report-modal';
+import { useTheme, typography, spacing, radius } from '@/theme';
 import type { ThemeColors } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,6 +33,9 @@ export default function UserProfileScreen() {
   const isRu = i18n.language === 'ru';
   const isOwnProfile = userId === session?.user.id;
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const blockUser = useBlockUser();
+  const unblockUser = useUnblockUser();
 
   const { data: profile } = useQuery({
     queryKey: ['user-profile', userId],
@@ -71,7 +76,90 @@ export default function UserProfileScreen() {
     },
   });
 
+  const blockerId = session?.user?.id ?? '';
+  const { data: blockRelation } = useQuery({
+    queryKey: blockRelationQueryKey(blockerId, userId ?? ''),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blocks')
+        .select('id')
+        .eq('blocker_id', blockerId)
+        .eq('blocked_id', userId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!blockerId && !!userId && !isOwnProfile,
+  });
+
+  const isBlocked = !!blockRelation;
+  const blockBusy = blockUser.isPending || unblockUser.isPending;
+  const sendWave = useSendWave();
+
+  const { data: waveStatus } = useQuery({
+    queryKey: ['wave-status', venueId, userId, blockerId],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from('mutual_interests')
+        .select('from_user_id, to_user_id, is_mutual')
+        .eq('venue_id', venueId!)
+        .eq('type', 'wave')
+        .or(
+          `and(from_user_id.eq.${blockerId},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${blockerId})`,
+        );
+      if (error) throw error;
+      const list = rows || [];
+      const mutual = list.some((r: { is_mutual: boolean }) => r.is_mutual);
+      const sent = list.some(
+        (r: { from_user_id: string; to_user_id: string }) =>
+          r.from_user_id === blockerId && r.to_user_id === userId,
+      );
+      const received = list.some(
+        (r: { from_user_id: string; to_user_id: string }) =>
+          r.from_user_id === userId && r.to_user_id === blockerId,
+      );
+      return { mutual, sent, received };
+    },
+    enabled: !!venueId && !!userId && !!blockerId && !isOwnProfile,
+  });
+
+  const waveDisabled =
+    isBlocked ||
+    sendWave.isPending ||
+    !!waveStatus?.mutual ||
+    !!waveStatus?.sent;
+
+  const openReport = () => {
+    if (!venueId) {
+      Alert.alert(isRu ? 'Ошибка' : 'Error', isRu ? 'Нет контекста venue' : 'No venue context');
+      return;
+    }
+    setReportOpen(true);
+  };
+
+  const confirmBlock = () => {
+    Alert.alert(t('safety.blockConfirm'), '', [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('safety.block'),
+        style: 'destructive',
+        onPress: () => userId && blockUser.mutate(userId),
+      },
+    ]);
+  };
+
+  const confirmUnblock = () => {
+    Alert.alert(t('safety.unblock'), t('safety.unblockConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('safety.unblock'),
+        onPress: () => userId && unblockUser.mutate(userId),
+      },
+    ]);
+  };
+
   return (
+    <View style={s.screenRoot}>
     <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 60 }}>
       {/* Header */}
       <View style={s.header}>
@@ -121,26 +209,128 @@ export default function UserProfileScreen() {
         )}
 
         {!isOwnProfile && (
-          <TouchableOpacity
-            style={s.chatBtn}
-            onPress={() => {
-              if (!venueId) {
-                Alert.alert(isRu ? 'Ошибка' : 'Error', isRu ? 'Нет контекста venue' : 'No venue context');
-                return;
-              }
-              startChat.mutate();
-            }}
-            disabled={startChat.isPending}
-          >
-            {startChat.isPending ? (
-              <ActivityIndicator size="small" color="#FFF" />
+          <>
+            {venueId ? (
+              <Text style={s.waveHint}>{t('chats.directWaveHint')}</Text>
             ) : (
-              <>
-                <Ionicons name="chatbubble" size={18} color="#FFF" />
-                <Text style={s.chatBtnText}>{isRu ? 'Написать' : 'Chat'}</Text>
-              </>
+              <Text style={s.waveHintMuted}>{t('venue.waveExplain')}</Text>
             )}
-          </TouchableOpacity>
+            {venueId && (
+              <TouchableOpacity
+                style={[
+                  s.wavePrimaryBtn,
+                  waveDisabled && s.wavePrimaryBtnDisabled,
+                  waveStatus?.mutual && s.wavePrimaryBtnMatched,
+                ]}
+                disabled={waveDisabled}
+                onPress={() => {
+                  if (!userId || !venueId) return;
+                  sendWave.mutate(
+                    { targetUserId: userId, venueId },
+                    {
+                      onSuccess: (data) => {
+                        if (!data.is_mutual) {
+                          Alert.alert('👋', t('venue.waveSent', { defaultValue: 'Wave sent!' }));
+                        }
+                      },
+                      onError: (err: Error) => {
+                        Alert.alert(isRu ? 'Ошибка' : 'Error', err.message || '');
+                      },
+                    },
+                  );
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  waveStatus?.mutual
+                    ? t('chats.matchedShort')
+                    : waveStatus?.sent
+                      ? t('chats.waveSentShort')
+                      : waveStatus?.received
+                        ? t('chats.waveBack')
+                        : t('chats.waveAction')
+                }
+              >
+                {sendWave.isPending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={waveStatus?.mutual ? 'heart' : 'hand-right-outline'}
+                      size={22}
+                      color="#FFF"
+                    />
+                    <Text
+                      style={[
+                        s.wavePrimaryBtnText,
+                        waveDisabled && !waveStatus?.mutual && { color: c.text.secondary },
+                      ]}
+                    >
+                      {waveStatus?.mutual
+                        ? t('chats.matchedShort')
+                        : waveStatus?.sent
+                          ? t('chats.waveSentShort')
+                          : waveStatus?.received
+                            ? t('chats.waveBack')
+                            : t('chats.waveAction')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          <View style={s.actionRow}>
+            <TouchableOpacity
+              style={s.chatBtn}
+              onPress={() => {
+                if (!venueId) {
+                  Alert.alert(isRu ? 'Ошибка' : 'Error', isRu ? 'Нет контекста venue' : 'No venue context');
+                  return;
+                }
+                startChat.mutate();
+              }}
+              disabled={startChat.isPending}
+            >
+              {startChat.isPending ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="chatbubble" size={18} color="#FFF" />
+                  <Text style={s.chatBtnText}>{isRu ? 'Написать' : 'Chat'}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.reportBtn}
+              onPress={openReport}
+              accessibilityRole="button"
+              accessibilityLabel={t('safety.report')}
+            >
+              <Ionicons name="flag-outline" size={18} color={c.accent.warning} />
+              <Text style={s.reportBtnText} numberOfLines={1}>{t('safety.report')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={isBlocked ? s.unblockBtn : s.blockBtn}
+              onPress={isBlocked ? confirmUnblock : confirmBlock}
+              disabled={blockBusy}
+              accessibilityRole="button"
+              accessibilityLabel={isBlocked ? t('safety.unblock') : t('safety.block')}
+            >
+              {blockBusy ? (
+                <ActivityIndicator size="small" color={isBlocked ? c.accent.success : c.accent.error} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isBlocked ? 'checkmark-circle-outline' : 'ban-outline'}
+                    size={18}
+                    color={isBlocked ? c.accent.success : c.accent.error}
+                  />
+                  <Text style={isBlocked ? s.unblockBtnText : s.blockBtnText} numberOfLines={1}>
+                    {isBlocked ? t('safety.unblock') : t('safety.block')}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          </>
         )}
       </View>
 
@@ -288,6 +478,14 @@ export default function UserProfileScreen() {
         </View>
       </Modal>
     </ScrollView>
+    {reportOpen && venueId && userId && (
+      <ReportModal
+        targetUserId={userId}
+        venueId={venueId}
+        onClose={() => setReportOpen(false)}
+      />
+    )}
+    </View>
   );
 }
 
@@ -383,6 +581,7 @@ function ZoomableImage({ uri, onClose }: { uri: string; onClose: () => void }) {
 function createStyles(c: ThemeColors, isDark: boolean) {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   return StyleSheet.create({
+    screenRoot: { flex: 1, backgroundColor: c.bg.primary },
     container: { flex: 1, backgroundColor: c.bg.primary },
     header: {
       flexDirection: 'row', alignItems: 'center',
@@ -483,16 +682,135 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     hiddenHint: {
       color: c.text.tertiary, fontSize: typography.size.micro,
     },
+    waveHint: {
+      fontSize: typography.size.bodySm,
+      color: c.text.secondary,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.xl,
+      lineHeight: typography.size.bodySm * 1.45,
+      width: '100%',
+    },
+    waveHintMuted: {
+      fontSize: typography.size.bodySm,
+      color: c.text.tertiary,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.xl,
+      lineHeight: typography.size.bodySm * 1.45,
+      width: '100%',
+    },
+    wavePrimaryBtn: {
+      marginTop: spacing.md,
+      width: '100%',
+      maxWidth: SCREEN_WIDTH - spacing.xl * 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md + 4,
+      paddingHorizontal: spacing.xl,
+      borderRadius: radius.xl,
+      backgroundColor: c.accent.pink,
+    },
+    wavePrimaryBtnDisabled: {
+      backgroundColor: c.bg.tertiary,
+      borderWidth: 1,
+      borderColor: borderColor,
+    },
+    wavePrimaryBtnMatched: {
+      backgroundColor: isDark ? 'rgba(0,229,160,0.35)' : 'rgba(0,201,141,0.25)',
+      borderWidth: 1,
+      borderColor: `${c.accent.success}66`,
+    },
+    wavePrimaryBtnText: {
+      color: '#FFFFFE',
+      fontSize: typography.size.bodyLg,
+      fontWeight: typography.weight.bold,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'stretch',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+      width: '100%',
+      paddingHorizontal: spacing.md,
+      maxWidth: SCREEN_WIDTH,
+    },
     chatBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      flexGrow: 1,
+      flexBasis: 120,
+      minWidth: 100,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
       backgroundColor: c.accent.primary,
-      paddingHorizontal: spacing['2xl'], paddingVertical: spacing.md,
-      borderRadius: radius.full, marginTop: spacing.xl,
-      minWidth: 140, justifyContent: 'center',
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+      borderRadius: radius.full,
     },
     chatBtnText: {
-      color: '#FFF', fontSize: typography.size.bodyLg,
+      color: '#FFF', fontSize: typography.size.bodyMd,
       fontWeight: typography.weight.bold,
+    },
+    reportBtn: {
+      flexGrow: 1,
+      flexBasis: 100,
+      minWidth: 88,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.md,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,217,61,0.35)' : 'rgba(230,184,0,0.45)',
+      backgroundColor: c.bg.secondary,
+    },
+    reportBtnText: {
+      color: c.accent.warning,
+      fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
+    },
+    blockBtn: {
+      flexGrow: 1,
+      flexBasis: 100,
+      minWidth: 88,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.md,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: `${c.accent.error}55`,
+      backgroundColor: c.bg.secondary,
+    },
+    blockBtnText: {
+      color: c.accent.error,
+      fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
+    },
+    unblockBtn: {
+      flexGrow: 1,
+      flexBasis: 100,
+      minWidth: 88,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.md,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: `${c.accent.success}55`,
+      backgroundColor: c.bg.secondary,
+    },
+    unblockBtnText: {
+      color: c.accent.success,
+      fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
     },
     fullscreenOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',

@@ -10,13 +10,14 @@ import { useVenue } from './venue-context';
 
 const navItems = [
   { href: '/dashboard', icon: '📊', labelKey: 'title', hintKey: 'titleHint' },
+  { href: '/dashboard/live-screen', icon: '📺', labelKey: 'liveScreen', hintKey: 'liveScreenHint' },
   { href: '/dashboard/analytics', icon: '📈', labelKey: 'analytics', hintKey: 'analyticsHint' },
   { href: '/dashboard/activities', icon: '🎯', labelKey: 'activities', hintKey: 'activitiesHint' },
+  { href: '/dashboard/services', icon: '🎟️', labelKey: 'services', hintKey: 'servicesHint' },
   { href: '/dashboard/announcements', icon: '📢', labelKey: 'announcements', hintKey: 'announcementsHint' },
   { href: '/dashboard/loyalty', icon: '🏆', labelKey: 'loyalty', hintKey: 'loyaltyHint' },
   { href: '/dashboard/moderation', icon: '🛡️', labelKey: 'moderation', hintKey: 'moderationHint' },
   { href: '/dashboard/qr-codes', icon: '📱', labelKey: 'qrCodes', hintKey: 'qrCodesHint' },
-  { href: '/dashboard/live-screen', icon: '📺', labelKey: 'liveScreen', hintKey: 'liveScreenHint' },
   { href: '/dashboard/settings', icon: '⚙️', labelKey: 'settings', hintKey: 'settingsHint' },
 ];
 
@@ -131,7 +132,11 @@ export function DashboardSidebar() {
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href === '/dashboard/activities' &&
+              pathname.startsWith('/dashboard/activities/')) ||
+            (item.href === '/dashboard/services' && pathname.startsWith('/dashboard/services'));
           return (
             <Link
               key={item.href}

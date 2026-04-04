@@ -30,7 +30,14 @@ import {
   useMapOnboardingVisible,
 } from '@/components/map/MapOnboarding';
 import { VENUE_EMOJI } from '@/lib/venue-constants';
+import {
+  isLatLngInMapRegion,
+  type MapRegionBounds,
+} from '@/lib/geo';
 import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
+
+/** Approx. height of compact venue carousel strip (cards + padding). */
+const COMPACT_VENUE_STRIP_HEIGHT = 92;
 
 const DARK_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#0D0D1A' }] },
@@ -45,6 +52,14 @@ const DARK_MAP_STYLE = [
 ];
 
 const LIGHT_MAP_STYLE: any[] = [];
+
+// Immediate map paint (Android waits for GPS otherwise). User is centered when location arrives.
+const MAP_BOOT_REGION = {
+  latitude: 52.2297,
+  longitude: 21.0122,
+  latitudeDelta: 8,
+  longitudeDelta: 8,
+} as const;
 
 // ─── Pulsing checkin badge (top bar) ─────────────────────
 
@@ -98,9 +113,11 @@ function PulsingVenueBadge({
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() =>
-        router.push(`/(app)/venue/${checkin.venue_id}` as any)
-      }
+      onPress={() => {
+        const vid = checkin?.venue_id;
+        if (!vid) return;
+        router.push(`/(app)/venue/${vid}` as any);
+      }}
       style={[
         styles.venueBadge,
         {
@@ -180,9 +197,11 @@ function renderCluster(cluster: any) {
         latitude: geometry.coordinates[1],
         longitude: geometry.coordinates[0],
       }}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={Platform.OS === 'android' ? false : undefined}
       onPress={onPress}
     >
-      <View style={styles.cluster}>
+      <View style={styles.cluster} collapsable={false}>
         <Text style={styles.clusterText}>{count}</Text>
       </View>
     </Marker>
@@ -211,7 +230,17 @@ export default function MapScreen() {
   );
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [markersReady, setMarkersReady] = useState(false);
+  const [mapRegion, setMapRegion] = useState<MapRegionBounds>(() => ({
+    latitude: MAP_BOOT_REGION.latitude,
+    longitude: MAP_BOOT_REGION.longitude,
+    latitudeDelta: MAP_BOOT_REGION.latitudeDelta,
+    longitudeDelta: MAP_BOOT_REGION.longitudeDelta,
+  }));
   const mapRef = useRef<any>(null);
+  const centeredOnUserRef = useRef(false);
+
+  /** Tab bar sits below map screen; FAB sits above venue card strip only. */
+  const locationFabBottom = COMPACT_VENUE_STRIP_HEIGHT + spacing.md;
 
   const filteredVenues = useMemo(() => {
     if (!venues) return [];
@@ -219,7 +248,42 @@ export default function MapScreen() {
     return venues.filter((v) => v.type === typeFilter);
   }, [venues, typeFilter]);
 
+  const venuesInViewport = useMemo(() => {
+    return filteredVenues.filter((v) =>
+      isLatLngInMapRegion(
+        Number(v.latitude),
+        Number(v.longitude),
+        mapRegion,
+      ),
+    );
+  }, [filteredVenues, mapRegion]);
+
+  const centerOnUser = useCallback(() => {
+    if (!location || !mapRef.current || centeredOnUserRef.current) return;
+    centeredOnUserRef.current = true;
+    mapRef.current.animateToRegion?.(
+      {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      },
+      Platform.OS === 'android' ? 500 : 400,
+    );
+  }, [location]);
+
+  useEffect(() => {
+    if (!location) return;
+    const t = setTimeout(centerOnUser, Platform.OS === 'android' ? 200 : 120);
+    return () => clearTimeout(t);
+  }, [location, centerOnUser]);
+
+  const lastMarkerPressRef = useRef<{ id: string; at: number } | null>(null);
   const handleMarkerPress = useCallback((venue: VenueWithStats) => {
+    const now = Date.now();
+    const last = lastMarkerPressRef.current;
+    if (last && last.id === venue.id && now - last.at < 450) return;
+    lastMarkerPressRef.current = { id: venue.id, at: now };
     setSelectedVenue(venue);
   }, []);
 
@@ -334,46 +398,54 @@ export default function MapScreen() {
         />
       </LinearGradient>
 
-      {/* ─── Map ─────────────────────────────────────── */}
-      {location && (
-        <ClusteredMapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFillObject}
-          provider={
-            Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined
-          }
-          customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-          initialRegion={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          showsUserLocation
-          showsMyLocationButton={false}
-          showsCompass={false}
-          onPress={() => setSelectedVenue(null)}
-          onMapReady={() => {
-            setTimeout(() => setMarkersReady(true), 300);
-          }}
-          clusterColor="#7C6FF7"
-          clusterTextColor="#FFFFFF"
-          radius={50}
-          minPoints={2}
-          renderCluster={renderCluster}
-        >
-          {markersReady &&
-            filteredVenues.map((venue) => (
-              <LiveVenueMarker
-                key={venue.id}
-                venue={venue}
-                isSelected={selectedVenue?.id === venue.id}
-                recentlyActive={recentCheckins.has(venue.id)}
-                onPress={handleMarkerPress}
-              />
-            ))}
-        </ClusteredMapView>
-      )}
+      {/* ─── Map (mounts immediately; location centers user when ready) ─ */}
+      <ClusteredMapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFillObject}
+        provider={
+          Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined
+        }
+        customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        initialRegion={{
+          latitude: MAP_BOOT_REGION.latitude,
+          longitude: MAP_BOOT_REGION.longitude,
+          latitudeDelta: MAP_BOOT_REGION.latitudeDelta,
+          longitudeDelta: MAP_BOOT_REGION.longitudeDelta,
+        }}
+        showsUserLocation={!!location}
+        showsMyLocationButton={false}
+        showsCompass={false}
+        onPress={() => setSelectedVenue(null)}
+        onRegionChangeComplete={(region) => {
+          setMapRegion({
+            latitude: region.latitude,
+            longitude: region.longitude,
+            latitudeDelta: region.latitudeDelta,
+            longitudeDelta: region.longitudeDelta,
+          });
+        }}
+        onMapReady={() => {
+          const delay = Platform.OS === 'android' ? 100 : 250;
+          setTimeout(() => setMarkersReady(true), delay);
+          setTimeout(centerOnUser, delay + (Platform.OS === 'android' ? 80 : 60));
+        }}
+        clusterColor="#7C6FF7"
+        clusterTextColor="#FFFFFF"
+        radius={50}
+        minPoints={2}
+        renderCluster={renderCluster}
+      >
+        {markersReady &&
+          filteredVenues.map((venue) => (
+            <LiveVenueMarker
+              key={venue.id}
+              venue={venue}
+              isSelected={selectedVenue?.id === venue.id}
+              recentlyActive={recentCheckins.has(venue.id)}
+              onPress={handleMarkerPress}
+            />
+          ))}
+      </ClusteredMapView>
 
       {/* ─── Empty state ─────────────────────────────── */}
       {venues && venues.length === 0 && !venuesLoading && (
@@ -393,6 +465,7 @@ export default function MapScreen() {
           styles.myLocationBtn,
           shadows.lg,
           {
+            bottom: locationFabBottom,
             backgroundColor: c.bg.secondary,
             borderColor: isDark
               ? 'rgba(255,255,255,0.08)'
@@ -418,11 +491,12 @@ export default function MapScreen() {
       </TouchableOpacity>
 
       {/* ─── Nearby venue cards ──────────────────────── */}
-      {!selectedVenue && filteredVenues.length > 0 && (
+      {!selectedVenue && venuesInViewport.length > 0 && (
         <NearbyVenueCards
-          venues={filteredVenues}
+          venues={venuesInViewport}
           userLocation={location}
           activeCheckin={activeCheckin}
+          bottomOffset={0}
           onSelectVenue={handleCardSelect}
         />
       )}
@@ -586,7 +660,6 @@ const styles = StyleSheet.create({
   myLocationBtn: {
     position: 'absolute',
     right: spacing.xl,
-    bottom: 160,
     width: 48,
     height: 48,
     borderRadius: 24,

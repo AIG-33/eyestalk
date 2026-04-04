@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
 import { REPORT_REASONS } from '@eyestalk/shared/constants';
@@ -91,9 +91,14 @@ export function ReportModal({ targetUserId, venueId, reportedMessageId, onClose 
   );
 }
 
+export function blockRelationQueryKey(blockerId: string, blockedUserId: string) {
+  return ['block-relation', blockerId, blockedUserId] as const;
+}
+
 export function useBlockUser() {
   const session = useAuthStore((s) => s.session);
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (blockedUserId: string) => {
@@ -103,7 +108,37 @@ export function useBlockUser() {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, blockedUserId) => {
+      if (session?.user.id) {
+        void queryClient.invalidateQueries({
+          queryKey: blockRelationQueryKey(session.user.id, blockedUserId),
+        });
+      }
+      Alert.alert(t('common.done'));
+    },
+  });
+}
+
+export function useUnblockUser() {
+  const session = useAuthStore((s) => s.session);
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (blockedUserId: string) => {
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', session!.user.id)
+        .eq('blocked_id', blockedUserId);
+      if (error) throw error;
+    },
+    onSuccess: (_, blockedUserId) => {
+      if (session?.user.id) {
+        void queryClient.invalidateQueries({
+          queryKey: blockRelationQueryKey(session.user.id, blockedUserId),
+        });
+      }
       Alert.alert(t('common.done'));
     },
   });

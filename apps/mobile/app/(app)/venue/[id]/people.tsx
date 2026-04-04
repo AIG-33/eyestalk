@@ -1,18 +1,22 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView, Pressable,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
-import { api } from '@/lib/api';
+import { useSendWave } from '@/hooks/use-send-wave';
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { ReportModal, useBlockUser } from '@/components/ui/report-modal';
 import { PersonCardSkeleton } from '@/components/ui/skeleton';
 import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
+import { markVenueIncomingWavesSeen } from '@/hooks/use-chat-read';
 
 const FILTERS = ['all', 'wantToChat', 'lookingForCompany', 'playing', 'lookingForDancePartner'];
 
@@ -24,53 +28,73 @@ export default function PeopleScreen() {
   const [filter, setFilter] = useState('all');
   const [reportTarget, setReportTarget] = useState<string | null>(null);
   const blockUser = useBlockUser();
-  const queryClient = useQueryClient();
+  const sendWave = useSendWave();
   const { c, isDark } = useTheme();
+  const queryClient = useQueryClient();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
 
+  const userId = session?.user?.id;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (venueId) void markVenueIncomingWavesSeen(queryClient, venueId);
+    }, [venueId, queryClient]),
+  );
+
   const { data: people = [], isLoading } = useQuery({
-    queryKey: ['venue-people', venueId],
+    queryKey: ['venue-people', venueId, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('checkins')
         .select('*, profiles(*)')
-        .eq('venue_id', venueId)
+        .eq('venue_id', venueId!)
         .eq('status', 'active')
         .eq('is_visible', true)
-        .neq('user_id', session!.user.id);
+        .neq('user_id', userId!);
       if (error) throw error;
       return data || [];
     },
+    enabled: !!venueId && !!userId,
   });
 
   const { data: sentWaves = [] } = useQuery({
-    queryKey: ['sent-waves', venueId],
+    queryKey: ['sent-waves', venueId, userId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('interests')
-        .select('target_user_id')
-        .eq('user_id', session!.user.id)
-        .eq('venue_id', venueId);
-      return (data || []).map((i: any) => i.target_user_id);
+      const { data, error } = await supabase
+        .from('mutual_interests')
+        .select('to_user_id')
+        .eq('from_user_id', userId!)
+        .eq('venue_id', venueId!)
+        .eq('type', 'wave');
+      if (error) throw error;
+      return (data || []).map((i: { to_user_id: string }) => i.to_user_id);
     },
+    enabled: !!venueId && !!userId,
   });
 
-  const sendInterest = useMutation({
-    mutationFn: async (targetId: string) => {
-      await api('/api/v1/interests', {
-        method: 'POST',
-        body: { target_user_id: targetId, venue_id: venueId, type: 'wave' },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sent-waves', venueId] });
-      Alert.alert('👋', t('venue.waveSent', { defaultValue: 'Wave sent!' }));
-    },
-  });
+  const handleSendWave = useCallback((targetId: string) => {
+    if (!venueId) return;
+    sendWave.mutate(
+      { targetUserId: targetId, venueId },
+      {
+        onSuccess: (data) => {
+          if (!data.is_mutual) {
+            Alert.alert('👋', t('venue.waveSent', { defaultValue: 'Wave sent!' }));
+          }
+        },
+        onError: (err: Error) => {
+          Alert.alert(t('common.error'), err.message || t('common.error'));
+        },
+      },
+    );
+  }, [sendWave, venueId, t]);
 
-  const filteredPeople = filter === 'all'
-    ? people
-    : people.filter((p: any) => p.status_tag === filter);
+  const filteredPeople = useMemo(() => {
+    const withProfile = (people as any[]).filter((p) => p?.profiles);
+    return filter === 'all'
+      ? withProfile
+      : withProfile.filter((p: any) => p.status_tag === filter);
+  }, [people, filter]);
 
   const handleBlockUser = useCallback((userId: string) => {
     Alert.alert(t('safety.blockConfirm'), '', [
@@ -81,57 +105,62 @@ export default function PeopleScreen() {
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const profile = item.profiles;
+    const nickname = profile.nickname ?? '?';
     const alreadyWaved = sentWaves.includes(item.user_id);
     const interests = (profile.interests || []).slice(0, 3);
 
     return (
-      <TouchableOpacity
-        style={s.row}
-        activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/(app)/user/[id]' as any, params: { id: item.user_id, venueId } })}
-        onLongPress={() => {
-          Alert.alert(profile.nickname, '', [
-            { text: t('safety.report'), onPress: () => setReportTarget(item.user_id) },
-            { text: t('safety.block'), style: 'destructive', onPress: () => handleBlockUser(item.user_id) },
-            { text: t('common.cancel'), style: 'cancel' },
-          ]);
-        }}
-      >
-        <Avatar uri={profile.avatar_url} name={profile.nickname} size="md" status="inVenue" />
+      <View style={s.row}>
+        <Pressable
+          style={({ pressed }) => [s.rowMain, pressed && s.rowPressed]}
+          onPress={() => router.push({ pathname: '/(app)/user/[id]' as any, params: { id: item.user_id, venueId } })}
+          onLongPress={() => {
+            Alert.alert(nickname, '', [
+              { text: t('safety.report'), onPress: () => setReportTarget(item.user_id) },
+              { text: t('safety.block'), style: 'destructive', onPress: () => handleBlockUser(item.user_id) },
+              { text: t('common.cancel'), style: 'cancel' },
+            ]);
+          }}
+        >
+          <Avatar uri={profile.avatar_url ?? null} name={nickname} size="md" status="inVenue" />
 
-        <View style={s.info}>
-          <View style={s.nameRow}>
-            <Text style={s.name} numberOfLines={1}>{profile.nickname}</Text>
-            {item.status_tag && (
-              <View style={s.statusBadge}>
-                <Text style={s.statusText}>
-                  {t(`status.${item.status_tag}`, { defaultValue: item.status_tag })}
-                </Text>
-              </View>
+          <View style={s.info}>
+            <View style={s.nameRow}>
+              <Text style={s.name} numberOfLines={1}>{nickname}</Text>
+              {item.status_tag && (
+                <View style={s.statusBadge}>
+                  <Text style={s.statusText}>
+                    {t(`status.${item.status_tag}`, { defaultValue: item.status_tag })}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {interests.length > 0 && (
+              <Text style={s.interests} numberOfLines={1}>
+                {interests.map((i: string) => t(`interests.${i}`, { defaultValue: i })).join(' · ')}
+              </Text>
             )}
           </View>
-          {interests.length > 0 && (
-            <Text style={s.interests} numberOfLines={1}>
-              {interests.map((i: string) => t(`interests.${i}`, { defaultValue: i })).join(' · ')}
-            </Text>
-          )}
-        </View>
+        </Pressable>
 
         <TouchableOpacity
           style={[s.waveBtn, alreadyWaved && s.waveBtnSent]}
-          onPress={() => !alreadyWaved && sendInterest.mutate(item.user_id)}
-          disabled={alreadyWaved || sendInterest.isPending}
+          onPress={() => {
+            if (!alreadyWaved) handleSendWave(item.user_id);
+          }}
+          disabled={alreadyWaved || sendWave.isPending}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons
-            name={alreadyWaved ? 'checkmark' : 'hand-left-outline'}
+            name={alreadyWaved ? 'checkmark' : 'hand-right-outline'}
             size={18}
             color={alreadyWaved ? c.status.success : c.accent.primary}
           />
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
-  }, [s, c, sentWaves, sendInterest, t, handleBlockUser, venueId]);
+  }, [s, c, sentWaves, sendWave.isPending, handleSendWave, t, handleBlockUser, venueId]);
 
   return (
     <View style={s.container}>
@@ -165,7 +194,11 @@ export default function PeopleScreen() {
         ))}
       </ScrollView>
 
-      {isLoading ? (
+      {!userId ? (
+        <View style={s.empty}>
+          <Text style={s.emptyText}>{t('common.loading')}</Text>
+        </View>
+      ) : isLoading ? (
         <View style={s.loadingWrap}>
           {[1, 2, 3, 4, 5].map((i) => (
             <PersonCardSkeleton key={i} />
@@ -243,11 +276,21 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       flexDirection: 'row', alignItems: 'center',
       backgroundColor: c.bg.secondary,
       borderRadius: radius.lg,
-      padding: spacing.md,
+      paddingVertical: spacing.sm,
+      paddingLeft: spacing.md,
+      paddingRight: spacing.sm,
       marginBottom: spacing.xs,
       borderWidth: 1, borderColor: border,
-      gap: spacing.md,
+      gap: spacing.sm,
     },
+    rowMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    rowPressed: { opacity: 0.92 },
 
     info: { flex: 1, gap: 2 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -260,7 +303,7 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1,
     },
     statusText: {
-      fontSize: typography.size.bodyXs || 11, fontWeight: typography.weight.medium,
+      fontSize: typography.size.micro, fontWeight: typography.weight.medium,
       color: c.accent.primary,
     },
     interests: {

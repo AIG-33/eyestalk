@@ -3,15 +3,17 @@ import { Animated } from 'react-native';
 import { Redirect } from 'expo-router';
 import { appStorage } from '@/lib/storage';
 import { useAuthStore } from '@/stores/auth.store';
+import { useActiveCheckin } from '@/hooks/use-checkin';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const ONBOARDING_KEY = 'eyestalk_onboarding_seen';
-const MIN_SPLASH_MS = 3000;
+const MIN_SPLASH_MS = 5000;
 const FADE_OUT_MS = 600;
 
 export default function Index() {
   const session = useAuthStore((s) => s.session);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const authLoading = useAuthStore((s) => s.isLoading);
+  const { data: activeCheckin, isLoading: checkinLoading } = useActiveCheckin();
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [navigateReady, setNavigateReady] = useState(false);
@@ -28,7 +30,8 @@ export default function Index() {
     return () => clearTimeout(timer);
   }, []);
 
-  const dataReady = !isLoading && onboardingSeen !== null;
+  const checkinResolved = !session || !checkinLoading;
+  const dataReady = !authLoading && onboardingSeen !== null && checkinResolved;
 
   const triggerFadeOut = useCallback(() => {
     Animated.timing(fadeAnim, {
@@ -53,6 +56,10 @@ export default function Index() {
   }
 
   if (session) {
+    const venueId = activeCheckin?.venue_id;
+    if (venueId) {
+      return <Redirect href={`/(app)/venue/${venueId}` as any} />;
+    }
     return <Redirect href="/(app)/map" />;
   }
 

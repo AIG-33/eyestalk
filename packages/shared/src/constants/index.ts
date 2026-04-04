@@ -64,7 +64,7 @@ export type StatusTag = (typeof STATUS_TAGS)[number];
 export const CHECKIN_METHODS = ['qr', 'geofence', 'code'] as const;
 export type CheckinMethod = (typeof CHECKIN_METHODS)[number];
 
-export const CHECKIN_STATUSES = ['active', 'expired', 'manual_checkout'] as const;
+export const CHECKIN_STATUSES = ['active', 'expired', 'manual_checkout', 'geofence_checkout'] as const;
 export type CheckinStatus = (typeof CHECKIN_STATUSES)[number];
 
 export const MESSAGE_TYPES = ['text', 'emoji', 'sticker', 'image', 'wave', 'compliment', 'system', 'announcement'] as const;
@@ -95,6 +95,9 @@ export const TOKEN_TRANSACTION_TYPES = [
   'venue_bonus',
   'purchase',
   'achievement_reward',
+  'service_booking',
+  'poll_participation_reward',
+  'match_reward',
 ] as const;
 export type TokenTransactionType = (typeof TOKEN_TRANSACTION_TYPES)[number];
 
@@ -127,6 +130,8 @@ export const MAX_ANNOUNCEMENTS_PER_DAY = 5;
 export const CHECKIN_DURATION_HOURS = 4;
 export const CHECKIN_REWARD_TOKENS = 10;
 export const CHECKIN_REWARD_COOLDOWN_HOURS = 12;
+export const POLL_PARTICIPATION_REWARD_TOKENS = 5;
+export const MATCH_REWARD_TOKENS = 20;
 export const MICRO_CHAT_DURATION_MINUTES = 5;
 export const MICRO_CHAT_MESSAGE_LIMIT = 10;
 export const DEFAULT_GEOFENCE_RADIUS_METERS = 50;

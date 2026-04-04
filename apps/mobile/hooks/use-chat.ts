@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { subscribeToChatMessages, unsubscribe } from '@/lib/realtime';
 import { useAuthStore } from '@/stores/auth.store';
+import { markChatAsRead } from '@/hooks/use-chat-read';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface ChatMessage {
@@ -18,7 +19,10 @@ export interface ChatMessage {
   };
 }
 
-export function useChatMessages(chatId: string | null) {
+export function useChatMessages(
+  chatId: string | null,
+  screenFocusedRef?: MutableRefObject<boolean>,
+) {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -49,12 +53,15 @@ export function useChatMessages(chatId: string | null) {
         ['chat', chatId, 'messages'],
         (old) => (old ? [...old, newMsg as unknown as ChatMessage] : [newMsg as unknown as ChatMessage]),
       );
+      if (screenFocusedRef?.current) {
+        void markChatAsRead(queryClient, chatId);
+      }
     });
 
     return () => {
       if (channelRef.current) unsubscribe(channelRef.current);
     };
-  }, [chatId, queryClient]);
+  }, [chatId, queryClient, screenFocusedRef]);
 
   return query;
 }

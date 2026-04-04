@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 interface UserLocation {
@@ -24,16 +25,37 @@ export function useLocation() {
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // Show map immediately on Android (and iOS) using last known fix, then refine with GPS.
+      try {
+        const last = await Location.getLastKnownPositionAsync();
+        if (mounted && last?.coords) {
+          setLocation({
+            latitude: last.coords.latitude,
+            longitude: last.coords.longitude,
+          });
+          setLoading(false);
+        }
+      } catch {
+        /* ignore */
+      }
 
-      if (mounted) {
-        setLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
+      try {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy:
+            Platform.OS === 'android'
+              ? Location.Accuracy.Low
+              : Location.Accuracy.Balanced,
         });
-        setLoading(false);
+
+        if (mounted) {
+          setLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+          setLoading(false);
+        }
+      } catch {
+        if (mounted) setLoading(false);
       }
     }
 

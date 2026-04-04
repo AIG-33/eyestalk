@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,10 +20,17 @@ interface UserLocation {
   longitude: number;
 }
 
+/** Card width + horizontal gap between cards (for snap interval). */
+const CARD_WIDTH = 104;
+const CARD_GAP = 8;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+
 interface Props {
   venues: VenueWithStats[] | undefined;
   userLocation: UserLocation | null;
   activeCheckin: any;
+  /** Distance from bottom of map tab content (0 = flush with tab bar seam). */
+  bottomOffset: number;
   onSelectVenue: (venue: VenueWithStats) => void;
 }
 
@@ -30,13 +38,17 @@ export function NearbyVenueCards({
   venues,
   userLocation,
   activeCheckin,
+  bottomOffset,
   onSelectVenue,
 }: Props) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { c, isDark } = useTheme();
 
   const sortedVenues = useMemo(() => {
-    if (!venues || !userLocation) return venues || [];
+    if (!venues?.length) return [];
+    if (!userLocation) {
+      return [...venues].sort((a, b) => a.name.localeCompare(b.name));
+    }
     return [...venues].sort((a, b) => {
       const distA = getDistanceMeters(
         userLocation.latitude,
@@ -69,7 +81,8 @@ export function NearbyVenueCards({
           i18n.language,
         )
       : null;
-    const isHere = activeCheckin?.venue_id === item.id;
+    const isHere =
+      String(activeCheckin?.venue_id ?? '') === String(item.id ?? '');
 
     return (
       <TouchableOpacity
@@ -78,11 +91,13 @@ export function NearbyVenueCards({
         style={[
           styles.card,
           {
+            width: CARD_WIDTH,
+            marginRight: CARD_GAP,
             backgroundColor: isDark
-              ? 'rgba(22,22,48,0.92)'
-              : 'rgba(255,255,255,0.95)',
+              ? 'rgba(22,22,48,0.94)'
+              : 'rgba(255,255,255,0.96)',
             borderColor: isHere
-              ? 'rgba(0,229,160,0.4)'
+              ? 'rgba(0,229,160,0.45)'
               : isDark
                 ? 'rgba(255,255,255,0.08)'
                 : 'rgba(0,0,0,0.06)',
@@ -112,7 +127,7 @@ export function NearbyVenueCards({
 
         <Text
           style={[styles.cardName, { color: c.text.primary }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {item.name}
         </Text>
@@ -124,28 +139,39 @@ export function NearbyVenueCards({
               <Text style={styles.cardLiveText}>{item.active_checkins}</Text>
             </View>
           )}
-          {dist && (
+          {dist ? (
             <View style={styles.cardDist}>
-              <Ionicons name="navigate-outline" size={10} color={c.text.tertiary} />
+              <Ionicons name="navigate-outline" size={9} color={c.text.tertiary} />
               <Text style={[styles.cardDistText, { color: c.text.tertiary }]}>
                 {dist}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { bottom: bottomOffset }]} pointerEvents="box-none">
       <FlatList
         data={sortedVenues}
         renderItem={renderCard}
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
+        decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.985}
+        snapToInterval={SNAP_INTERVAL}
+        snapToAlignment="start"
+        disableIntervalMomentum
         contentContainerStyle={styles.list}
+        {...(Platform.OS === 'ios'
+          ? {
+              contentInsetAdjustmentBehavior: 'never' as const,
+              contentInset: { top: 0, left: 0, bottom: 0, right: 0 },
+              scrollIndicatorInsets: { top: 0, left: 0, bottom: 0, right: 0 },
+            }
+          : {})}
       />
     </View>
   );
@@ -154,47 +180,50 @@ export function NearbyVenueCards({
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 100,
     left: 0,
     right: 0,
   },
   list: {
-    paddingHorizontal: spacing.xl,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 0,
+    paddingTop: 0,
   },
   card: {
-    width: 130,
-    padding: spacing.md,
-    borderRadius: radius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
     ...shadows.sm,
   },
   cardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: spacing.sm,
+    marginBottom: 6,
   },
   cardLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
   },
   cardEmoji: {
-    fontSize: 18,
+    fontSize: 15,
   },
   cardName: {
-    fontSize: typography.size.bodySm,
+    fontSize: typography.size.micro,
     fontWeight: typography.weight.bold,
-    marginBottom: 4,
+    lineHeight: typography.size.micro * 1.25,
+    minHeight: typography.size.micro * 2.5,
   },
   cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    marginTop: 4,
+    flexWrap: 'wrap',
   },
   cardLive: {
     flexDirection: 'row',

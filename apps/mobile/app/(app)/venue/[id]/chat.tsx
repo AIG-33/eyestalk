@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
 import { subscribeToChatMessages, unsubscribe } from '@/lib/realtime';
+import { markChatAsRead } from '@/hooks/use-chat-read';
 import { ReportModal, useBlockUser } from '@/components/ui/report-modal';
 import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -37,6 +39,7 @@ export default function VenueChatScreen() {
   const blockUser = useBlockUser();
   const flatListRef = useRef<FlatList>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const screenFocusedRef = useRef(true);
   const queryClient = useQueryClient();
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
@@ -108,11 +111,24 @@ export default function VenueChatScreen() {
     enabled: !!chatId,
   });
 
+  useFocusEffect(
+    useCallback(() => {
+      screenFocusedRef.current = true;
+      if (chatId) void markChatAsRead(queryClient, chatId);
+      return () => {
+        screenFocusedRef.current = false;
+      };
+    }, [chatId, queryClient]),
+  );
+
   useEffect(() => {
     if (!chatId) return;
 
     channelRef.current = subscribeToChatMessages(chatId, () => {
       queryClient.invalidateQueries({ queryKey: ['venue-chat', chatId, 'messages'] });
+      if (screenFocusedRef.current) {
+        void markChatAsRead(queryClient, chatId);
+      }
     });
 
     return () => {
@@ -149,7 +165,7 @@ export default function VenueChatScreen() {
 
   const isOwnMessage = (msg: Message) => msg.sender_id === session?.user.id;
 
-  const handleMessageLongPress = (msg: Message) => {
+  const showMessageActionsMenu = (msg: Message) => {
     if (isOwnMessage(msg)) return;
     const senderName = Array.isArray(msg.sender)
       ? msg.sender[0]?.nickname
@@ -209,32 +225,56 @@ export default function VenueChatScreen() {
       );
     }
 
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onLongPress={() => handleMessageLongPress(item)}
-        delayLongPress={400}
-        style={[s.msgRow, own && s.msgRowOwn]}
-      >
-        <View style={[
-          s.msgBubble,
-          own ? s.msgBubbleOwn : admin ? s.msgBubbleAdmin : s.msgBubbleOther,
-        ]}>
-          {!own && admin && (
-            <View style={s.adminLabel}>
-              <Text style={s.adminStar}>⭐</Text>
-              <Text style={s.adminName}>{venueInfo?.name || 'Venue'}</Text>
-            </View>
-          )}
-          {!own && !admin && (
-            <Text style={s.msgSender}>{senderName || '???'}</Text>
-          )}
-          <Text style={[s.msgText, admin && !own && s.adminMsgText]}>{item.content}</Text>
-          <Text style={s.msgTime}>
-            {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+    const bubble = (
+      <View style={[
+        s.msgBubble,
+        own ? s.msgBubbleOwn : admin ? s.msgBubbleAdmin : s.msgBubbleOther,
+        !own && s.msgBubbleInThread,
+      ]}>
+        {!own && admin && (
+          <View style={s.adminLabel}>
+            <Text style={s.adminStar}>⭐</Text>
+            <Text style={s.adminName}>{venueInfo?.name || 'Venue'}</Text>
+          </View>
+        )}
+        {!own && !admin && (
+          <Text style={s.msgSender}>{senderName || '???'}</Text>
+        )}
+        <Text style={[s.msgText, admin && !own && s.adminMsgText]}>{item.content}</Text>
+        <Text style={s.msgTime}>
+          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    );
+
+    if (own) {
+      return (
+        <View style={[s.msgRow, s.msgRowOwn]}>
+          {bubble}
         </View>
-      </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={[s.msgRow, s.msgRowOther]}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onLongPress={() => showMessageActionsMenu(item)}
+          delayLongPress={400}
+          style={s.msgBubbleWrapper}
+        >
+          {bubble}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.msgMenuBtn}
+          onPress={() => showMessageActionsMenu(item)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('chats.messageActionsA11y')}
+        >
+          <Ionicons name="ellipsis-horizontal" size={20} color={c.text.tertiary} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -374,9 +414,29 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     },
     msgRow: { marginBottom: spacing.sm, flexDirection: 'row' },
     msgRowOwn: { justifyContent: 'flex-end' },
+    msgRowOther: {
+      alignSelf: 'flex-start',
+      alignItems: 'flex-end',
+    },
+    msgBubbleWrapper: {
+      flexShrink: 1,
+      maxWidth: '78%',
+    },
+    msgMenuBtn: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'flex-end',
+      minWidth: 36,
+      minHeight: 36,
+      marginLeft: 2,
+      marginBottom: 4,
+    },
     msgBubble: {
       maxWidth: '80%', borderRadius: radius.xl,
       paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    },
+    msgBubbleInThread: {
+      maxWidth: '100%',
     },
     msgBubbleOwn: {
       backgroundColor: c.accent.primary,

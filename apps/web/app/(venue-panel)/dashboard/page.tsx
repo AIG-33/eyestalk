@@ -157,6 +157,16 @@ function DashboardContent({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Link
+          href="/dashboard/live-screen"
+          className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            📺 {t('liveScreen')}
+          </h2>
+          <p style={{ color: 'var(--text-tertiary)' }}>{t('liveScreenHint')}</p>
+        </Link>
+        <Link
           href="/dashboard/analytics"
           className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
           style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}

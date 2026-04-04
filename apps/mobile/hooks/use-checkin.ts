@@ -4,10 +4,6 @@ import { api } from '@/lib/api';
 import { useCheckinStore } from '@/stores/checkin.store';
 import { useAuthStore } from '@/stores/auth.store';
 
-const CHECKIN_DURATION_HOURS = 4;
-const CHECKIN_REWARD_TOKENS = 10;
-const CHECKIN_REWARD_COOLDOWN_HOURS = 12;
-
 export function useActiveCheckin() {
   const session = useAuthStore((s) => s.session);
   const { setActiveCheckin, clearCheckin } = useCheckinStore();
@@ -17,7 +13,7 @@ export function useActiveCheckin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('checkins')
-        .select('*, venues(id, name, type, logo_url)')
+        .select('*, venues(id, name, type, logo_url, latitude, longitude, geofence_radius)')
         .eq('user_id', session!.user.id)
         .eq('status', 'active')
         .maybeSingle();
@@ -48,104 +44,36 @@ export function useCheckin() {
       lat: number;
       lng: number;
     }) => {
-      const userId = session?.user.id;
-      if (!userId) throw new Error('Not authenticated');
-
-      console.log('[checkin] Step 1: checking existing checkin for user', userId);
-      const { data: existingCheckin, error: existingErr } = await supabase
-        .from('checkins')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (existingErr) throw new Error(`Check existing: ${existingErr.message}`);
-      if (existingCheckin) throw new Error('Already checked in to a venue');
-
-      console.log('[checkin] Step 2: fetching venue', params.venue_id);
-      const { data: venue, error: venueErr } = await supabase
-        .from('venues')
-        .select('id, name, latitude, longitude, geofence_radius')
-        .eq('id', params.venue_id)
-        .single();
-
-      if (venueErr) throw new Error(`Venue fetch: ${venueErr.message}`);
-      if (!venue) throw new Error('Venue not found');
-
-      console.log('[checkin] Step 3: venue found:', venue.name, 'at', venue.latitude, venue.longitude, 'radius:', venue.geofence_radius);
-
-      if (params.qr_code) {
-        const { data: qr, error: qrErr } = await supabase
-          .from('qr_codes')
-          .select('id')
-          .eq('venue_id', params.venue_id)
-          .eq('code', params.qr_code)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (qrErr) throw new Error(`QR check: ${qrErr.message}`);
-        if (!qr) throw new Error('Invalid QR code');
-      } else {
-        const distance = getDistanceMeters(
-          params.lat, params.lng,
-          Number(venue.latitude), Number(venue.longitude),
-        );
-        const maxDist = venue.geofence_radius || 100;
-        console.log('[checkin] Step 4: distance =', Math.round(distance), 'm, max =', maxDist, 'm');
-        if (distance > maxDist) {
-          throw new Error(`Too far from venue (${Math.round(distance)}m away, max ${maxDist}m)`);
-        }
-      }
-
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + CHECKIN_DURATION_HOURS);
-
-      const cooldownCutoff = new Date();
-      cooldownCutoff.setHours(cooldownCutoff.getHours() - CHECKIN_REWARD_COOLDOWN_HOURS);
-
-      const { data: recentRewarded } = await supabase
-        .from('token_transactions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('type', 'checkin_reward')
-        .gte('created_at', cooldownCutoff.toISOString())
-        .limit(1);
-
-      const eligibleForReward = !recentRewarded || recentRewarded.length === 0;
-      const tokensEarned = eligibleForReward ? CHECKIN_REWARD_TOKENS : 0;
-
-      console.log('[checkin] Step 5: inserting checkin, eligible for reward:', eligibleForReward);
-      const { data: checkin, error: checkinError } = await supabase
-        .from('checkins')
-        .insert({
-          user_id: userId,
-          venue_id: params.venue_id,
-          method: params.qr_code ? 'qr' : 'geofence',
-          status: 'active',
-          tokens_earned: tokensEarned,
-          expires_at: expiresAt.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (checkinError) throw new Error(`Checkin insert: ${checkinError.message} (code: ${checkinError.code})`);
-      console.log('[checkin] Step 6: success!', checkin);
-
-      return { checkin, tokens_earned: tokensEarned };
+      if (!session?.user.id) throw new Error('Not authenticated');
+      return api.post<{
+        checkin: Record<string, unknown>;
+        tokens_earned: number;
+        reward_cooldown?: boolean;
+      }>('/checkins', {
+        venue_id: params.venue_id,
+        qr_code: params.qr_code,
+        lat: params.lat,
+        lng: params.lng,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkin'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
-      api.post('/achievements', { action: 'check' }).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async (checkinId: string) => {
+    mutationFn: async (
+      arg: string | { checkinId: string; status?: 'manual_checkout' | 'geofence_checkout' },
+    ) => {
+      const checkinId = typeof arg === 'string' ? arg : arg.checkinId;
+      const status =
+        typeof arg === 'string' ? 'manual_checkout' : (arg.status ?? 'manual_checkout');
       const { error } = await supabase
         .from('checkins')
         .update({
-          status: 'manual_checkout',
+          status,
           checked_out_at: new Date().toISOString(),
         })
         .eq('id', checkinId);
@@ -160,15 +88,4 @@ export function useCheckin() {
   });
 
   return { checkinMutation, checkoutMutation };
-}
-
-function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3;
-  const rad = Math.PI / 180;
-  const dLat = (lat2 - lat1) * rad;
-  const dLon = (lon2 - lon1) * rad;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

@@ -1,6 +1,29 @@
 const R = 6371e3;
 const RAD = Math.PI / 180;
 
+/** Map region from react-native-maps (center + span). */
+export type MapRegionBounds = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
+
+/** True if a point lies inside the visible map rectangle (ignores date-line wrap). */
+export function isLatLngInMapRegion(
+  lat: number,
+  lng: number,
+  region: MapRegionBounds,
+): boolean {
+  const halfLat = region.latitudeDelta / 2;
+  const halfLng = region.longitudeDelta / 2;
+  const latOk =
+    lat >= region.latitude - halfLat && lat <= region.latitude + halfLat;
+  const lngOk =
+    lng >= region.longitude - halfLng && lng <= region.longitude + halfLng;
+  return latOk && lngOk;
+}
+
 export function getDistanceMeters(
   lat1: number,
   lon1: number,

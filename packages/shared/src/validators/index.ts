@@ -154,3 +154,32 @@ export const placeBidSchema = z.object({
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;
 export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
 export type PlaceBidInput = z.infer<typeof placeBidSchema>;
+
+export const createVenueServiceSchema = z.object({
+  venue_id: z.string().uuid(),
+  title: z.string().min(2).max(200),
+  description: z.string().max(1000).optional().nullable(),
+  price_tokens: z.number().int().min(0).default(0),
+  duration_minutes: z.number().int().min(1).max(1440),
+  capacity_per_slot: z.number().int().min(1).max(100).default(1),
+  sort_order: z.number().int().min(0).optional(),
+});
+
+export const updateVenueServiceSchema = z.object({
+  title: z.string().min(2).max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  price_tokens: z.number().int().min(0).optional(),
+  duration_minutes: z.number().int().min(1).max(1440).optional(),
+  capacity_per_slot: z.number().int().min(1).max(100).optional(),
+  is_active: z.boolean().optional(),
+  sort_order: z.number().int().min(0).optional(),
+});
+
+export const addVenueServiceSlotSchema = z.object({
+  service_id: z.string().uuid(),
+  starts_at: z.string().datetime(),
+});
+
+export type CreateVenueServiceInput = z.infer<typeof createVenueServiceSchema>;
+export type UpdateVenueServiceInput = z.infer<typeof updateVenueServiceSchema>;
+export type AddVenueServiceSlotInput = z.infer<typeof addVenueServiceSlotSchema>;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { ACTIVITY_TYPES } from '@eyestalk/shared/constants';
@@ -297,6 +298,13 @@ export default function ActivitiesPage() {
                         }`}
                       />
                     </button>
+
+                    <Link
+                      href={`/dashboard/activities/${act.id}`}
+                      className="text-violet-400 hover:text-violet-300 text-sm font-medium px-3 py-1.5 rounded-lg border border-violet-500/40 hover:bg-violet-500/10 whitespace-nowrap transition-colors"
+                    >
+                      {t('activityViewDetails')}
+                    </Link>
 
                     {/* Edit button */}
                     <button

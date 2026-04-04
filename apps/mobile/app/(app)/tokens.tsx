@@ -94,6 +94,7 @@ export default function TokensScreen() {
             <Text style={styles.infoItem}>{t('tokens.spendBoost')}</Text>
             <Text style={styles.infoItem}>{t('tokens.spendExtend')}</Text>
             <Text style={styles.infoItem}>{t('tokens.spendActivity')}</Text>
+            <Text style={styles.infoItem}>{t('tokens.spendService')}</Text>
           </View>
         </View>
       )}

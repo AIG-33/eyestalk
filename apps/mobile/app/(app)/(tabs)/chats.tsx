@@ -1,9 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUserChats, type UserChat } from '@/hooks/use-chat';
+import { markAllIncomingWavesSeen } from '@/hooks/use-chat-read';
 import { useActiveCheckin } from '@/hooks/use-checkin';
 import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/avatar';
@@ -22,8 +25,15 @@ const VENUE_EMOJI: Record<string, string> = {
 export default function ChatsScreen() {
   const { t } = useTranslation();
   const { c, isDark } = useTheme();
+  const queryClient = useQueryClient();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const { data: chats = [], isLoading } = useUserChats();
+
+  useFocusEffect(
+    useCallback(() => {
+      void markAllIncomingWavesSeen(queryClient);
+    }, [queryClient]),
+  );
   const { data: activeCheckin } = useActiveCheckin();
   const session = useAuthStore((st) => st.session);
   const myId = session?.user.id;

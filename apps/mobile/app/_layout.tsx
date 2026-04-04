@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthListener } from '@/hooks/use-auth';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useMatchListener } from '@/hooks/use-match-listener';
+import { useGeofenceAutoCheckout } from '@/hooks/use-geofence-auto-checkout';
 import { useMatchStore } from '@/stores/match.store';
 import { useUIStore } from '@/stores/ui.store';
 import { MatchNotification } from '@/components/ui/match-notification';
@@ -29,6 +30,7 @@ function GlobalListeners({ children }: { children: React.ReactNode }) {
   useAuthListener();
   usePushNotifications();
   useMatchListener();
+  useGeofenceAutoCheckout();
   const loadSettings = useUIStore((s) => s.loadSettings);
   const stealthMode = useUIStore((s) => s.stealthMode);
 

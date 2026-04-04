@@ -215,9 +215,9 @@ const s = StyleSheet.create({
   },
   slogan: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
     color: PURPLE,
-    letterSpacing: 2.5,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
     textAlign: 'center',
   },

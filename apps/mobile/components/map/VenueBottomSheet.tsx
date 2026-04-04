@@ -49,7 +49,8 @@ export function VenueBottomSheet({
   const { c, isDark } = useTheme();
   const { data: activities } = useVenueActivities(venue.id);
   const { data: people } = useVenuePeople(venue.id);
-  const isCheckedInHere = activeCheckin?.venue_id === venue.id;
+  const isCheckedInHere =
+    String(activeCheckin?.venue_id ?? '') === String(venue.id ?? '');
 
   const emoji = VENUE_EMOJI[venue.type] || '📍';
   const dist = userLocation
@@ -75,20 +76,27 @@ export function VenueBottomSheet({
       animationType="slide"
       visible
       onRequestClose={onClose}
+      presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
     >
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View
-        style={[
-          styles.sheet,
-          {
-            paddingBottom: Math.max(insets.bottom, 20),
-            backgroundColor: c.bg.secondary,
-            borderColor: isDark
-              ? 'rgba(255,255,255,0.06)'
-              : 'rgba(0,0,0,0.06)',
-          },
-        ]}
-      >
+      <View style={styles.modalRoot}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+        <View
+          style={[
+            styles.sheet,
+            {
+              paddingBottom: Math.max(insets.bottom, 20),
+              backgroundColor: c.bg.secondary,
+              borderColor: isDark
+                ? 'rgba(255,255,255,0.06)'
+                : 'rgba(0,0,0,0.06)',
+            },
+          ]}
+        >
         <View
           style={[
             styles.handle,
@@ -135,7 +143,7 @@ export function VenueBottomSheet({
             <View style={styles.meta}>
               <Text style={[styles.type, { color: c.text.secondary }]}>
                 {t(`venueTypes.${venue.type}`, {
-                  defaultValue: venue.type.replace('_', ' '),
+                  defaultValue: (venue.type ?? '').replace(/_/g, ' ') || '—',
                 })}
               </Text>
               {venue.active_checkins > 0 && (
@@ -361,12 +369,16 @@ export function VenueBottomSheet({
           </TouchableOpacity>
         </View>
       </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1 },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   sheet: {
     borderTopLeftRadius: radius['2xl'],
     borderTopRightRadius: radius['2xl'],

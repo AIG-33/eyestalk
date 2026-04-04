@@ -112,7 +112,7 @@ export default function AuctionScreen() {
       queryClient.invalidateQueries({ queryKey: ['auction-bids', activityId] });
     },
     onError: (err: Error) => {
-      Alert.alert('Bid failed', err.message);
+      Alert.alert(t('auction.bidFailed'), err.message);
     },
   });
 
@@ -191,21 +191,45 @@ export default function AuctionScreen() {
   const minimumBid = highestBid > 0 ? highestBid + minIncrement : startingPrice;
   const isEnded = auctionData?.is_ended || countdown === 'Ended';
   const isActive = activity?.status === 'active' && !isEnded;
+  const itemName = activity?.config?.item_name || activity?.title || 'Auction';
+
+  const confirmPlaceBid = (amount: number) => {
+    if (placeBid.isPending) return;
+    Alert.alert(
+      t('auction.confirmTitle'),
+      t('auction.confirmMessage', { amount, item: itemName }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('auction.confirmCta'),
+          onPress: () => placeBid.mutate(amount),
+        },
+      ],
+    );
+  };
 
   const handlePlaceBid = () => {
-    const amount = parseInt(bidInput);
+    const amount = parseInt(bidInput, 10);
     if (!amount || amount < minimumBid) {
-      Alert.alert('Invalid bid', `Minimum bid is ${minimumBid} tokens`);
+      Alert.alert(
+        t('auction.invalidBid'),
+        t('auction.minBid', { min: minimumBid }),
+      );
       return;
     }
-    placeBid.mutate(amount);
+    confirmPlaceBid(amount);
   };
 
   const quickBid = (amount: number) => {
-    placeBid.mutate(amount);
+    if (amount < minimumBid) {
+      Alert.alert(
+        t('auction.invalidBid'),
+        t('auction.minBid', { min: minimumBid }),
+      );
+      return;
+    }
+    confirmPlaceBid(amount);
   };
-
-  const itemName = activity?.config?.item_name || activity?.title || 'Auction';
 
   const renderBid = useCallback(({ item, index }: { item: AuctionBid; index: number }) => {
     const isTop = index === 0;

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { haptic } from '@/lib/haptics';
 import { useTheme, component, typography, shadows } from '@/theme';
+import { ChatsTabIcon } from '@/components/navigation/chats-tab-icon';
 
 const TAB_ICONS: Record<string, { outline: keyof typeof Ionicons.glyphMap; filled: keyof typeof Ionicons.glyphMap }> = {
   map: { outline: 'map-outline', filled: 'map' },
@@ -75,7 +76,7 @@ export default function TabsLayout() {
         listeners={{ tabPress: () => haptic.selection() }}
         options={{
           title: t('tabs.chats'),
-          tabBarIcon: ({ focused }) => <TabIcon name="chats" focused={focused} />,
+          tabBarIcon: ({ focused }) => <ChatsTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen

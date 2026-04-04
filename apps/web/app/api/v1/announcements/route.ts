@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { MAX_ANNOUNCEMENTS_PER_DAY } from '@eyestalk/shared/constants';
+import { sendExpoPushBatch } from '@/lib/push/expo-push';
 
 const announcementSchema = z.object({
   venue_id: z.string().uuid(),
@@ -97,6 +98,60 @@ export async function POST(request: NextRequest) {
   if (msgError) {
     return NextResponse.json({ error: msgError.message }, { status: 500 });
   }
+
+  const title = venue.name.length > 40 ? `${venue.name.slice(0, 37)}…` : venue.name;
+  const pushBody =
+    content.length > 120 ? `${content.slice(0, 117)}…` : content;
+
+  void (async () => {
+    try {
+      const { data: checkins } = await admin
+        .from('checkins')
+        .select('user_id')
+        .eq('venue_id', venue_id)
+        .eq('status', 'active');
+
+      const recipientIds = new Set<string>();
+      for (const row of checkins || []) {
+        if (row.user_id && row.user_id !== user.id) recipientIds.add(row.user_id);
+      }
+
+      if (recipientIds.size === 0) return;
+
+      const { data: tokens } = await admin
+        .from('user_push_tokens')
+        .select('expo_push_token')
+        .in('user_id', [...recipientIds]);
+
+      const toSend = (tokens || [])
+        .map((t) => t.expo_push_token)
+        .filter(
+          (t): t is string =>
+            typeof t === 'string' && t.startsWith('ExponentPushToken'),
+        );
+
+      const uniqueTokens = [...new Set(toSend)];
+      if (uniqueTokens.length === 0) return;
+
+      await sendExpoPushBatch(
+        uniqueTokens.map((to) => ({
+          to,
+          title,
+          body: pushBody,
+          sound: 'default',
+          channelId: 'announcements',
+          data: {
+            type: 'announcement',
+            venueId: venue_id,
+            chatId: chat.id,
+            messageId: message.id,
+          },
+        })),
+      );
+    } catch (e) {
+      console.error('[announcements] push fan-out failed', e);
+    }
+  })();
 
   return NextResponse.json({ message, announcements_remaining: MAX_ANNOUNCEMENTS_PER_DAY - (todayCount || 0) - 1 });
 }

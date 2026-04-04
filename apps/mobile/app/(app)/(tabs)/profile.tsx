@@ -186,6 +186,7 @@ export default function ProfileScreen() {
         <MenuItem icon="images-outline" label={i18n.language === 'ru' ? 'Мои фото' : 'My Photos'} hint={i18n.language === 'ru' ? 'Загрузите дополнительные фото' : 'Upload additional photos'} value={`${photos.length}`} onPress={() => router.push('/(app)/my-photos' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="create-outline" label={t('profile.editProfile')} hint={t('profile.editProfileHint')} onPress={() => router.push('/(app)/edit-profile' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="wallet-outline" label={t('profile.tokens')} hint={t('profile.tokenBalanceHint')} value={`${profile?.token_balance || 0}`} onPress={() => router.push('/(app)/tokens' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="megaphone-outline" label={t('announcements.title')} hint={t('announcements.profileHint')} onPress={() => router.push('/(app)/announcements' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="trophy-outline" label={t('achievements.title', { defaultValue: i18n.language === 'ru' ? 'Достижения' : 'Achievements' })} hint={t('achievements.profileHint', { defaultValue: i18n.language === 'ru' ? 'Бейджи, стрики и прогресс' : 'Badges, streaks, and progress' })} onPress={() => router.push('/(app)/achievements' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem
           icon={isDark ? 'moon-outline' : 'sunny-outline'}

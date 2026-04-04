@@ -131,6 +131,8 @@
     "checkinHint": "Check in to see who's here and start meeting people",
     "checkout": "Check Out",
     "checkoutHint": "Leave this venue — your chats will expire in 24 hours",
+    "autoGeofenceCheckoutTitle": "Checked out",
+    "autoGeofenceCheckoutMessage": "You left {{venueName}} — we checked you out automatically.",
     "people": "People",
     "peopleHint": "See who's here right now and send a wave to connect",
     "chat": "Chat",
@@ -155,7 +157,40 @@
     "checkinRequiredChat": "Check in to this venue to join the chat and start conversations",
     "checkinRequiredActivities": "Check in to this venue to participate in activities and challenges",
     "checkinToChat": "Check in to join the chat",
-    "checkinToJoin": "Check in to participate"
+    "checkinToJoin": "Check in to participate",
+    "services": "Services",
+    "servicesHint": "Book tables, lanes, or perks with tokens",
+    "checkinRequiredServices": "Check in to this venue to book a service",
+    "checkinToBook": "Check in to book"
+  },
+  "venueServices": {
+    "title": "Services",
+    "hint": "Reserve a slot with tokens. You must be checked in at this venue.",
+    "book": "Book",
+    "booked": "Booked ✓",
+    "full": "Full",
+    "free": "Free",
+    "cost": "{{n}} tokens",
+    "spots": "{{left}} / {{cap}} left",
+    "emptyTitle": "No services yet",
+    "emptyHint": "The venue hasn't added any bookable slots for this day.",
+    "emptyDayTitle": "No slots on this day",
+    "emptyDayHint": "Try another date — tap a day with a green dot.",
+    "bookFailed": "Could not book",
+    "confirmTitle": "Confirm booking",
+    "confirmBody": "Book \"{{title}}\" for {{cost}} tokens?",
+    "confirmBodyFree": "Book \"{{title}}\"? (free)",
+    "confirmOk": "Book",
+    "errCheckin": "Check in at this venue first.",
+    "errTokens": "Not enough tokens.",
+    "errFull": "This slot is full.",
+    "errAlready": "You already have this slot.",
+    "errGone": "This slot is no longer available.",
+    "errAuth": "Sign in to book.",
+    "errUnknown": "Something went wrong. Try again.",
+    "filterAll": "All",
+    "filterAvailable": "Available",
+    "filterBooked": "Booked"
   },
   "chats": {
     "empty": "No chats yet",
@@ -173,6 +208,18 @@
     "ephemeralNotice": "This chat expires 24h after you leave the venue",
     "directChatHint": "This is a private chat — only you two can see it",
     "venueChatHint": "Everyone checked in at this venue can see and send messages here",
+    "messageActionsA11y": "More: report message or block user",
+    "waveAction": "Wave",
+    "waveBack": "Wave back",
+    "waveSentShort": "Wave sent",
+    "matchedShort": "Matched",
+    "waveInChatOther": "Sent a wave",
+    "waveInChatOwn": "You sent a wave",
+    "matchInChat": "It's a match! Say hi.",
+    "directWaveHint": "Send a wave — it appears in this chat. If they wave back, it's a match.",
+    "directHeaderHint": "Wave 👋 or message — you match if you both wave",
+    "matchToastTitle": "It's a match!",
+    "matchToastSubtitle": "Open the chat and say hi",
     "chatSections": {
       "active": "Active — you're both here now",
       "recent": "Recent conversations",
@@ -219,6 +266,8 @@
     "reportHint": "Let us know if someone is behaving inappropriately — reports are anonymous",
     "reportSent": "Report sent. Thank you for keeping EyesTalk safe!",
     "blockConfirm": "Are you sure you want to block this user? They won't know they've been blocked.",
+    "unblock": "Unblock",
+    "unblockConfirm": "Remove block for this user? You'll be able to see each other again.",
     "reportReason": "Reason",
     "reportReasonHint": "Select the reason that best describes the issue",
     "reportDescription": "Description (optional)",
@@ -248,6 +297,7 @@
     "spendBoost": "Boost your visibility for 1 hour",
     "spendExtend": "Extend a micro-chat",
     "spendActivity": "Join premium activities",
+    "spendService": "Book tables, lanes, or other venue services",
     "types": {
       "checkin_reward": "Check-in reward",
       "activity_reward": "Activity reward",
@@ -257,7 +307,8 @@
       "referral": "Referral bonus",
       "venue_bonus": "Venue bonus",
       "purchase": "Purchase",
-      "achievement_reward": "Achievement reward"
+      "achievement_reward": "Achievement reward",
+      "service_booking": "Service booking"
     }
   },
   "microChat": {
@@ -340,6 +391,14 @@
     "mutualInterest": "You have things in common",
     "longPressHint": "Long press on a person to report or block"
   },
+  "announcements": {
+    "title": "Announcements",
+    "profileHint": "Updates from venues where you joined the chat",
+    "badge": "Announcement",
+    "openChatHint": "Tap to open venue chat",
+    "empty": "No announcements yet",
+    "emptyHint": "When venues post updates, they appear here. Open a venue from the map and join its chat to follow."
+  },
   "achievements": {
     "title": "Achievements",
     "profileHint": "Badges, streaks, and progress",
@@ -402,5 +461,13 @@
       "quest": "Quest — complete tasks to earn rewards",
       "auction": "Auction — bid tokens on prizes"
     }
+  },
+  "auction": {
+    "confirmTitle": "Confirm your bid",
+    "confirmMessage": "You agree to place a bid of {{amount}} tokens for \"{{item}}\". Tap Confirm to submit — your bid will be recorded immediately.",
+    "confirmCta": "Confirm & place bid",
+    "invalidBid": "Invalid bid",
+    "minBid": "Minimum bid is {{min}} tokens",
+    "bidFailed": "Bid failed"
   }
 }

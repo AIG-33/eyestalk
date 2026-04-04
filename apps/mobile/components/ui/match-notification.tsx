@@ -35,9 +35,9 @@ export function MatchNotification({ matchedNickname, chatId, onDismiss }: Props)
       <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.9}>
         <Text style={styles.emoji}>✨</Text>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>It's a match!</Text>
+          <Text style={styles.title}>{t('chats.matchToastTitle')}</Text>
           <Text style={styles.subtitle}>
-            {matchedNickname} {t('chats.chatRequest').toLowerCase()}
+            {matchedNickname} — {t('chats.matchToastSubtitle')}
           </Text>
         </View>
         <Text style={styles.arrow}>→</Text>

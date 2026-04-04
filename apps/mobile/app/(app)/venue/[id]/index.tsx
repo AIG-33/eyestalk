@@ -223,6 +223,18 @@ export default function VenueDetailScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.bentoCard, s.bentoLarge]}
+              onPress={() => router.push(`/(app)/venue/${id}/services` as any)}
+            >
+              <View style={s.bentoCardInner}>
+                <Ionicons name="ticket" size={28} color={c.accent.primary} />
+                <Text style={s.bentoLabel}>{t('venue.services')}</Text>
+                <Text style={s.bentoHint}>
+                  {isCheckedInHere ? t('venue.servicesHint') : t('venue.checkinToBook')}
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Zones */}

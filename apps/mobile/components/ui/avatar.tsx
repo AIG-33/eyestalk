@@ -13,6 +13,7 @@ interface Props {
 }
 
 export function Avatar({ uri, name, size = 'md', status = null }: Props) {
+  const safeName = name?.trim?.() ? name : '?';
   const dim = component.avatar[size];
   const showRing = status && status !== 'stealth' && (size === 'md' || size === 'lg' || size === 'xl');
   const ringWidth = size === 'md' ? 2 : 3;
@@ -49,7 +50,7 @@ export function Avatar({ uri, name, size = 'md', status = null }: Props) {
           style={[styles.fallback, { width: dim, height: dim, borderRadius: dim / 2 }]}
         >
           <Text style={[styles.initial, { fontSize: dim * 0.4 }]}>
-            {name.charAt(0).toUpperCase()}
+            {safeName.charAt(0).toUpperCase()}
           </Text>
         </LinearGradient>
       )}
