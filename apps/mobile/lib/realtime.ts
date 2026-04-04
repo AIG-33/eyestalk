@@ -5,8 +5,13 @@ export function subscribeToVenueChat(
   venueId: string,
   onMessage: (payload: { new: Record<string, unknown> }) => void,
 ): RealtimeChannel {
+  const channelName = `venue-chat:${venueId}`;
+
+  const existing = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
+  if (existing) supabase.removeChannel(existing);
+
   return supabase
-    .channel(`venue-chat:${venueId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -47,8 +52,13 @@ export function subscribeToChatMessages(
   chatId: string,
   onMessage: (message: Record<string, unknown>) => void,
 ): RealtimeChannel {
+  const channelName = `chat:${chatId}`;
+
+  const existing = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
+  if (existing) supabase.removeChannel(existing);
+
   return supabase
-    .channel(`chat:${chatId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -66,8 +76,13 @@ export function subscribeToActivityUpdates(
   activityId: string,
   onUpdate: (payload: Record<string, unknown>) => void,
 ): RealtimeChannel {
+  const channelName = `activity:${activityId}`;
+
+  const existing = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
+  if (existing) supabase.removeChannel(existing);
+
   return supabase
-    .channel(`activity:${activityId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {

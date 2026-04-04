@@ -48,18 +48,37 @@ export function useChatMessages(
   useEffect(() => {
     if (!chatId) return;
 
-    channelRef.current = subscribeToChatMessages(chatId, (newMsg) => {
-      queryClient.setQueryData<ChatMessage[]>(
-        ['chat', chatId, 'messages'],
-        (old) => (old ? [...old, newMsg as unknown as ChatMessage] : [newMsg as unknown as ChatMessage]),
-      );
-      if (screenFocusedRef?.current) {
-        void markChatAsRead(queryClient, chatId);
-      }
-    });
+    try {
+      channelRef.current = subscribeToChatMessages(chatId, (newMsg) => {
+        queryClient.setQueryData<ChatMessage[]>(
+          ['chat', chatId, 'messages'],
+          (old) => (old ? [...old, newMsg as unknown as ChatMessage] : [newMsg as unknown as ChatMessage]),
+        );
+        if (screenFocusedRef?.current) {
+          void markChatAsRead(queryClient, chatId);
+        }
+      });
+    } catch (e) {
+      console.warn('[use-chat] realtime subscribe failed, retrying', e);
+      setTimeout(() => {
+        try {
+          channelRef.current = subscribeToChatMessages(chatId, (newMsg) => {
+            queryClient.setQueryData<ChatMessage[]>(
+              ['chat', chatId, 'messages'],
+              (old) => (old ? [...old, newMsg as unknown as ChatMessage] : [newMsg as unknown as ChatMessage]),
+            );
+          });
+        } catch {
+          // give up silently — messages will still load via polling
+        }
+      }, 500);
+    }
 
     return () => {
-      if (channelRef.current) unsubscribe(channelRef.current);
+      if (channelRef.current) {
+        unsubscribe(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [chatId, queryClient, screenFocusedRef]);
 
