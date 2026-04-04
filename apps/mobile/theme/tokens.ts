@@ -55,7 +55,7 @@ export const colors = {
   tag: {
     intention: { bg: 'rgba(124,111,247,0.15)', text: '#A29BFE' },
     venue: { bg: 'rgba(0,229,160,0.15)', text: '#00E5A0' },
-    filter: { bg: 'transparent', text: '#A0A0B8', border: '#2A2A5A' },
+    filter: { bg: 'rgba(13,13,26,0.75)', text: '#A0A0B8', border: 'rgba(255,255,255,0.12)' },
     filterActive: { bg: '#7C6FF7', text: '#FFFFFF' },
   },
 
@@ -116,7 +116,7 @@ export const lightColors = {
   tag: {
     intention: { bg: 'rgba(108,92,231,0.1)', text: '#6C5CE7' },
     venue: { bg: 'rgba(0,201,141,0.1)', text: '#00C98D' },
-    filter: { bg: 'transparent', text: '#555570', border: '#DDDDE8' },
+    filter: { bg: 'rgba(255,255,255,0.85)', text: '#555570', border: 'rgba(0,0,0,0.1)' },
     filterActive: { bg: '#6C5CE7', text: '#FFFFFF' },
   },
 

@@ -105,11 +105,11 @@ function PulsingVenueBadge({
         styles.venueBadge,
         {
           backgroundColor: isDark
-            ? 'rgba(0,229,160,0.08)'
-            : 'rgba(0,180,130,0.08)',
+            ? 'rgba(13,13,26,0.85)'
+            : 'rgba(255,255,255,0.9)',
           borderColor: isDark
-            ? 'rgba(0,229,160,0.25)'
-            : 'rgba(0,160,120,0.3)',
+            ? 'rgba(0,229,160,0.3)'
+            : 'rgba(0,160,120,0.35)',
         },
       ]}
     >
@@ -118,8 +118,8 @@ function PulsingVenueBadge({
           styles.venueBadgeLogo,
           {
             backgroundColor: isDark
-              ? 'rgba(0,229,160,0.12)'
-              : 'rgba(0,180,130,0.12)',
+              ? 'rgba(0,229,160,0.15)'
+              : 'rgba(0,180,130,0.15)',
           },
         ]}
       >
@@ -269,7 +269,16 @@ export default function MapScreen() {
   return (
     <View style={[styles.container, { backgroundColor: c.bg.primary }]}>
       {/* ─── Top bar ─────────────────────────────────── */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+      <LinearGradient
+        colors={
+          isDark
+            ? [`${c.bg.primary}FF`, `${c.bg.primary}E6`, `${c.bg.primary}99`, `${c.bg.primary}00`]
+            : ['rgba(245,245,250,1)', 'rgba(245,245,250,0.92)', 'rgba(245,245,250,0.6)', 'rgba(245,245,250,0)']
+        }
+        locations={[0, 0.55, 0.8, 1]}
+        style={[styles.topBar, { paddingTop: insets.top + 8 }]}
+        pointerEvents="box-none"
+      >
         <View style={styles.topBarRow}>
           <View style={styles.logoCol}>
             <View style={styles.logoRow}>
@@ -283,7 +292,7 @@ export default function MapScreen() {
               </Text>
             </View>
             <Text
-              style={[styles.tagline, { color: c.text.tertiary }]}
+              style={[styles.tagline, { color: c.text.secondary }]}
               numberOfLines={1}
             >
               {tagline}
@@ -323,7 +332,7 @@ export default function MapScreen() {
           selectedType={typeFilter}
           onSelectType={setTypeFilter}
         />
-      </View>
+      </LinearGradient>
 
       {/* ─── Map ─────────────────────────────────────── */}
       {location && (
@@ -451,7 +460,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.xl,
   },
   topBarRow: {
     flexDirection: 'row',
