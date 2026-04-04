@@ -9,6 +9,8 @@ function routeFromNotificationData(data: Record<string, unknown> | null | undefi
     router.push(`/(app)/chat/${data.chatId}` as any);
   } else if (data.type === 'venue' && data.venueId) {
     router.push(`/(app)/venue/${data.venueId}` as any);
+  } else if (data.type === 'service_update' && data.venueId) {
+    router.push(`/(app)/venue/${data.venueId}/services` as any);
   } else if (data.type === 'announcement') {
     router.push('/(app)/announcements' as any);
   }

@@ -404,6 +404,54 @@ export default function VenueServicesScreen() {
     refetchInterval: 20_000,
   });
 
+  // ── Fetch: user subscriptions for this venue's services ──
+  const { data: subscribedServiceIds = new Set<string>() } = useQuery({
+    queryKey: ['venue', venueId, 'service-subs', session?.user?.id ?? 'anon'],
+    queryFn: async (): Promise<Set<string>> => {
+      if (!session || services.length === 0) return new Set();
+      const { data } = await supabase
+        .from('venue_service_subscriptions')
+        .select('service_id')
+        .eq('user_id', session.user.id)
+        .in('service_id', services.map((s) => s.id));
+      return new Set((data || []).map((r: { service_id: string }) => r.service_id));
+    },
+    enabled: !!session && services.length > 0,
+    staleTime: 60_000,
+  });
+
+  // ── Toggle subscription mutation ──
+  const toggleSubMutation = useMutation({
+    mutationFn: async (serviceId: string) => {
+      if (!session) throw new Error('Not authenticated');
+      const isSubscribed = subscribedServiceIds.has(serviceId);
+      if (isSubscribed) {
+        const { error } = await supabase
+          .from('venue_service_subscriptions')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('service_id', serviceId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('venue_service_subscriptions')
+          .insert({ user_id: session.user.id, service_id: serviceId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['venue', venueId, 'service-subs'] });
+    },
+  });
+
+  const handleToggleSub = useCallback((serviceId: string) => {
+    if (!session) {
+      Alert.alert(t('venueServices.bookFailed'), t('venueServices.errAuth'));
+      return;
+    }
+    toggleSubMutation.mutate(serviceId);
+  }, [session, toggleSubMutation, t]);
+
   // ── Book mutation ──
   const bookMutation = useMutation({
     mutationFn: async (slotId: string) => {
@@ -528,11 +576,54 @@ export default function VenueServicesScreen() {
           <Text style={s.loadingText}>{t('common.loading')}</Text>
         </View>
       ) : filteredSections.length === 0 ? (
-        <View style={s.centered}>
-          <Text style={s.emptyIcon}>🗓️</Text>
-          <Text style={s.emptyTitle}>{t('venueServices.emptyDayTitle')}</Text>
-          <Text style={s.emptyText}>{t('venueServices.emptyDayHint')}</Text>
-        </View>
+        <ScrollView contentContainerStyle={s.emptyContainer}>
+          <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+            <Text style={s.emptyIcon}>🗓️</Text>
+            <Text style={s.emptyTitle}>{t('venueServices.emptyDayTitle')}</Text>
+            <Text style={s.emptyText}>{t('venueServices.emptyDayHint')}</Text>
+          </View>
+          {session && services.length > 0 && (
+            <View style={{ paddingHorizontal: spacing.xl }}>
+              <Text style={[s.sectionTitle, { marginBottom: spacing.sm }]}>
+                {t('venueServices.subscribeTitle')}
+              </Text>
+              {services.map((svc) => {
+                const isSub = subscribedServiceIds.has(svc.id);
+                return (
+                  <TouchableOpacity
+                    key={svc.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: c.bg.secondary,
+                      borderRadius: radius.lg,
+                      padding: spacing.md,
+                      marginBottom: spacing.sm,
+                      borderWidth: 1,
+                      borderColor: isSub ? c.accent.primary + '44' : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
+                    }}
+                    onPress={() => handleToggleSub(svc.id)}
+                    disabled={toggleSubMutation.isPending}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ color: c.text.primary, fontSize: typography.size.bodyMd, fontWeight: typography.weight.medium, flex: 1 }}>
+                      {svc.title}
+                    </Text>
+                    <Ionicons
+                      name={isSub ? 'notifications' : 'notifications-outline'}
+                      size={22}
+                      color={isSub ? c.accent.primary : c.text.tertiary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+              <Text style={{ color: c.text.tertiary, fontSize: typography.size.bodySm, marginTop: spacing.xs, textAlign: 'center' }}>
+                {t('venueServices.subscribeHint')}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
       ) : (
         <SectionList
           sections={filteredSections}
@@ -546,11 +637,27 @@ export default function VenueServicesScreen() {
               isDark={isDark}
             />
           )}
-          renderSectionHeader={({ section }) => (
-            <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>{section.title}</Text>
-            </View>
-          )}
+          renderSectionHeader={({ section }) => {
+            const isSub = subscribedServiceIds.has(section.serviceId);
+            return (
+              <View style={[s.sectionHeader, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={s.sectionTitle}>{section.title}</Text>
+                {session && (
+                  <TouchableOpacity
+                    onPress={() => handleToggleSub(section.serviceId)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    disabled={toggleSubMutation.isPending}
+                  >
+                    <Ionicons
+                      name={isSub ? 'notifications' : 'notifications-outline'}
+                      size={20}
+                      color={isSub ? c.accent.primary : c.text.tertiary}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          }}
           contentContainerStyle={s.listContent}
           stickySectionHeadersEnabled={false}
         />
@@ -670,6 +777,12 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     centered: {
       flex: 1, alignItems: 'center', justifyContent: 'center',
       paddingHorizontal: spacing['3xl'],
+    },
+    emptyContainer: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing['3xl'],
+      paddingBottom: spacing['4xl'],
     },
     loadingText: { color: c.text.secondary },
     emptyIcon: { fontSize: 52, marginBottom: spacing.lg },

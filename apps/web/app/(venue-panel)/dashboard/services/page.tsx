@@ -88,6 +88,18 @@ function localToISODatetime(local: string) {
   return local ? new Date(local).toISOString() : '';
 }
 
+async function notifyServiceSubscribers(serviceId: string) {
+  try {
+    await fetch('/api/v1/service-notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service_id: serviceId }),
+    });
+  } catch {
+    // best-effort; don't block UX on notification failure
+  }
+}
+
 function countExpectedSlots(dateFrom: string, dateTo: string, weekdays: number[]): number {
   if (!dateFrom || !dateTo || weekdays.length === 0) return 0;
   let cur = new Date(dateFrom);
@@ -242,6 +254,7 @@ function ScheduleGenerator({ service, onClose, onDone }: ScheduleGeneratorProps)
       setErr(genErr.message || t('schedError'));
     } else {
       setResult(count as number);
+      if ((count as number) > 0) void notifyServiceSubscribers(service.id);
       onDone();
     }
   };
@@ -674,6 +687,7 @@ export default function VenueServicesPage() {
     });
     setAddingSlot(false);
     if (error) { alert(error.message); return; }
+    void notifyServiceSubscribers(svc.id);
     setSingleSlotStart('');
     loadMonthSlots();
     loadDaySlots();

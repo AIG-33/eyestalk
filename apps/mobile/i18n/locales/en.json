@@ -190,7 +190,9 @@
     "errUnknown": "Something went wrong. Try again.",
     "filterAll": "All",
     "filterAvailable": "Available",
-    "filterBooked": "Booked"
+    "filterBooked": "Booked",
+    "subscribeTitle": "Get notified",
+    "subscribeHint": "Tap the bell to get a push notification when new slots appear."
   },
   "chats": {
     "empty": "No chats yet",

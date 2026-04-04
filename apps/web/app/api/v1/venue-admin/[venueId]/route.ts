@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 type RouteParams = { params: Promise<{ venueId: string }> };
 
-async function authorizeOwner(venueId: string) {
-  const supabase = await createClient();
+async function authorizeOwner(venueId: string, request: NextRequest) {
+  const supabase = await createApiRouteSupabase(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Unauthorized', status: 401 } as const;
 
@@ -25,7 +25,7 @@ async function authorizeOwner(venueId: string) {
 // ── Logo upload ──────────────────────────────────────────────
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { venueId } = await params;
-  const auth = await authorizeOwner(venueId);
+  const auth = await authorizeOwner(venueId, request);
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { admin } = auth;
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 // ── Logo delete ──────────────────────────────────────────────
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { venueId } = await params;
-  const auth = await authorizeOwner(venueId);
+  const auth = await authorizeOwner(venueId, request);
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { admin } = auth;
@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // ── Venue delete ─────────────────────────────────────────────
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { venueId } = await params;
-  const auth = await authorizeOwner(venueId);
+  const auth = await authorizeOwner(venueId, request);
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { admin } = auth;
@@ -95,9 +95,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ success: true });
 }
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   const { venueId } = await params;
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

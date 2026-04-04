@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { reportSchema } from '@eyestalk/shared/validators';
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

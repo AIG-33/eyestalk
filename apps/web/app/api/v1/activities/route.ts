@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createActivitySchema } from '@eyestalk/shared/validators';
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
   const { searchParams } = new URL(request.url);
   const venueId = searchParams.get('venue_id');
   const status = searchParams.get('status') || 'active';

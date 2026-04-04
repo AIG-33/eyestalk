@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { updateActivitySchema } from '@eyestalk/shared/validators';
 
-async function authorizeForActivity(activityId: string) {
-  const supabase = await createClient();
+async function authorizeForActivity(activityId: string, request: NextRequest) {
+  const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
   const {
@@ -49,7 +49,7 @@ export async function PATCH(
   { params }: { params: Promise<{ activityId: string }> },
 ) {
   const { activityId } = await params;
-  const auth = await authorizeForActivity(activityId);
+  const auth = await authorizeForActivity(activityId, request);
   if ('error' in auth && auth.error) return auth.error;
   const { admin } = auth as Exclude<typeof auth, { error: NextResponse }>;
 
@@ -77,11 +77,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ activityId: string }> },
 ) {
   const { activityId } = await params;
-  const auth = await authorizeForActivity(activityId);
+  const auth = await authorizeForActivity(activityId, request);
   if ('error' in auth && auth.error) return auth.error;
   const { admin } = auth as Exclude<typeof auth, { error: NextResponse }>;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOrCreateDirectChat } from '@/lib/direct-chat';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ const sendInterestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -191,8 +191,8 @@ async function triggerAchievementCheck(userId: string) {
   } catch {}
 }
 
-export async function GET() {
-  const supabase = await createClient();
+export async function GET(request: NextRequest) {
+  const supabase = await createApiRouteSupabase(request);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

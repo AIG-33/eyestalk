@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -18,10 +19,12 @@ import { IcebreakerBar } from '@/components/chat/icebreaker-bar';
 import { MicroChatTimer } from '@/components/chat/micro-chat-timer';
 import { useSendWave } from '@/hooks/use-send-wave';
 import { markChatAsRead } from '@/hooks/use-chat-read';
-import { colors, typography, spacing, shadows, radius, component } from '@/theme';
+import { typography, spacing, shadows, radius, component, useTheme } from '@/theme';
 
 export default function DirectChatScreen() {
   const { id: chatId } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const { c, isDark } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const session = useAuthStore((s) => s.session);
@@ -129,6 +132,15 @@ export default function DirectChatScreen() {
   const waveButtonDisabled =
     sendWave.isPending || !!waveChatState?.sent || !!waveChatState?.mutual;
 
+  /** Android 3-button nav often reports inset 0 — keep bar above system UI. */
+  const inputBarBottomPad = useMemo(
+    () =>
+      Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 10) + spacing.md,
+    [insets.bottom],
+  );
+
+  const hairline = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+
   const handleSend = () => {
     if (!text.trim()) return;
     sendMessage.mutate(text.trim());
@@ -204,9 +216,19 @@ export default function DirectChatScreen() {
 
     if (item.type === 'system' && item.content === '__match__') {
       return (
-        <View style={styles.matchBanner}>
+        <View
+          style={[
+            styles.matchBanner,
+            {
+              backgroundColor: isDark ? 'rgba(124,111,247,0.15)' : 'rgba(108,92,231,0.12)',
+              borderColor: isDark ? 'rgba(124,111,247,0.35)' : 'rgba(108,92,231,0.25)',
+            },
+          ]}
+        >
           <Text style={styles.matchBannerEmoji}>✨</Text>
-          <Text style={styles.matchBannerText}>{t('chats.matchInChat')}</Text>
+          <Text style={[styles.matchBannerText, { color: c.accent.primaryLight }]}>
+            {t('chats.matchInChat')}
+          </Text>
         </View>
       );
     }
@@ -218,18 +240,34 @@ export default function DirectChatScreen() {
             <Avatar uri={null} name={senderNick || item.sender_id?.charAt(0) || '?'} size="xs" />
           )}
           <LinearGradient
-            colors={isOwn ? colors.gradient.match : [colors.bg.tertiary, colors.bg.secondary]}
+            colors={isOwn ? c.gradient.match : [c.bg.tertiary, c.bg.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.waveBubble, isOwn && styles.waveBubbleOwn]}
+            style={[
+              styles.waveBubble,
+              isOwn && styles.waveBubbleOwn,
+              !isOwn && { borderColor: hairline },
+            ]}
           >
             <Text style={styles.waveEmoji}>👋</Text>
-            <Text style={[styles.waveBubbleText, isOwn && styles.waveBubbleTextOwn]}>
+            <Text
+              style={[
+                styles.waveBubbleText,
+                isOwn ? styles.waveBubbleTextOwn : { color: c.text.primary },
+              ]}
+            >
               {isOwn
                 ? t('chats.waveInChatOwn')
                 : `${senderNick || t('common.user')} ${t('chats.waveInChatOther')}`}
             </Text>
-            <Text style={[styles.bubbleTime, isOwn ? { color: 'rgba(255,255,255,0.65)' } : { color: colors.text.tertiary }]}>
+            <Text
+              style={[
+                styles.bubbleTime,
+                isOwn
+                  ? { color: 'rgba(255,255,255,0.65)' }
+                  : { color: c.text.tertiary },
+              ]}
+            >
               {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
           </LinearGradient>
@@ -244,19 +282,21 @@ export default function DirectChatScreen() {
         )}
         {isOwn ? (
           <LinearGradient
-            colors={colors.gradient.primary}
+            colors={c.gradient.primary}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={[styles.bubble, styles.bubbleOwn]}
           >
-            <Text style={styles.bubbleText}>{item.content}</Text>
+            <Text style={[styles.bubbleText, styles.bubbleTextOnGradient]}>
+              {item.content}
+            </Text>
             <Text style={styles.bubbleTime}>
               {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
           </LinearGradient>
         ) : (
-          <View style={[styles.bubble, styles.bubbleOther]}>
-            <Text style={styles.bubbleText}>{item.content}</Text>
-            <Text style={[styles.bubbleTime, { color: colors.text.tertiary }]}>
+          <View style={[styles.bubble, styles.bubbleOther, { backgroundColor: c.bg.secondary, borderColor: hairline, borderWidth: 1 }]}>
+            <Text style={[styles.bubbleText, { color: c.text.primary }]}>{item.content}</Text>
+            <Text style={[styles.bubbleTime, { color: c.text.tertiary }]}>
               {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
           </View>
@@ -267,14 +307,14 @@ export default function DirectChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: c.bg.primary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: hairline }]}>
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: spacing.md }}
@@ -283,14 +323,14 @@ export default function DirectChatScreen() {
         >
           <Avatar uri={peer?.avatar_url ?? null} name={peer?.nickname || 'C'} size="sm" status="inVenue" />
           <View style={styles.headerInfo}>
-            <Text style={styles.headerName}>{peer?.nickname || 'Chat'}</Text>
-            <Text style={styles.headerStatus} numberOfLines={2}>
+            <Text style={[styles.headerName, { color: c.text.primary }]}>{peer?.nickname || 'Chat'}</Text>
+            <Text style={[styles.headerStatus, { color: c.accent.success }]} numberOfLines={2}>
               {!isMicroChat ? t('chats.directHeaderHint') : t('map.activeNow')}
             </Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleOptions}>
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.text.secondary} />
+          <Ionicons name="ellipsis-vertical" size={20} color={c.text.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -306,16 +346,35 @@ export default function DirectChatScreen() {
 
       {/* Ephemeral notice */}
       {!isMicroChat && (
-        <View style={styles.ephemeralNotice}>
-          <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
-          <Text style={styles.ephemeralText}>{t('chats.ephemeralNotice')}</Text>
+        <View
+          style={[
+            styles.ephemeralNotice,
+            {
+              backgroundColor: isDark ? 'rgba(90,90,120,0.12)' : 'rgba(0,0,0,0.04)',
+            },
+          ]}
+        >
+          <Ionicons name="time-outline" size={14} color={c.text.tertiary} />
+          <Text style={[styles.ephemeralText, { color: c.text.tertiary }]}>
+            {t('chats.ephemeralNotice')}
+          </Text>
         </View>
       )}
 
       {!isMicroChat && peer && chatMeta?.venue_id && (
-        <View style={styles.waveHintStrip}>
-          <Ionicons name="hand-right-outline" size={16} color={colors.accent.pink} />
-          <Text style={styles.waveHintStripText}>{t('chats.directWaveHint')}</Text>
+        <View
+          style={[
+            styles.waveHintStrip,
+            {
+              backgroundColor: isDark ? 'rgba(255,107,157,0.1)' : 'rgba(255,107,157,0.08)',
+              borderBottomColor: hairline,
+            },
+          ]}
+        >
+          <Ionicons name="hand-right-outline" size={16} color={c.accent.pink} />
+          <Text style={[styles.waveHintStripText, { color: c.text.secondary }]}>
+            {t('chats.directWaveHint')}
+          </Text>
         </View>
       )}
 
@@ -328,16 +387,30 @@ export default function DirectChatScreen() {
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
+        style={{ flex: 1, backgroundColor: c.bg.primary }}
         contentContainerStyle={styles.messageList}
         inverted={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
       />
 
       {/* Input */}
-      <View style={styles.inputBar}>
+      <View
+        style={[
+          styles.inputBar,
+          {
+            paddingBottom: inputBarBottomPad,
+            borderTopColor: hairline,
+            backgroundColor: c.bg.primary,
+          },
+        ]}
+      >
         {!isMicroChat && peer && chatMeta?.venue_id && (
           <TouchableOpacity
-            style={[styles.waveSendBtn, waveButtonDisabled && styles.waveSendBtnDisabled]}
+            style={[
+              styles.waveSendBtn,
+              { backgroundColor: c.accent.pink },
+              waveButtonDisabled && [styles.waveSendBtnDisabled, { backgroundColor: c.bg.surface }],
+            ]}
             disabled={waveButtonDisabled}
             onPress={() => {
               sendWave.mutate(
@@ -382,18 +455,30 @@ export default function DirectChatScreen() {
             )}
           </TouchableOpacity>
         )}
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: c.bg.tertiary,
+              borderColor: c.bg.surface,
+            },
+          ]}
+        >
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: c.text.primary }]}
             value={text}
             onChangeText={setText}
             placeholder={t('chats.sendMessage')}
-            placeholderTextColor={colors.text.tertiary}
+            placeholderTextColor={c.text.tertiary}
             multiline
             maxLength={1000}
           />
           <TouchableOpacity
-            style={[styles.sendBtn, !text.trim() && { opacity: 0.3 }]}
+            style={[
+              styles.sendBtn,
+              { backgroundColor: c.accent.primary },
+              !text.trim() && { opacity: 0.3 },
+            ]}
             onPress={handleSend}
             disabled={!text.trim()}
           >
@@ -406,20 +491,19 @@ export default function DirectChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.primary },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingTop: 52, paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+    borderBottomWidth: 1,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerInfo: { flex: 1 },
   headerName: {
     fontSize: typography.size.headingSm, fontWeight: typography.weight.bold,
-    color: colors.text.primary,
   },
   headerStatus: {
-    fontSize: typography.size.bodySm, color: colors.accent.success,
+    fontSize: typography.size.bodySm,
   },
   ephemeralNotice: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -427,7 +511,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(90,90,120,0.1)',
   },
   ephemeralText: {
-    color: colors.text.tertiary, fontSize: typography.size.micro,
+    fontSize: typography.size.micro,
   },
   waveHintStrip: {
     flexDirection: 'row',
@@ -435,13 +519,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    backgroundColor: 'rgba(255,107,157,0.08)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   waveHintStripText: {
     flex: 1,
-    color: colors.text.secondary,
     fontSize: typography.size.bodySm,
     lineHeight: typography.size.bodySm * 1.35,
   },
@@ -452,14 +533,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.md,
     borderRadius: radius.xl,
-    backgroundColor: 'rgba(124,111,247,0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(124,111,247,0.35)',
     maxWidth: '92%',
   },
   matchBannerEmoji: { fontSize: 22, marginBottom: 4 },
   matchBannerText: {
-    color: colors.accent.primaryLight,
     fontSize: typography.size.bodyMd,
     fontWeight: typography.weight.bold,
     textAlign: 'center',
@@ -481,7 +559,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     minWidth: 140,
   },
   waveBubbleOwn: {
@@ -489,7 +566,6 @@ const styles = StyleSheet.create({
   },
   waveEmoji: { fontSize: 28, marginBottom: 4 },
   waveBubbleText: {
-    color: colors.text.primary,
     fontSize: typography.size.bodyMd,
     fontWeight: typography.weight.semibold,
   },
@@ -514,13 +590,15 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 20, borderBottomRightRadius: 4,
   },
   bubbleOther: {
-    backgroundColor: component.chatBubble.otherBg,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     borderBottomLeftRadius: 4, borderBottomRightRadius: 20,
   },
   bubbleText: {
-    fontSize: typography.size.bodyMd, color: colors.text.primary,
+    fontSize: typography.size.bodyMd,
     lineHeight: typography.size.bodyMd * 1.45,
+  },
+  bubbleTextOnGradient: {
+    color: '#FFFFFE',
   },
   bubbleTime: {
     fontSize: typography.size.micro, color: 'rgba(255,255,255,0.5)',
@@ -530,35 +608,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    paddingBottom: spacing['3xl'],
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
   },
   waveSendBtn: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.accent.pink,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 2,
     ...shadows.glowPrimary,
   },
   waveSendBtnDisabled: {
-    backgroundColor: colors.bg.surface,
     opacity: 0.85,
   },
   inputContainer: {
     flex: 1,
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
-    backgroundColor: colors.bg.tertiary, borderRadius: radius['2xl'],
+    borderRadius: radius['2xl'],
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.bg.surface,
+    borderWidth: 1,
   },
   input: {
-    flex: 1, fontSize: typography.size.bodyMd, color: colors.text.primary,
+    flex: 1, fontSize: typography.size.bodyMd,
     maxHeight: 100, paddingVertical: spacing.sm,
   },
   sendBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     ...shadows.glowPrimary,
   },
 });

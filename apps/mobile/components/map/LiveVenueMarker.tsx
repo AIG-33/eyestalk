@@ -80,7 +80,11 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     setLaidOut(true);
   }, []);
 
-  const logoImageStyle = useMemo(
+  /**
+   * Android: never put borderRadius on Image — Google Maps snapshots markers to a bitmap and
+   * clips wrong (¼ circle). Clip with a wrapper View + overflow hidden instead.
+   */
+  const logoClipStyle = useMemo(
     () => ({
       width: markerSize,
       height: markerSize,
@@ -88,13 +92,24 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
       borderWidth,
       borderColor,
       backgroundColor: '#7C6FF7' as const,
+      overflow: 'hidden' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
     }),
     [markerSize, borderWidth, borderColor],
   );
 
+  const logoImageInnerStyle = useMemo(
+    () => ({
+      width: markerSize,
+      height: markerSize,
+    }),
+    [markerSize],
+  );
+
   /**
-   * iOS: overflow hidden clips image to circle. Android: overflow:hidden on custom Marker
-   * children often snapshots as a wedge/¼ circle — omit it; View bg still respects borderRadius.
+   * iOS: overflow hidden clips image to circle.
+   * Android (emoji): no overflow:hidden — use solid circle from borderRadius background only.
    */
   const circleShellStyle = useMemo(
     () => ({
@@ -123,12 +138,14 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     >
       <View
         collapsable={false}
+        renderToHardwareTextureAndroid={false}
         onLayout={onRootLayout}
         style={{
           width: outer,
           height: outer,
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundColor: 'transparent',
         }}
       >
         {hasActivity && Platform.OS === 'ios' && (
@@ -151,33 +168,22 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
         )}
 
         {hasLogo ? (
-          Platform.OS === 'android' ? (
+          <View style={logoClipStyle} collapsable={false}>
             <Image
               source={{ uri: venue.logo_url! }}
-              style={logoImageStyle}
+              style={logoImageInnerStyle}
               resizeMode="cover"
               onLoad={() => setImgLoaded(true)}
             />
-          ) : (
-            <View style={circleShellStyle}>
-              <Image
-                source={{ uri: venue.logo_url! }}
-                style={{
-                  width: markerSize,
-                  height: markerSize,
-                }}
-                resizeMode="cover"
-                onLoad={() => setImgLoaded(true)}
-              />
-            </View>
-          )
+          </View>
         ) : (
-          <View style={circleShellStyle}>
+          <View style={circleShellStyle} collapsable={false}>
             <Text style={{ fontSize: EMOJI_FONT }}>{emoji}</Text>
           </View>
         )}
 
-        {hasActivity && (
+        {/* Absolute children break Android marker bitmap — badge only on iOS. */}
+        {hasActivity && Platform.OS === 'ios' && (
           <View
             style={{
               position: 'absolute',

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 
@@ -10,11 +10,11 @@ const loyaltyTierSchema = z.object({
 });
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ venueId: string }> },
 ) {
   const { venueId } = await params;
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -46,7 +46,7 @@ export async function POST(
   { params }: { params: Promise<{ venueId: string }> },
 ) {
   const { venueId } = await params;
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -94,7 +94,7 @@ export async function DELETE(
   { params }: { params: Promise<{ venueId: string }> },
 ) {
   const { venueId } = await params;
-  const supabase = await createClient();
+  const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();

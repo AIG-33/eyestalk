@@ -1,7 +1,32 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import {
+  createClient as createSupabaseClient,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { createClient } from './server';
 import type { User } from '@supabase/supabase-js';
+
+/**
+ * Supabase client for API routes: Bearer JWT (mobile) or cookie session (web).
+ * Use this for RLS-backed queries; pair with createAdminClient when needed.
+ */
+export async function createApiRouteSupabase(
+  request: NextRequest,
+): Promise<SupabaseClient> {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      },
+    );
+  }
+  return createClient();
+}
 
 /**
  * Authenticate an API request using either the Authorization Bearer
