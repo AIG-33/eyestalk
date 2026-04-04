@@ -198,7 +198,7 @@ function renderCluster(cluster: any) {
         longitude: geometry.coordinates[0],
       }}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={Platform.OS === 'android' ? false : undefined}
+      tracksViewChanges
       onPress={onPress}
     >
       <View style={styles.cluster} collapsable={false}>

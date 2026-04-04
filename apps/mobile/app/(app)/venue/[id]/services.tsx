@@ -51,7 +51,10 @@ type FilterStatus = 'all' | 'available' | 'booked';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function addDays(d: Date, n: number) {
@@ -324,14 +327,14 @@ export default function VenueServicesScreen() {
     queryKey: ['venue', venueId, 'service-dots'],
     queryFn: async (): Promise<Set<string>> => {
       if (services.length === 0) return new Set();
-      const from = toISODate(TODAY);
-      const to = toISODate(addDays(TODAY, DAYS_WINDOW));
+      const fromISO = new Date(toISODate(TODAY) + 'T00:00:00').toISOString();
+      const toISO = new Date(toISODate(addDays(TODAY, DAYS_WINDOW)) + 'T23:59:59').toISOString();
       const { data } = await supabase
         .from('venue_service_slots')
         .select('starts_at')
         .in('service_id', services.map((s) => s.id))
-        .gte('starts_at', from + 'T00:00:00Z')
-        .lte('starts_at', to + 'T23:59:59Z')
+        .gte('starts_at', fromISO)
+        .lte('starts_at', toISO)
         .eq('status', 'scheduled');
       const set = new Set<string>();
       for (const sl of (data || []) as { starts_at: string }[]) {
@@ -348,8 +351,8 @@ export default function VenueServicesScreen() {
     queryKey: ['venue', venueId, 'service-day', selectedDate, session?.user?.id ?? 'anon'],
     queryFn: async (): Promise<Section[]> => {
       if (services.length === 0) return [];
-      const dayStart = selectedDate + 'T00:00:00Z';
-      const dayEnd = selectedDate + 'T23:59:59Z';
+      const dayStart = new Date(selectedDate + 'T00:00:00').toISOString();
+      const dayEnd = new Date(selectedDate + 'T23:59:59').toISOString();
 
       const { data: slots, error } = await supabase
         .from('venue_service_slots')
