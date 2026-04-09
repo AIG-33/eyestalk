@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { useToast } from '@/components/dashboard/toast';
+import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 
 interface TopGuest {
   user_id: string;
@@ -23,8 +25,10 @@ interface LoyaltyTier {
 export default function LoyaltyPage() {
   const t = useTranslations('dashboard');
   const { current } = useVenue();
+  const { toast } = useToast();
   const [guests, setGuests] = useState<TopGuest[]>([]);
   const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+  const [deletingTierId, setDeletingTierId] = useState<string | null>(null);
   const [totalUnique, setTotalUnique] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +54,7 @@ export default function LoyaltyPage() {
       setTotalUnique(data.total_unique_guests || 0);
     } catch {
       setGuests([]);
+      toast('Failed to load data', 'error');
     }
     setLoading(false);
   }, [current?.id]);
@@ -79,6 +84,7 @@ export default function LoyaltyPage() {
         setNewName('');
         setNewMin('');
         setNewReward('');
+        toast('Tier added', 'success');
         fetchData();
       }
     } catch (e: any) {
@@ -87,11 +93,17 @@ export default function LoyaltyPage() {
     setSaving(false);
   };
 
-  const handleDeleteTier = async (tierId: string) => {
-    if (!current?.id) return;
-    await fetch(`/api/v1/venue-admin/${current.id}/loyalty?tier_id=${tierId}`, {
+  const handleDeleteTier = (tierId: string) => {
+    setDeletingTierId(tierId);
+  };
+
+  const confirmDeleteTier = async () => {
+    if (!current?.id || !deletingTierId) return;
+    await fetch(`/api/v1/venue-admin/${current.id}/loyalty?tier_id=${deletingTierId}`, {
       method: 'DELETE',
     });
+    setDeletingTierId(null);
+    toast('Tier removed', 'success');
     fetchData();
   };
 
@@ -222,7 +234,24 @@ export default function LoyaltyPage() {
         </h3>
 
         {loading ? (
-          <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl px-4 py-3 animate-pulse"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                <div className="w-6 h-5 rounded" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                <div className="w-8 h-8 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 rounded w-32" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                  <div className="h-2.5 rounded w-20" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                </div>
+                <div className="text-right space-y-2">
+                  <div className="h-3.5 rounded w-8 ml-auto" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                  <div className="h-2.5 rounded w-10 ml-auto" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : guests.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-3">👥</p>
@@ -279,6 +308,17 @@ export default function LoyaltyPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deletingTierId}
+        title="Remove Tier"
+        description="Are you sure you want to remove this loyalty tier? Guests who already earned it will keep their status."
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDeleteTier}
+        onCancel={() => setDeletingTierId(null)}
+      />
     </div>
   );
 }

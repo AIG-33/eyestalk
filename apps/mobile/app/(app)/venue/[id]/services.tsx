@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, type ReactElement } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
 import { useTheme, typography, spacing, radius, shadows, component, colors } from '@/theme';
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { haptic } from '@/lib/haptics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,46 +121,47 @@ type FilterSheetProps = {
 
 function FilterSheet({ services, selectedService, statusFilter, onSelectService, onSelectStatus, onClose }: FilterSheetProps) {
   const { t } = useTranslation();
+  const { c } = useTheme();
   const STATUS_OPTS: FilterStatus[] = ['all', 'available', 'booked'];
 
   return (
-    <View style={filterStyles.overlay}>
-      <TouchableOpacity style={filterStyles.backdrop} onPress={onClose} activeOpacity={1} />
-      <View style={filterStyles.sheet}>
-        <View style={filterStyles.handle} />
+    <View style={filterSheetBase.overlay}>
+      <TouchableOpacity style={filterSheetBase.backdrop} onPress={onClose} activeOpacity={1} />
+      <View style={[filterSheetBase.sheet, { backgroundColor: c.bg.secondary }]}>
+        <View style={[filterSheetBase.handle, { backgroundColor: c.bg.surface }]} />
 
-        <Text style={filterStyles.sectionTitle}>{t('venueServices.title')}</Text>
-        <View style={filterStyles.chipRow}>
+        <Text style={[filterSheetBase.sectionTitle, { color: c.text.secondary }]}>{t('venueServices.title')}</Text>
+        <View style={filterSheetBase.chipRow}>
           <TouchableOpacity
-            style={[filterStyles.chip, !selectedService && filterStyles.chipActive]}
+            style={[filterSheetBase.chip, { backgroundColor: c.bg.primary, borderColor: c.bg.surface }, !selectedService && { backgroundColor: c.accent.primary, borderColor: c.accent.primary }]}
             onPress={() => onSelectService(null)}
           >
-            <Text style={[filterStyles.chipText, !selectedService && filterStyles.chipTextActive]}>
+            <Text style={[filterSheetBase.chipText, { color: c.text.secondary }, !selectedService && filterSheetBase.chipTextActive]}>
               {t('venueServices.filterAll')}
             </Text>
           </TouchableOpacity>
           {services.map((svc) => (
             <TouchableOpacity
               key={svc.id}
-              style={[filterStyles.chip, selectedService === svc.id && filterStyles.chipActive]}
+              style={[filterSheetBase.chip, { backgroundColor: c.bg.primary, borderColor: c.bg.surface }, selectedService === svc.id && { backgroundColor: c.accent.primary, borderColor: c.accent.primary }]}
               onPress={() => onSelectService(svc.id)}
             >
-              <Text style={[filterStyles.chipText, selectedService === svc.id && filterStyles.chipTextActive]}>
+              <Text style={[filterSheetBase.chipText, { color: c.text.secondary }, selectedService === svc.id && filterSheetBase.chipTextActive]}>
                 {svc.title}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={[filterStyles.sectionTitle, { marginTop: spacing.lg }]}>Status</Text>
-        <View style={filterStyles.chipRow}>
+        <Text style={[filterSheetBase.sectionTitle, { color: c.text.secondary, marginTop: spacing.lg }]}>Status</Text>
+        <View style={filterSheetBase.chipRow}>
           {STATUS_OPTS.map((f) => (
             <TouchableOpacity
               key={f}
-              style={[filterStyles.chip, statusFilter === f && filterStyles.chipActive]}
+              style={[filterSheetBase.chip, { backgroundColor: c.bg.primary, borderColor: c.bg.surface }, statusFilter === f && { backgroundColor: c.accent.primary, borderColor: c.accent.primary }]}
               onPress={() => onSelectStatus(f)}
             >
-              <Text style={[filterStyles.chipText, statusFilter === f && filterStyles.chipTextActive]}>
+              <Text style={[filterSheetBase.chipText, { color: c.text.secondary }, statusFilter === f && filterSheetBase.chipTextActive]}>
                 {f === 'all' ? t('venueServices.filterAll') : f === 'available' ? t('venueServices.filterAvailable') : t('venueServices.filterBooked')}
               </Text>
             </TouchableOpacity>
@@ -173,11 +176,10 @@ function FilterSheet({ services, selectedService, statusFilter, onSelectService,
   );
 }
 
-const filterStyles = StyleSheet.create({
+const filterSheetBase = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 100 },
   backdrop: { flex: 1, backgroundColor: component.bottomSheet.backdrop },
   sheet: {
-    backgroundColor: colors.bg.secondary,
     borderTopLeftRadius: component.bottomSheet.radius,
     borderTopRightRadius: component.bottomSheet.radius,
     padding: spacing['2xl'],
@@ -187,12 +189,10 @@ const filterStyles = StyleSheet.create({
     width: component.bottomSheet.handleWidth,
     height: component.bottomSheet.handleHeight,
     borderRadius: 2,
-    backgroundColor: component.bottomSheet.handleColor,
     alignSelf: 'center',
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    color: colors.text.secondary,
     fontSize: typography.size.bodySm,
     fontWeight: typography.weight.semibold,
     textTransform: 'uppercase',
@@ -204,12 +204,9 @@ const filterStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
-    backgroundColor: colors.bg.primary,
     borderWidth: 1,
-    borderColor: colors.bg.surface,
   },
-  chipActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
-  chipText: { color: colors.text.secondary, fontSize: typography.size.bodyMd, fontWeight: typography.weight.medium },
+  chipText: { fontSize: typography.size.bodyMd, fontWeight: typography.weight.medium },
   chipTextActive: { color: '#FFFFFF' },
 });
 
@@ -292,7 +289,6 @@ function SlotCard({ item, onBook, isPending, c, isDark }: SlotCardProps) {
 export default function VenueServicesScreen() {
   const { id: venueId } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const session = useAuthStore((s) => s.session);
   const queryClient = useQueryClient();
   const { c, isDark } = useTheme();
@@ -306,7 +302,7 @@ export default function VenueServicesScreen() {
   const dateListRef = useRef<FlatList>(null);
 
   // ── Fetch: all active services for this venue ──
-  const { data: services = [] } = useQuery({
+  const { data: services = [], refetch: refetchServices } = useQuery({
     queryKey: ['venue', venueId, 'services-list'],
     queryFn: async (): Promise<ServiceItem[]> => {
       const { data, error } = await supabase
@@ -347,7 +343,7 @@ export default function VenueServicesScreen() {
   });
 
   // ── Fetch: slots for selected date ──
-  const { data: sections = [], isLoading: slotsLoading } = useQuery({
+  const { data: sections = [], isLoading: slotsLoading, refetch: refetchSlots, isRefetching: isRefetchingSlots } = useQuery({
     queryKey: ['venue', venueId, 'service-day', selectedDate, session?.user?.id ?? 'anon'],
     queryFn: async (): Promise<Section[]> => {
       if (services.length === 0) return [];
@@ -465,12 +461,14 @@ export default function VenueServicesScreen() {
       return data;
     },
     onSuccess: () => {
+      haptic.success();
       queryClient.invalidateQueries({ queryKey: ['venue', venueId, 'service-day'] });
       queryClient.invalidateQueries({ queryKey: ['venue', venueId, 'service-dots'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['tokens', 'history'] });
     },
     onError: (err: { message?: string }) => {
+      haptic.error();
       Alert.alert(t('venueServices.bookFailed'), mapBookError(err?.message || '', t));
     },
   });
@@ -510,6 +508,18 @@ export default function VenueServicesScreen() {
 
   const hasActiveFilter = selectedService !== null || statusFilter !== 'all';
 
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const isRefreshing = manualRefreshing || isRefetchingSlots;
+  const handleRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    await Promise.all([refetchServices(), refetchSlots()]);
+    setManualRefreshing(false);
+  }, [refetchServices, refetchSlots]);
+
+  const refreshCtrl: ReactElement = (
+    <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={c.accent.primary} />
+  );
+
   // ── Render ──
 
   const renderDateItem = useCallback(({ item: date }: { item: Date }) => {
@@ -540,22 +550,17 @@ export default function VenueServicesScreen() {
 
   return (
     <View style={s.container}>
-      {/* ── Header ── */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/map'))}
-          style={s.backBtn}
-        >
-          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>{t('venueServices.title')}</Text>
-        <TouchableOpacity
-          style={[s.filterBtn, hasActiveFilter && s.filterBtnActive]}
-          onPress={() => setShowFilter(true)}
-        >
-          <Ionicons name="options-outline" size={18} color={hasActiveFilter ? '#FFF' : c.text.secondary} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('venueServices.title')}
+        rightAction={
+          <TouchableOpacity
+            style={[s.filterBtn, hasActiveFilter && s.filterBtnActive]}
+            onPress={() => setShowFilter(true)}
+          >
+            <Ionicons name="options-outline" size={18} color={hasActiveFilter ? '#FFF' : c.text.secondary} />
+          </TouchableOpacity>
+        }
+      />
 
       {/* ── Month label ── */}
       <Text style={s.monthLabel}>{monthLabel}</Text>
@@ -579,7 +584,7 @@ export default function VenueServicesScreen() {
           <Text style={s.loadingText}>{t('common.loading')}</Text>
         </View>
       ) : filteredSections.length === 0 ? (
-        <ScrollView contentContainerStyle={s.emptyContainer}>
+        <ScrollView contentContainerStyle={s.emptyContainer} refreshControl={refreshCtrl}>
           <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
             <Text style={s.emptyIcon}>🗓️</Text>
             <Text style={s.emptyTitle}>{t('venueServices.emptyDayTitle')}</Text>
@@ -663,6 +668,7 @@ export default function VenueServicesScreen() {
           }}
           contentContainerStyle={s.listContent}
           stickySectionHeadersEnabled={false}
+          refreshControl={refreshCtrl}
         />
       )}
 
@@ -689,23 +695,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
   const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.xl,
-      paddingBottom: spacing.sm,
-    },
-    backBtn: {
-      width: 40, height: 40, borderRadius: 20,
-      alignItems: 'center', justifyContent: 'center',
-      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-    },
-    headerTitle: {
-      fontSize: typography.size.headingMd,
-      fontWeight: typography.weight.extrabold,
-      color: c.text.primary,
-    },
     filterBtn: {
       width: 36, height: 36, borderRadius: 18,
       alignItems: 'center', justifyContent: 'center',

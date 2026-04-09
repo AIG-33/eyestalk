@@ -31,12 +31,20 @@ export async function registerForPushNotifications(
   if (finalStatus !== 'granted') return null;
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('announcements', {
-      name: 'Announcements',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      sound: 'default',
-    });
+    await Promise.all([
+      Notifications.setNotificationChannelAsync('announcements', {
+        name: 'Announcements',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+      }),
+      Notifications.setNotificationChannelAsync('service-updates', {
+        name: 'Service updates',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+      }),
+    ]);
   }
 
   const projectId =

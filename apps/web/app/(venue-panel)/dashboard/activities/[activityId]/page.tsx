@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { Breadcrumbs } from '@/components/dashboard/breadcrumbs';
 
 type PollOption = { key: string; label: string };
 
@@ -181,8 +181,27 @@ export default function ActivityDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <p className="text-gray-400">{t('activityDetailLoading')}</p>
+      <div className="p-8 max-w-4xl space-y-6">
+        <Breadcrumbs items={[
+          { label: t('title'), href: '/dashboard' },
+          { label: t('activities'), href: '/dashboard/activities' },
+          { label: '...' },
+        ]} />
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-800 rounded w-1/3" />
+          <div className="h-4 bg-gray-800 rounded w-2/3" />
+          <div className="bg-gray-900/80 rounded-xl p-5 border border-gray-800">
+            <div className="h-4 bg-gray-800 rounded w-1/4 mb-4" />
+            <div className="flex gap-6">
+              <div className="h-10 bg-gray-800 rounded w-20" />
+              <div className="h-10 bg-gray-800 rounded w-20" />
+            </div>
+          </div>
+          <div className="bg-gray-900/80 rounded-xl p-5 border border-gray-800">
+            <div className="h-4 bg-gray-800 rounded w-1/3 mb-4" />
+            <div className="h-[200px] bg-gray-800 rounded" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -190,9 +209,11 @@ export default function ActivityDetailPage() {
   if (error === 'notFound' || !activity) {
     return (
       <div className="p-8">
-        <Link href="/dashboard/activities" className="text-violet-400 hover:text-violet-300 text-sm mb-4 inline-block">
-          ← {t('activityDetailBack')}
-        </Link>
+        <Breadcrumbs items={[
+          { label: t('title'), href: '/dashboard' },
+          { label: t('activities'), href: '/dashboard/activities' },
+          { label: t('activityNotFound') },
+        ]} />
         <p className="text-gray-400">{t('activityNotFound')}</p>
       </div>
     );
@@ -201,9 +222,11 @@ export default function ActivityDetailPage() {
   if (error === 'wrongVenue') {
     return (
       <div className="p-8">
-        <Link href="/dashboard/activities" className="text-violet-400 hover:text-violet-300 text-sm mb-4 inline-block">
-          ← {t('activityDetailBack')}
-        </Link>
+        <Breadcrumbs items={[
+          { label: t('title'), href: '/dashboard' },
+          { label: t('activities'), href: '/dashboard/activities' },
+          { label: t('activityWrongVenue') },
+        ]} />
         <p className="text-gray-400">{t('activityWrongVenue')}</p>
       </div>
     );
@@ -211,12 +234,11 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <Link
-        href="/dashboard/activities"
-        className="text-violet-400 hover:text-violet-300 text-sm font-medium mb-6 inline-flex items-center gap-1"
-      >
-        ← {t('activityDetailBack')}
-      </Link>
+      <Breadcrumbs items={[
+        { label: t('title'), href: '/dashboard' },
+        { label: t('activities'), href: '/dashboard/activities' },
+        { label: activity.title },
+      ]} />
 
       <div className="flex flex-wrap items-start gap-4 mb-8">
         <span className="text-4xl">{EMOJI[activity.type] || '🎯'}</span>

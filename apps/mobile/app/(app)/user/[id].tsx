@@ -1,7 +1,8 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity, Dimensions, StyleSheet,
   Modal, Pressable, ActivityIndicator, Alert, Animated, PanResponder, Linking,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { ReportModal, useBlockUser, useUnblockUser, blockRelationQueryKey } from '@/components/ui/report-modal';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { haptic } from '@/lib/haptics';
 import { useTheme, typography, spacing, radius } from '@/theme';
 import type { ThemeColors } from '@/theme';
 
@@ -37,7 +40,7 @@ export default function UserProfileScreen() {
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
 
-  const { data: profile } = useQuery({
+  const { data: profile, refetch: refetchProfile } = useQuery({
     queryKey: ['user-profile', userId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,7 +54,14 @@ export default function UserProfileScreen() {
     enabled: !!userId,
   });
 
-  const { data: photos = [] } = useProfilePhotos(userId);
+  const { data: photos = [], refetch: refetchPhotos } = useProfilePhotos(userId);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProfile(), refetchPhotos()]);
+    setRefreshing(false);
+  }, [refetchProfile, refetchPhotos]);
   const { data: hasAccess } = usePhotoAccessStatus(userId);
 
   const publicPhotos = photos.filter((p) => p.is_public);
@@ -160,20 +170,14 @@ export default function UserProfileScreen() {
 
   return (
     <View style={s.screenRoot}>
-    <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 60 }}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map' as any)}
-          style={s.backBtn}
-        >
-          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>
-          {profile?.nickname || '...'}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <ScrollView
+      style={s.container}
+      contentContainerStyle={{ paddingBottom: 60 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent.primary} />
+      }
+    >
+      <ScreenHeader title={profile?.nickname || '...'} />
 
       {/* Avatar + info */}
       <View style={s.profileSection}>
@@ -225,10 +229,12 @@ export default function UserProfileScreen() {
                 disabled={waveDisabled}
                 onPress={() => {
                   if (!userId || !venueId) return;
+                  haptic.light();
                   sendWave.mutate(
                     { targetUserId: userId, venueId },
                     {
                       onSuccess: (data) => {
+                        haptic.success();
                         if (!data.is_mutual) {
                           Alert.alert('👋', t('venue.waveSent', { defaultValue: 'Wave sent!' }));
                         }
@@ -583,19 +589,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
   return StyleSheet.create({
     screenRoot: { flex: 1, backgroundColor: c.bg.primary },
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingTop: 56, paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
-    },
-    backBtn: {
-      width: 36, height: 36, borderRadius: 18,
-      alignItems: 'center', justifyContent: 'center',
-    },
-    headerTitle: {
-      flex: 1, textAlign: 'center',
-      fontSize: typography.size.headingMd, fontWeight: typography.weight.extrabold,
-      color: c.text.primary,
-    },
     profileSection: { alignItems: 'center', marginBottom: spacing.xl },
     avatarGradient: {
       width: 120, height: 120, borderRadius: 60,

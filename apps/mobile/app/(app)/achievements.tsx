@@ -1,25 +1,28 @@
-import { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
+import { useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAchievements, useCheckAchievements } from '@/hooks/use-achievements';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { useTheme, typography, spacing, radius, shadows, type ThemeColors } from '@/theme';
 
 export default function AchievementsScreen() {
   const { t } = useTranslation();
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
-  const { data: achievements = [], isLoading } = useAchievements();
+  const { data: achievements = [], isLoading, refetch, isRefetching } = useAchievements();
   const checkMutation = useCheckAchievements();
+
+  useFocusEffect(
+    useCallback(() => {
+      checkMutation.mutate();
+    }, []),
+  );
 
   const unlocked = achievements.filter((a) => a.is_unlocked);
   const locked = achievements.filter((a) => !a.is_unlocked);
-
-  const handleRefresh = () => {
-    checkMutation.mutate();
-  };
 
   const renderAchievement = ({ item }: { item: (typeof achievements)[0] }) => {
     const pct = Math.min(100, Math.round((item.progress / item.threshold) * 100));
@@ -54,65 +57,48 @@ export default function AchievementsScreen() {
     );
   };
 
+  const sortedData = useMemo(() => {
+    const items: Array<(typeof achievements)[0] | { _sectionHeader: string }> = [];
+    if (unlocked.length > 0) {
+      items.push({ _sectionHeader: `${t('achievements.earned', { defaultValue: 'Earned' })} (${unlocked.length})` } as any);
+      items.push(...unlocked);
+    }
+    if (locked.length > 0) {
+      items.push({ _sectionHeader: `${t('achievements.inProgress', { defaultValue: 'In Progress' })} (${locked.length})` } as any);
+      items.push(...locked);
+    }
+    return items;
+  }, [unlocked, locked, t]);
+
   const ListHeader = () => (
-    <View>
-      {/* Stats card */}
-      <LinearGradient
-        colors={c.gradient.primary as unknown as [string, string]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={[s.statsCard, shadows.glowPrimary]}
-      >
-        <Text style={s.statsValue}>{unlocked.length}</Text>
-        <Text style={s.statsLabel}>
-          {t('achievements.unlocked', { defaultValue: 'Unlocked' })}
-        </Text>
-        <Text style={s.statsTotal}>
-          {t('achievements.outOf', {
-            defaultValue: 'out of {{total}}',
-            total: achievements.length,
-          })}
-        </Text>
-      </LinearGradient>
-
-      <TouchableOpacity style={s.refreshBtn} onPress={handleRefresh} disabled={checkMutation.isPending}>
-        <Ionicons name="refresh" size={16} color={c.accent.primary} />
-        <Text style={s.refreshText}>
-          {checkMutation.isPending
-            ? t('common.loading')
-            : t('achievements.checkProgress', { defaultValue: 'Check progress' })}
-        </Text>
-      </TouchableOpacity>
-
-      {unlocked.length > 0 && (
-        <Text style={s.sectionTitle}>
-          {t('achievements.earned', { defaultValue: 'Earned' })} ({unlocked.length})
-        </Text>
-      )}
-    </View>
-  );
-
-  const LockedHeader = () => (
-    locked.length > 0 ? (
-      <Text style={s.sectionTitle}>
-        {t('achievements.inProgress', { defaultValue: 'In Progress' })} ({locked.length})
+    <LinearGradient
+      colors={c.gradient.primary as unknown as [string, string]}
+      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      style={[s.statsCard, shadows.glowPrimary]}
+    >
+      <Text style={s.statsValue}>{unlocked.length}</Text>
+      <Text style={s.statsLabel}>
+        {t('achievements.unlocked', { defaultValue: 'Unlocked' })}
       </Text>
-    ) : null
+      <Text style={s.statsTotal}>
+        {t('achievements.outOf', {
+          defaultValue: 'out of {{total}}',
+          total: achievements.length,
+        })}
+      </Text>
+    </LinearGradient>
   );
+
+  const renderItem = ({ item }: { item: any }) => {
+    if (item._sectionHeader) {
+      return <Text style={s.sectionTitle}>{item._sectionHeader}</Text>;
+    }
+    return renderAchievement({ item });
+  };
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}
-          style={s.backBtn}
-        >
-          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>
-          {t('achievements.title', { defaultValue: 'Achievements' })}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title={t('achievements.title', { defaultValue: 'Achievements' })} />
 
       {isLoading ? (
         <View style={s.centered}>
@@ -120,22 +106,15 @@ export default function AchievementsScreen() {
         </View>
       ) : (
         <FlatList
-          data={[...unlocked, ...locked]}
-          keyExtractor={(item) => item.id}
-          renderItem={renderAchievement}
+          data={sortedData}
+          keyExtractor={(item: any) => item.id ?? item._sectionHeader}
+          renderItem={renderItem}
           contentContainerStyle={s.list}
-          ListHeaderComponent={() => (
-            <>
-              <ListHeader />
-              {unlocked.length > 0 && locked.length > 0 && (
-                <View style={{ marginTop: unlocked.length > 0 ? 0 : spacing.lg }}>
-                  {/* Separator inserted by section logic below */}
-                </View>
-              )}
-            </>
-          )}
-          stickyHeaderIndices={[]}
+          ListHeaderComponent={ListHeader}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={c.accent.primary} />
+          }
         />
       )}
     </View>
@@ -146,15 +125,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingTop: 52, paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
-    },
-    backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: {
-      fontSize: typography.size.headingLg, fontWeight: typography.weight.bold,
-      color: c.text.primary,
-    },
     statsCard: {
       marginHorizontal: spacing.xl, padding: spacing['3xl'],
       borderRadius: radius['2xl'], alignItems: 'center', marginBottom: spacing.lg,
@@ -169,16 +139,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     },
     statsTotal: {
       color: 'rgba(255,255,255,0.5)', fontSize: typography.size.bodySm, marginTop: 2,
-    },
-    refreshBtn: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: spacing.sm, marginHorizontal: spacing.xl, marginBottom: spacing.xl,
-      paddingVertical: spacing.md, borderRadius: radius.lg,
-      backgroundColor: isDark ? 'rgba(124,111,247,0.1)' : 'rgba(108,92,231,0.08)',
-    },
-    refreshText: {
-      color: c.accent.primary, fontSize: typography.size.bodyMd,
-      fontWeight: typography.weight.semibold,
     },
     sectionTitle: {
       color: c.text.secondary, fontSize: typography.size.label,

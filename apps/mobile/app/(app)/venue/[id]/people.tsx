@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView, Pressable,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView, Pressable, RefreshControl,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -13,10 +12,13 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSendWave } from '@/hooks/use-send-wave';
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ReportModal, useBlockUser } from '@/components/ui/report-modal';
 import { PersonCardSkeleton } from '@/components/ui/skeleton';
 import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 import { markVenueIncomingWavesSeen } from '@/hooks/use-chat-read';
+import { haptic } from '@/lib/haptics';
 
 const FILTERS = ['all', 'wantToChat', 'lookingForCompany', 'playing', 'lookingForDancePartner'];
 
@@ -41,7 +43,7 @@ export default function PeopleScreen() {
     }, [venueId, queryClient]),
   );
 
-  const { data: people = [], isLoading } = useQuery({
+  const { data: people = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['venue-people', venueId, userId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -74,10 +76,12 @@ export default function PeopleScreen() {
 
   const handleSendWave = useCallback((targetId: string) => {
     if (!venueId) return;
+    haptic.light();
     sendWave.mutate(
       { targetUserId: targetId, venueId },
       {
         onSuccess: (data) => {
+          haptic.success();
           if (!data.is_mutual) {
             Alert.alert('👋', t('venue.waveSent', { defaultValue: 'Wave sent!' }));
           }
@@ -164,18 +168,15 @@ export default function PeopleScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}
-          style={s.backBtn}
-        >
-          <Ionicons name="chevron-back" size={22} color={c.text.primary} />
-        </TouchableOpacity>
-        <Text style={s.title}>{t('venue.people')}</Text>
-        <View style={s.countBadge}>
-          <Text style={s.countText}>{filteredPeople.length}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title={t('venue.people')}
+        centered={false}
+        rightAction={
+          <View style={s.countBadge}>
+            <Text style={s.countText}>{filteredPeople.length}</Text>
+          </View>
+        }
+      />
 
       <ScrollView
         horizontal
@@ -195,9 +196,7 @@ export default function PeopleScreen() {
       </ScrollView>
 
       {!userId ? (
-        <View style={s.empty}>
-          <Text style={s.emptyText}>{t('common.loading')}</Text>
-        </View>
+        <EmptyState icon="hourglass-outline" title={t('common.loading')} />
       ) : isLoading ? (
         <View style={s.loadingWrap}>
           {[1, 2, 3, 4, 5].map((i) => (
@@ -205,11 +204,7 @@ export default function PeopleScreen() {
           ))}
         </View>
       ) : filteredPeople.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyEmoji}>👀</Text>
-          <Text style={s.emptyTitle}>{t('people.emptyTitle')}</Text>
-          <Text style={s.emptyText}>{t('people.emptyHint')}</Text>
-        </View>
+        <EmptyState emoji="👀" title={t('people.emptyTitle')} hint={t('people.emptyHint')} />
       ) : (
         <FlatList
           data={filteredPeople}
@@ -217,6 +212,9 @@ export default function PeopleScreen() {
           renderItem={renderItem}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={c.accent.primary} />
+          }
         />
       )}
 
@@ -238,21 +236,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
 
-    header: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
-      gap: spacing.sm,
-    },
-    backBtn: {
-      width: 36, height: 36, borderRadius: 18,
-      alignItems: 'center', justifyContent: 'center',
-      backgroundColor: borderFaint,
-    },
-    title: {
-      flex: 1,
-      fontSize: typography.size.headingMd, fontWeight: typography.weight.bold,
-      color: c.text.primary,
-    },
     countBadge: {
       minWidth: 28, height: 28, borderRadius: 14,
       backgroundColor: `${c.accent.primary}20`,
@@ -322,18 +305,5 @@ function createStyles(c: ThemeColors, isDark: boolean) {
 
     loadingWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
 
-    empty: {
-      flex: 1, alignItems: 'center', justifyContent: 'center',
-      paddingHorizontal: spacing['3xl'],
-    },
-    emptyEmoji: { fontSize: 48, marginBottom: spacing.md },
-    emptyTitle: {
-      color: c.text.primary, fontSize: typography.size.headingSm,
-      fontWeight: typography.weight.bold, marginBottom: spacing.xs, textAlign: 'center',
-    },
-    emptyText: {
-      color: c.text.secondary, fontSize: typography.size.bodySm,
-      textAlign: 'center', lineHeight: typography.size.bodySm * 1.5,
-    },
   });
 }

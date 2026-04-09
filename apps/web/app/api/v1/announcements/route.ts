@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { MAX_ANNOUNCEMENTS_PER_DAY } from '@eyestalk/shared/constants';
 import { sendExpoPushBatch } from '@/lib/push/expo-push';
+import { rateLimit } from '@/lib/rate-limit';
 
 const announcementSchema = z.object({
   venue_id: z.string().uuid(),
@@ -11,6 +12,13 @@ const announcementSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip') || 'unknown';
+  const rl = rateLimit(`announcements:${ip}`);
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 

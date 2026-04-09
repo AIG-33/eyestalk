@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { MICRO_CHAT_DURATION_MINUTES, MICRO_CHAT_MESSAGE_LIMIT } from '@eyestalk/shared/constants';
+import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 
 interface Props {
   expiresAt: string | null;
@@ -12,6 +13,8 @@ interface Props {
 
 export function MicroChatTimer({ expiresAt, messageCount, onExtend, extendCost }: Props) {
   const { t } = useTranslation();
+  const { c, isDark } = useTheme();
+  const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const [timeLeft, setTimeLeft] = useState('');
   const [expired, setExpired] = useState(false);
 
@@ -42,10 +45,10 @@ export function MicroChatTimer({ expiresAt, messageCount, onExtend, extendCost }
 
   if (expired) {
     return (
-      <View style={styles.expiredContainer}>
-        <Text style={styles.expiredText}>{t('microChat.expired')}</Text>
-        <TouchableOpacity style={styles.extendButton} onPress={onExtend}>
-          <Text style={styles.extendText}>
+      <View style={s.expiredContainer}>
+        <Text style={s.expiredText}>{t('microChat.expired')}</Text>
+        <TouchableOpacity style={s.extendButton} onPress={onExtend}>
+          <Text style={s.extendText}>
             {t('microChat.extend', { cost: extendCost })}
           </Text>
         </TouchableOpacity>
@@ -54,34 +57,37 @@ export function MicroChatTimer({ expiresAt, messageCount, onExtend, extendCost }
   }
 
   return (
-    <View style={[styles.container, isLow && styles.containerWarning]}>
-      <Text style={[styles.timerText, isLow && styles.timerWarning]}>⏱ {timeLeft}</Text>
-      <Text style={styles.separator}>·</Text>
-      <Text style={[styles.messagesText, messagesLeft <= 3 && styles.timerWarning]}>
+    <View style={[s.container, isLow && s.containerWarning]}>
+      <Text style={[s.timerText, isLow && s.timerWarning]}>⏱ {timeLeft}</Text>
+      <Text style={s.separator}>·</Text>
+      <Text style={[s.messagesText, messagesLeft <= 3 && s.timerWarning]}>
         {t('microChat.messagesLeft', { count: Math.max(0, messagesLeft) })}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 6, gap: 8, backgroundColor: '#1A1929',
-    borderBottomWidth: 1, borderBottomColor: '#2A2940',
-  },
-  containerWarning: { backgroundColor: 'rgba(255,107,107,0.1)' },
-  timerText: { color: '#A7A9BE', fontSize: 13, fontWeight: '600' },
-  timerWarning: { color: '#FF6B6B' },
-  separator: { color: '#2A2940', fontSize: 13 },
-  messagesText: { color: '#A7A9BE', fontSize: 13 },
-  expiredContainer: {
-    alignItems: 'center', padding: 16, gap: 12,
-    backgroundColor: '#1A1929', borderBottomWidth: 1, borderBottomColor: '#2A2940',
-  },
-  expiredText: { color: '#FF6B6B', fontSize: 14, fontWeight: '600' },
-  extendButton: {
-    backgroundColor: '#6C5CE7', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12,
-  },
-  extendText: { color: '#FFFFFE', fontSize: 14, fontWeight: '700' },
-});
+function createStyles(c: ThemeColors, isDark: boolean) {
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      paddingVertical: spacing.sm, gap: spacing.sm, backgroundColor: c.bg.secondary,
+      borderBottomWidth: 1, borderBottomColor: borderColor,
+    },
+    containerWarning: { backgroundColor: `${c.accent.error}1A` },
+    timerText: { color: c.text.secondary, fontSize: typography.size.bodySm, fontWeight: typography.weight.semibold },
+    timerWarning: { color: c.accent.error },
+    separator: { color: c.text.tertiary, fontSize: typography.size.bodySm },
+    messagesText: { color: c.text.secondary, fontSize: typography.size.bodySm },
+    expiredContainer: {
+      alignItems: 'center', padding: spacing.lg, gap: spacing.md,
+      backgroundColor: c.bg.secondary, borderBottomWidth: 1, borderBottomColor: borderColor,
+    },
+    expiredText: { color: c.accent.error, fontSize: typography.size.bodyMd, fontWeight: typography.weight.semibold },
+    extendButton: {
+      backgroundColor: c.accent.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.md,
+    },
+    extendText: { color: '#FFFFFF', fontSize: typography.size.bodyMd, fontWeight: typography.weight.bold },
+  });
+}

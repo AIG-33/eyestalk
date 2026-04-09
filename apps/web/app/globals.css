@@ -88,6 +88,14 @@ input:focus, textarea:focus, select:focus {
   box-shadow: var(--glow-primary);
 }
 
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
 /* Light theme overrides for Tailwind utility classes used in dashboard */
 [data-theme="light"] {
   .bg-gray-900 { background-color: #FFFFFF !important; }

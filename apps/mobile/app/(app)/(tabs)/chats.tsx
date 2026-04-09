@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,7 @@ export default function ChatsScreen() {
   const { c, isDark } = useTheme();
   const queryClient = useQueryClient();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
-  const { data: chats = [], isLoading } = useUserChats();
+  const { data: chats = [], isLoading, refetch, isRefetching } = useUserChats();
 
   useFocusEffect(
     useCallback(() => {
@@ -128,6 +128,7 @@ export default function ChatsScreen() {
     const venueType = (chat?.venues as any)?.type || 'other';
     const preview = getPreview(item);
     const time = item.last_message?.created_at || chat?.created_at;
+    const unread = item.unread_count || 0;
 
     if (isVenue) {
       return (
@@ -140,9 +141,16 @@ export default function ChatsScreen() {
               <Text style={s.name} numberOfLines={1}>{venueName}</Text>
               {time && <Text style={s.time}>{formatTime(time)}</Text>}
             </View>
-            <Text style={s.preview} numberOfLines={1}>
-              {preview || t('venue.chatHint')}
-            </Text>
+            <View style={s.bottomRow}>
+              <Text style={[s.preview, unread > 0 && s.previewBold]} numberOfLines={1}>
+                {preview || t('venue.chatHint')}
+              </Text>
+              {unread > 0 && (
+                <View style={s.unreadBadge}>
+                  <Text style={s.unreadText}>{unread > 99 ? '99+' : unread}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </TouchableOpacity>
       );
@@ -158,12 +166,19 @@ export default function ChatsScreen() {
         />
         <View style={s.body}>
           <View style={s.topRow}>
-            <Text style={s.name} numberOfLines={1}>{peer?.nickname || 'Chat'}</Text>
+            <Text style={[s.name, unread > 0 && s.nameBold]} numberOfLines={1}>{peer?.nickname || 'Chat'}</Text>
             {time && <Text style={s.time}>{formatTime(time)}</Text>}
           </View>
-          <Text style={s.preview} numberOfLines={1}>
-            {preview || t('chats.directChatHint')}
-          </Text>
+          <View style={s.bottomRow}>
+            <Text style={[s.preview, unread > 0 && s.previewBold]} numberOfLines={1}>
+              {preview || t('chats.directChatHint')}
+            </Text>
+            {unread > 0 && (
+              <View style={s.unreadBadge}>
+                <Text style={s.unreadText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -195,6 +210,9 @@ export default function ChatsScreen() {
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={() => <View style={s.separator} />}
           SectionSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={c.accent.primary} />
+          }
         />
       ) : (
         <View style={s.empty}>
@@ -281,9 +299,36 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       fontSize: typography.size.bodySm,
       flexShrink: 0,
     },
+    bottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
     preview: {
       color: c.text.secondary,
       fontSize: typography.size.bodyMd,
+      flex: 1,
+    },
+    previewBold: {
+      color: c.text.primary,
+      fontWeight: typography.weight.medium,
+    },
+    nameBold: {
+      fontWeight: typography.weight.bold,
+    },
+    unreadBadge: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: c.accent.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    unreadText: {
+      color: '#FFFFFF',
+      fontSize: typography.size.micro,
+      fontWeight: typography.weight.bold,
     },
 
     separator: {

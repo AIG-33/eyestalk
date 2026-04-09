@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useTheme, typography, spacing, radius, shadows } from '@/theme';
 
 interface Activity {
@@ -28,6 +29,12 @@ const ACTIVITY_EMOJI: Record<string, string> = {
   auction: '💰',
 };
 
+const ACTIVITY_ACCENT: Record<string, { bg: string; border: string; text: string }> = {
+  poll: { bg: 'rgba(0,212,255,0.08)', border: 'rgba(0,212,255,0.25)', text: '#00D4FF' },
+  auction: { bg: 'rgba(255,217,61,0.08)', border: 'rgba(255,217,61,0.25)', text: '#FFD93D' },
+  event: { bg: 'rgba(0,229,160,0.08)', border: 'rgba(0,229,160,0.25)', text: '#00E5A0' },
+};
+
 export default function ActivitiesScreen() {
   const { id: venueId } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
@@ -37,7 +44,7 @@ export default function ActivitiesScreen() {
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
 
-  const { data: activities = [], isLoading } = useQuery({
+  const { data: activities = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['venue', venueId, 'activities'],
     queryFn: async (): Promise<Activity[]> => {
       const { data, error } = await supabase
@@ -119,6 +126,8 @@ export default function ActivitiesScreen() {
     const isPoll = item.type === 'poll';
     const auctionConfig = isAuction ? item.config : null;
     const alreadyJoined = joinedSet.has(item.id);
+    const accent = ACTIVITY_ACCENT[item.type] || ACTIVITY_ACCENT.event;
+    const participants = item._count?.participants ?? 0;
 
     const getButtonLabel = () => {
       if (isAuction) return isActive ? '💰 Bid' : '👀 View';
@@ -128,16 +137,31 @@ export default function ActivitiesScreen() {
     };
 
     return (
-      <View style={[s.activityCard, isActive && s.activityCardActive]}>
+      <View style={[
+        s.activityCard,
+        { backgroundColor: accent.bg, borderColor: isActive ? accent.border : borderColor },
+      ]}>
+        {/* Type indicator strip */}
+        <View style={[s.typeStrip, { backgroundColor: accent.text }]} />
+
         <View style={s.activityHeader}>
-          <Text style={s.activityEmoji}>
-            {ACTIVITY_EMOJI[item.type] || '🎯'}
-          </Text>
+          <View style={[s.emojiWrap, { backgroundColor: `${accent.text}20` }]}>
+            <Text style={s.activityEmoji}>
+              {ACTIVITY_EMOJI[item.type] || '🎯'}
+            </Text>
+          </View>
           <View style={s.activityHeaderText}>
             <Text style={s.activityTitle}>{item.title}</Text>
-            <Text style={s.activityType}>
-              {item.type.replace('_', ' ')}
-            </Text>
+            <View style={s.activityMeta}>
+              <Text style={[s.activityType, { color: accent.text }]}>
+                {item.type.replace('_', ' ')}
+              </Text>
+              {participants > 0 && (
+                <Text style={s.participantCount}>
+                  · {participants} {participants === 1 ? 'person' : 'people'}
+                </Text>
+              )}
+            </View>
           </View>
           {isActive && timeLeft && (
             <View style={s.timerBadge}>
@@ -151,13 +175,29 @@ export default function ActivitiesScreen() {
         )}
 
         {isAuction && auctionConfig?.item_name && (
-          <View style={s.auctionPreview}>
-            <Text style={s.auctionItemName}>
+          <View style={[s.auctionPreview, { borderColor: accent.border }]}>
+            <Text style={[s.auctionItemName, { color: accent.text }]}>
               {auctionConfig.item_name as string}
             </Text>
             <Text style={s.auctionPrice}>
               Starting: {(auctionConfig.starting_price as number) || 0} 🪙
             </Text>
+          </View>
+        )}
+
+        {isPoll && (item.config as any)?.options && (
+          <View style={s.pollPreview}>
+            {((item.config as any).options as string[]).slice(0, 3).map((opt: string, i: number) => (
+              <View key={i} style={s.pollOption}>
+                <View style={[s.pollDot, { backgroundColor: accent.text }]} />
+                <Text style={s.pollOptionText} numberOfLines={1}>{opt}</Text>
+              </View>
+            ))}
+            {((item.config as any).options as string[]).length > 3 && (
+              <Text style={s.pollMore}>
+                +{((item.config as any).options as string[]).length - 3} more
+              </Text>
+            )}
           </View>
         )}
 
@@ -173,7 +213,7 @@ export default function ActivitiesScreen() {
           </Text>
           {isAuction ? (
             <TouchableOpacity
-              style={[s.auctionButton, shadows.glowPrimary]}
+              style={[s.actionButton, { backgroundColor: accent.text }]}
               onPress={() =>
                 router.push(
                   `/(app)/venue/${venueId}/auction/${item.id}` as any,
@@ -185,9 +225,8 @@ export default function ActivitiesScreen() {
           ) : (
             <TouchableOpacity
               style={[
-                isPoll ? s.pollButton : s.joinButton,
-                alreadyJoined && !isPoll && s.joinedButton,
-                shadows.glowPrimary,
+                s.actionButton,
+                { backgroundColor: alreadyJoined && !isPoll ? borderColor : accent.text },
               ]}
               onPress={() => handleJoinAndNavigate(item)}
               disabled={joinActivity.isPending || (alreadyJoined && !isPoll)}
@@ -205,17 +244,12 @@ export default function ActivitiesScreen() {
     );
   };
 
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
   return (
     <View style={s.container}>
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={c.text.primary} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>{t('activities.title')}</Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title={t('activities.title')} />
 
-      {/* Hint */}
       <View style={s.hintBanner}>
         <Ionicons name="flash-outline" size={16} color={c.accent.warning} />
         <Text style={s.hintText}>{t('activities.joinHint')}</Text>
@@ -231,13 +265,12 @@ export default function ActivitiesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderActivity}
           contentContainerStyle={s.list}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={c.accent.primary} />
+          }
         />
       ) : (
-        <View style={s.centered}>
-          <Text style={s.emptyIcon}>🎯</Text>
-          <Text style={s.emptyTitle}>{t('activities.emptyTitle')}</Text>
-          <Text style={s.emptyText}>{t('activities.emptyHint')}</Text>
-        </View>
+        <EmptyState emoji="🎯" title={t('activities.emptyTitle')} hint={t('activities.emptyHint')} />
       )}
     </View>
   );
@@ -259,20 +292,6 @@ function createStyles(c: ThemeColors, isDark: boolean) {
   const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
-      borderBottomWidth: 1, borderBottomColor: borderColorFaint,
-    },
-    backBtn: {
-      width: 40, height: 40, borderRadius: 20,
-      alignItems: 'center', justifyContent: 'center',
-      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-    },
-    headerTitle: {
-      fontSize: typography.size.headingMd, fontWeight: typography.weight.extrabold,
-      color: c.text.primary,
-    },
     hintBanner: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
       marginHorizontal: spacing.xl, marginBottom: spacing.md,
@@ -289,31 +308,33 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       paddingHorizontal: spacing['3xl'],
     },
     loadingText: { color: c.text.secondary },
-    emptyIcon: { fontSize: 56, marginBottom: spacing.lg },
-    emptyTitle: {
-      color: c.text.primary, fontSize: typography.size.headingMd,
-      fontWeight: typography.weight.bold, textAlign: 'center', marginBottom: spacing.sm,
-    },
-    emptyText: {
-      color: c.text.secondary, fontSize: typography.size.bodyMd,
-      textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5,
-    },
     list: { padding: spacing.xl, gap: spacing.md },
     activityCard: {
-      backgroundColor: c.bg.secondary, borderRadius: radius.lg, padding: spacing.lg,
-      borderWidth: 1, borderColor: borderColor,
+      borderRadius: radius.lg, padding: spacing.lg,
+      borderWidth: 1, overflow: 'hidden',
     },
-    activityCardActive: { borderColor: c.accent.primary },
+    typeStrip: {
+      position: 'absolute', top: 0, left: 0, width: 4, height: '100%',
+      borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg,
+    },
     activityHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    activityEmoji: { fontSize: 32 },
+    emojiWrap: {
+      width: 44, height: 44, borderRadius: 22,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    activityEmoji: { fontSize: 22 },
     activityHeaderText: { flex: 1 },
+    activityMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     activityTitle: {
       color: c.text.primary, fontSize: typography.size.bodyLg,
       fontWeight: typography.weight.bold,
     },
     activityType: {
-      color: c.text.secondary, fontSize: typography.size.bodySm,
-      textTransform: 'capitalize', marginTop: 2,
+      fontSize: typography.size.bodySm,
+      textTransform: 'capitalize', fontWeight: typography.weight.semibold,
+    },
+    participantCount: {
+      color: c.text.tertiary, fontSize: typography.size.bodySm,
     },
     timerBadge: {
       backgroundColor: 'rgba(255,71,87,0.15)', paddingHorizontal: spacing.sm,
@@ -339,26 +360,31 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     tokenCost: {
       color: c.text.secondary, fontSize: typography.size.bodyMd,
     },
-    joinButton: {
-      backgroundColor: c.accent.primary,
+    actionButton: {
       paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
       borderRadius: radius.md,
-    },
-    joinedButton: {
-      backgroundColor: borderColor,
     },
     joinedButtonText: {
       color: c.text.tertiary,
     },
-    pollButton: {
-      backgroundColor: c.accent.primary,
-      paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-      borderRadius: radius.md,
+    pollPreview: {
+      marginTop: spacing.md, gap: spacing.xs,
     },
-    auctionButton: {
-      backgroundColor: c.accent.primary,
-      paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-      borderRadius: radius.md,
+    pollOption: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+      paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+    },
+    pollDot: {
+      width: 6, height: 6, borderRadius: 3,
+    },
+    pollOptionText: {
+      color: c.text.secondary, fontSize: typography.size.bodySm, flex: 1,
+    },
+    pollMore: {
+      color: c.text.tertiary, fontSize: typography.size.bodySm,
+      paddingLeft: spacing.md + 6 + spacing.sm,
     },
     joinButtonText: {
       color: '#FFFFFF', fontSize: typography.size.bodyMd,

@@ -4,10 +4,16 @@ import { getApiUser } from '@/lib/supabase/api-auth';
 import { placeBidSchema } from '@eyestalk/shared/validators';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ activityId: string }> },
 ) {
   const { activityId } = await params;
+
+  const user = await getApiUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const admin = createAdminClient();
 
   const { data: activity } = await admin

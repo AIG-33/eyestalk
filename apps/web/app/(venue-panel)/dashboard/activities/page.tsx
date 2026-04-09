@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { ACTIVITY_TYPES } from '@eyestalk/shared/constants';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { useToast } from '@/components/dashboard/toast';
 
 function FieldLabel({ label, hint }: { label: string; hint: string }) {
   const [open, setOpen] = useState(false);
@@ -83,6 +84,7 @@ type StatusFilter = 'all' | 'draft' | 'active' | 'completed' | 'cancelled';
 export default function ActivitiesPage() {
   const t = useTranslations('dashboard');
   const { current } = useVenue();
+  const { toast } = useToast();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -90,6 +92,10 @@ export default function ActivitiesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const PAGE_SIZE = 20;
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const loadActivities = useCallback(async () => {
     const venueId = current?.id;
@@ -100,16 +106,42 @@ export default function ActivitiesPage() {
     }
 
     const supabase = createClient();
+    const [{ data }, { count }] = await Promise.all([
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('venue_id', venueId)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE),
+      supabase
+        .from('activities')
+        .select('id', { count: 'exact', head: true })
+        .eq('venue_id', venueId),
+    ]);
+
+    const list = (data as Activity[]) || [];
+    setActivities(list);
+    setTotalCount(count || 0);
+    setHasMore(list.length >= PAGE_SIZE);
+    setLoading(false);
+  }, [current?.id]);
+
+  const loadMore = async () => {
+    const venueId = current?.id;
+    if (!venueId || !hasMore) return;
+    setLoadingMore(true);
+    const supabase = createClient();
     const { data } = await supabase
       .from('activities')
       .select('*')
       .eq('venue_id', venueId)
       .order('created_at', { ascending: false })
-      .limit(100);
-
-    setActivities((data as Activity[]) || []);
-    setLoading(false);
-  }, [current?.id]);
+      .range(activities.length, activities.length + PAGE_SIZE - 1);
+    const more = (data as Activity[]) || [];
+    setActivities((prev) => [...prev, ...more]);
+    setHasMore(more.length >= PAGE_SIZE);
+    setLoadingMore(false);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -134,7 +166,7 @@ export default function ActivitiesPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('activities').insert({
+    const { error } = await supabase.from('activities').insert({
       venue_id: venueId,
       created_by: user.id,
       title: form.title,
@@ -148,6 +180,11 @@ export default function ActivitiesPage() {
       ends_at: form.ends_at,
     });
 
+    if (error) {
+      toast('Failed to create activity', 'error');
+      return;
+    }
+    toast('Activity created', 'success');
     setShowCreate(false);
     loadActivities();
   };
@@ -162,16 +199,22 @@ export default function ActivitiesPage() {
       body: JSON.stringify(updates),
     });
     if (res.ok) {
+      toast('Activity updated', 'success');
       setEditingId(null);
       loadActivities();
+    } else {
+      toast('Failed to update activity', 'error');
     }
   };
 
   const deleteActivity = async (id: string) => {
     const res = await fetch(`/api/v1/activities/${id}`, { method: 'DELETE' });
     if (res.ok) {
+      toast('Activity deleted', 'success');
       setDeletingId(null);
       loadActivities();
+    } else {
+      toast('Failed to delete activity', 'error');
     }
   };
 
@@ -198,8 +241,11 @@ export default function ActivitiesPage() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-white">{t('activities')}</h1>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white">{t('activities')}</h1>
+          <p className="text-gray-400 text-sm">{t('activitiesHint')}</p>
+        </div>
         <button
           onClick={() => {
             setShowCreate(!showCreate);
@@ -231,7 +277,22 @@ export default function ActivitiesPage() {
       {showCreate && <CreateActivityForm onSubmit={createActivity} onCancel={() => setShowCreate(false)} />}
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-900 rounded-xl p-4 border border-gray-800 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-gray-800 rounded-lg" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-4 bg-gray-800 rounded w-1/3" />
+                  <div className="h-3 bg-gray-800 rounded w-1/2" />
+                </div>
+                <div className="h-6 w-16 bg-gray-800 rounded-full" />
+                <div className="w-11 h-6 bg-gray-800 rounded-full" />
+                <div className="h-8 w-20 bg-gray-800 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filteredActivities.length === 0 ? (
         <div className="bg-gray-900 rounded-2xl p-12 border border-gray-800 text-center">
           <p className="text-4xl mb-4">🎯</p>
@@ -397,6 +458,18 @@ export default function ActivitiesPage() {
               )}
             </div>
           ))}
+
+          {hasMore && (
+            <div className="text-center pt-4">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-6 py-2 rounded-xl text-sm font-medium transition-colors bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+              >
+                {loadingMore ? '...' : `Load more (${activities.length} of ${totalCount})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

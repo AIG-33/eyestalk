@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { useToast } from '@/components/dashboard/toast';
+import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 
 type Tab = 'reports' | 'chat';
 
@@ -21,11 +23,10 @@ export default function ModerationPage() {
     );
   }
 
-  const isRu = t('moderation') === 'Модерация';
-
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>{t('moderation')}</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{t('moderation')}</h1>
+      <p style={{ color: 'var(--text-tertiary)' }} className="mb-4">{t('moderationHint')}</p>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-8 p-1 rounded-xl w-fit" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
@@ -37,7 +38,7 @@ export default function ModerationPage() {
             color: tab === 'reports' ? '#fff' : 'var(--text-secondary)',
           }}
         >
-          🛡️ {isRu ? 'Жалобы' : 'Reports'}
+          🛡️ {t('tabReports')}
         </button>
         <button
           onClick={() => setTab('chat')}
@@ -47,7 +48,7 @@ export default function ModerationPage() {
             color: tab === 'chat' ? '#fff' : 'var(--text-secondary)',
           }}
         >
-          💬 {isRu ? 'Общий чат' : 'General Chat'}
+          💬 {t('tabGeneralChat')}
         </button>
       </div>
 
@@ -64,8 +65,10 @@ export default function ModerationPage() {
 
 function ReportsSection({ venueId }: { venueId: string }) {
   const t = useTranslations('dashboard');
+  const { toast } = useToast();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmAction, setConfirmAction] = useState<{ reportId: string; action: string; label: string } | null>(null);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -84,6 +87,24 @@ function ReportsSection({ venueId }: { venueId: string }) {
   useEffect(() => {
     void loadReports();
   }, [loadReports]);
+
+  const executeAction = async (reportId: string, action: string) => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('reports').update({ status: action, resolved_by: user?.id }).eq('id', reportId);
+    if (error) {
+      toast(error.message, 'error');
+    } else {
+      toast(`Report ${action}`, 'success');
+    }
+    loadReports();
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    await executeAction(confirmAction.reportId, confirmAction.action);
+    setConfirmAction(null);
+  };
 
   if (loading) {
     return <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>;
@@ -151,8 +172,18 @@ function ReportsSection({ venueId }: { venueId: string }) {
                 </span>
                 {report.status === 'pending' && (
                   <div className="flex gap-1">
-                    <ReportAction reportId={report.id} action="resolved" label="Resolve" color="green" onDone={loadReports} />
-                    <ReportAction reportId={report.id} action="dismissed" label="Dismiss" color="gray" onDone={loadReports} />
+                    <button
+                      onClick={() => setConfirmAction({ reportId: report.id, action: 'resolved', label: 'Resolve' })}
+                      className="text-xs px-2 py-1 rounded text-green-400 hover:bg-green-500/10 transition-colors"
+                    >
+                      Resolve
+                    </button>
+                    <button
+                      onClick={() => setConfirmAction({ reportId: report.id, action: 'dismissed', label: 'Dismiss' })}
+                      className="text-xs px-2 py-1 rounded text-gray-400 hover:bg-gray-500/10 transition-colors"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
               </div>
@@ -160,24 +191,22 @@ function ReportsSection({ venueId }: { venueId: string }) {
           ))}
         </div>
       )}
-    </>
-  );
-}
 
-function ReportAction({
-  reportId, action, label, color, onDone,
-}: {
-  reportId: string; action: string; label: string; color: string; onDone: () => void;
-}) {
-  const handleAction = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('reports').update({ status: action, resolved_by: user?.id }).eq('id', reportId);
-    onDone();
-  };
-  const cls = color === 'green' ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-400 hover:bg-gray-500/10';
-  return (
-    <button onClick={handleAction} className={`text-xs px-2 py-1 rounded ${cls} transition-colors`}>{label}</button>
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.label === 'Resolve' ? 'Resolve Report' : 'Dismiss Report'}
+        description={
+          confirmAction?.label === 'Resolve'
+            ? 'Mark this report as resolved? The reporter will be notified.'
+            : 'Dismiss this report? It will be marked as no action needed.'
+        }
+        confirmLabel={confirmAction?.label || 'Confirm'}
+        cancelLabel="Cancel"
+        destructive={confirmAction?.action === 'dismissed'}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmAction(null)}
+      />
+    </>
   );
 }
 
@@ -201,8 +230,6 @@ function ChatSection({ venueId, venueName }: { venueId: string; venueName: strin
   const [initError, setInitError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
-
-  const isRu = venueName ? true : true; // always show; lang detected elsewhere
 
   useEffect(() => {
     let cancelled = false;

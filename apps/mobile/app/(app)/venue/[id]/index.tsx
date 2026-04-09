@@ -1,15 +1,18 @@
-import { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from '@tanstack/react-query';
 import { useVenueDetail } from '@/hooks/use-venues';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
 import { useLocation } from '@/hooks/use-location';
+import { supabase } from '@/lib/supabase';
 import { VenueStatusSheet } from '@/components/venue/venue-status-sheet';
 import { Button } from '@/components/ui/button';
 import { useTheme, typography, spacing, shadows, radius, venueAmbient } from '@/theme';
+import { haptic } from '@/lib/haptics';
 
 const VENUE_EMOJI: Record<string, string> = {
   karaoke: '🎤', nightclub: '🪩', sports_bar: '⚽', bowling: '🎳',
@@ -21,12 +24,33 @@ export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const { c, isDark } = useTheme();
-  const { data: venue, isLoading } = useVenueDetail(id);
-  const { data: activeCheckin } = useActiveCheckin();
+  const { data: venue, isLoading, refetch: refetchVenue, isRefetching: isRefetchingVenue } = useVenueDetail(id);
+  const { data: activeCheckin, refetch: refetchCheckin, isRefetching: isRefetchingCheckin } = useActiveCheckin();
+
+  const isRefreshing = isRefetchingVenue || isRefetchingCheckin;
+  const handleRefresh = useCallback(() => {
+    void refetchVenue();
+    void refetchCheckin();
+  }, [refetchVenue, refetchCheckin]);
   const { checkinMutation, checkoutMutation } = useCheckin();
   const { location } = useLocation();
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
+
+  const { data: liveCount = 0 } = useQuery({
+    queryKey: ['venue-live-count', id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('checkins')
+        .select('*', { count: 'exact', head: true })
+        .eq('venue_id', id)
+        .eq('status', 'active');
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!id,
+    refetchInterval: 15_000,
+  });
 
   const isCheckedInHere = activeCheckin?.venue_id === id;
   const isCheckedInElsewhere = activeCheckin && activeCheckin.venue_id !== id;
@@ -37,13 +61,16 @@ export default function VenueDetailScreen() {
       return;
     }
 
+    haptic.medium();
     checkinMutation.mutate(
       { venue_id: id, lat: location.latitude, lng: location.longitude },
       {
         onSuccess: (result) => {
+          haptic.success();
           Alert.alert('Checked in!', `You earned ${result.tokens_earned} tokens`);
         },
         onError: (err: any) => {
+          haptic.error();
           Alert.alert('Check-in failed', err.message || JSON.stringify(err));
         },
       },
@@ -51,7 +78,10 @@ export default function VenueDetailScreen() {
   };
 
   const handleCheckout = () => {
-    if (activeCheckin) checkoutMutation.mutate(activeCheckin.id);
+    if (activeCheckin) {
+      haptic.medium();
+      checkoutMutation.mutate(activeCheckin.id);
+    }
   };
 
   if (isLoading || !venue) {
@@ -66,7 +96,12 @@ export default function VenueDetailScreen() {
 
   return (
     <View style={s.container}>
-      <ScrollView contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={c.accent.primary} />
+        }
+      >
         {/* Hero with ambient gradient */}
         <View style={s.hero}>
           <LinearGradient
@@ -94,6 +129,14 @@ export default function VenueDetailScreen() {
                 {venue.type.replace('_', ' ')}
               </Text>
             </View>
+            {liveCount > 0 && (
+              <View style={s.liveBadge}>
+                <View style={s.liveDot} />
+                <Text style={s.liveText}>
+                  {liveCount} {t('venue.peopleNow', { defaultValue: 'here now' })}
+                </Text>
+              </View>
+            )}
             {venue.address && (
               <Text style={s.address} numberOfLines={1}>{venue.address}</Text>
             )}
@@ -230,9 +273,7 @@ export default function VenueDetailScreen() {
               <View style={s.bentoCardInner}>
                 <Ionicons name="ticket" size={28} color={c.accent.primary} />
                 <Text style={s.bentoLabel}>{t('venue.services')}</Text>
-                <Text style={s.bentoHint}>
-                  {isCheckedInHere ? t('venue.servicesHint') : t('venue.checkinToBook')}
-                </Text>
+                <Text style={s.bentoHint}>{t('venue.servicesHint')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -335,6 +376,20 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     typeText: {
       color: c.accent.primaryLight, fontSize: typography.size.bodySm,
       fontWeight: typography.weight.semibold, textTransform: 'capitalize',
+    },
+    liveBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: `${c.accent.success}18`,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+      borderRadius: radius.full,
+    },
+    liveDot: {
+      width: 6, height: 6, borderRadius: 3,
+      backgroundColor: c.accent.success,
+    },
+    liveText: {
+      color: c.accent.success, fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
     },
     address: {
       color: c.text.secondary, fontSize: typography.size.bodyMd, flex: 1,

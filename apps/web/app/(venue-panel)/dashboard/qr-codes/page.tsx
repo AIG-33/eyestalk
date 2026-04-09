@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { useToast } from '@/components/dashboard/toast';
 
 interface QrCode {
   id: string;
@@ -18,6 +19,7 @@ interface QrCode {
 export default function QrCodesPage() {
   const t = useTranslations('dashboard');
   const { current } = useVenue();
+  const { toast } = useToast();
   const [qrCodes, setQrCodes] = useState<QrCode[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +61,7 @@ export default function QrCodesPage() {
       type: 'permanent',
     });
 
+    toast('QR code generated', 'success');
     loadQrCodes();
   };
 
@@ -68,6 +71,7 @@ export default function QrCodesPage() {
       .from('qr_codes')
       .update({ is_active: !qr.is_active })
       .eq('id', qr.id);
+    toast(qr.is_active ? 'QR deactivated' : 'QR activated', 'success');
     loadQrCodes();
   };
 

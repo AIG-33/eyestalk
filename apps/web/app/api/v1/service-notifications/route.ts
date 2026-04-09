@@ -3,17 +3,20 @@ import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendExpoPushBatch } from '@/lib/push/expo-push';
 import { z } from 'zod';
+import { rateLimit } from '@/lib/rate-limit';
 
 const notifySchema = z.object({
   service_id: z.string().uuid(),
 });
 
-/**
- * POST — notify subscribers that new slots are available for a service.
- * Called by the venue dashboard after generating or manually creating slots.
- * Only venue owner / moderator can trigger this.
- */
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip') || 'unknown';
+  const rl = rateLimit(`svc-notify:${ip}`);
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const supabase = await createApiRouteSupabase(request);
   const admin = createAdminClient();
 
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
       if (uniqueTokens.length === 0) return;
 
       const title = venue.name.length > 40 ? `${venue.name.slice(0, 37)}…` : venue.name;
-      const pushBody = `New slots available for "${service.title}"`;
+      const pushBody = `🎫 ${service.title} — new slots / новые слоты`;
 
       await sendExpoPushBatch(
         uniqueTokens.map((to) => ({

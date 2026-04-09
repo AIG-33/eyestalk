@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Linking } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Linking, RefreshControl } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,14 +16,23 @@ import { useUIStore } from '@/stores/ui.store';
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { c, isDark } = useTheme();
+  const isRu = i18n.language === 'ru';
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const session = useAuthStore((s) => s.session);
   const clearSession = useAuthStore((s) => s.clearSession);
-  const { data: profile } = useProfile();
-  const { data: activeCheckin } = useActiveCheckin();
+  const { data: profile, refetch: refetchProfile, isRefetching: isRefetchingProfile } = useProfile();
+  const { data: activeCheckin, refetch: refetchCheckin, isRefetching: isRefetchingCheckin } = useActiveCheckin();
   const uploadAvatar = useUploadAvatar();
-  const { data: photos = [] } = useProfilePhotos(session?.user.id);
+  const { data: photos = [], refetch: refetchPhotos, isRefetching: isRefetchingPhotos } = useProfilePhotos(session?.user.id);
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const isRefreshing = manualRefreshing || isRefetchingProfile || isRefetchingCheckin || isRefetchingPhotos;
+  const handleRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    await Promise.all([refetchProfile(), refetchCheckin(), refetchPhotos()]);
+    setManualRefreshing(false);
+  }, [refetchProfile, refetchCheckin, refetchPhotos]);
 
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
@@ -48,7 +58,13 @@ export default function ProfileScreen() {
   const avatarSize = component.avatar.xl;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: c.bg.primary }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={c.accent.primary} />
+      }
+    >
       <LinearGradient
         colors={[isDark ? 'rgba(124,111,247,0.08)' : 'rgba(108,92,231,0.06)', 'transparent']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 250 }}
@@ -181,27 +197,35 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Menu */}
-      <View style={{ marginHorizontal: spacing.xl, backgroundColor: c.bg.secondary, borderRadius: radius.xl, overflow: 'hidden', marginBottom: spacing.xl, borderWidth: 1, borderColor }}>
-        <MenuItem icon="images-outline" label={i18n.language === 'ru' ? 'Мои фото' : 'My Photos'} hint={i18n.language === 'ru' ? 'Загрузите дополнительные фото' : 'Upload additional photos'} value={`${photos.length}`} onPress={() => router.push('/(app)/my-photos' as any)} c={c} borderColor={borderColorFaint} />
+      {/* Account */}
+      <MenuSection label={isRu ? 'Аккаунт' : 'Account'} c={c} borderColor={borderColor}>
+        <MenuItem icon="images-outline" label={isRu ? 'Мои фото' : 'My Photos'} hint={isRu ? 'Загрузите дополнительные фото' : 'Upload additional photos'} value={`${photos.length}`} onPress={() => router.push('/(app)/my-photos' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="create-outline" label={t('profile.editProfile')} hint={t('profile.editProfileHint')} onPress={() => router.push('/(app)/edit-profile' as any)} c={c} borderColor={borderColorFaint} />
         <MenuItem icon="wallet-outline" label={t('profile.tokens')} hint={t('profile.tokenBalanceHint')} value={`${profile?.token_balance || 0}`} onPress={() => router.push('/(app)/tokens' as any)} c={c} borderColor={borderColorFaint} />
-        <MenuItem icon="megaphone-outline" label={t('announcements.title')} hint={t('announcements.profileHint')} onPress={() => router.push('/(app)/announcements' as any)} c={c} borderColor={borderColorFaint} />
-        <MenuItem icon="trophy-outline" label={t('achievements.title', { defaultValue: i18n.language === 'ru' ? 'Достижения' : 'Achievements' })} hint={t('achievements.profileHint', { defaultValue: i18n.language === 'ru' ? 'Бейджи, стрики и прогресс' : 'Badges, streaks, and progress' })} onPress={() => router.push('/(app)/achievements' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="trophy-outline" label={t('achievements.title', { defaultValue: isRu ? 'Достижения' : 'Achievements' })} hint={t('achievements.profileHint', { defaultValue: isRu ? 'Бейджи, стрики и прогресс' : 'Badges, streaks, and progress' })} onPress={() => router.push('/(app)/achievements' as any)} c={c} borderColor={borderColorFaint} />
+      </MenuSection>
+
+      {/* Preferences */}
+      <MenuSection label={isRu ? 'Настройки' : 'Preferences'} c={c} borderColor={borderColor}>
         <MenuItem
           icon={isDark ? 'moon-outline' : 'sunny-outline'}
-          label={i18n.language === 'ru' ? 'Тема' : 'Theme'}
-          value={isDark ? (i18n.language === 'ru' ? 'Тёмная' : 'Dark') : (i18n.language === 'ru' ? 'Светлая' : 'Light')}
+          label={isRu ? 'Тема' : 'Theme'}
+          value={isDark ? (isRu ? 'Тёмная' : 'Dark') : (isRu ? 'Светлая' : 'Light')}
           onPress={toggleTheme}
           c={c} borderColor={borderColorFaint}
         />
         <MenuItem icon="globe-outline" label={t('profile.language')} hint={t('profile.languageHint')} value={i18n.language === 'ru' ? 'Русский' : 'English'} onPress={toggleLanguage} c={c} borderColor={borderColorFaint} />
-        <MenuItem icon="settings-outline" label={i18n.language === 'ru' ? 'Настройки' : 'Settings'} onPress={() => router.push('/(app)/settings' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="megaphone-outline" label={t('announcements.title')} hint={t('announcements.profileHint')} onPress={() => router.push('/(app)/announcements' as any)} c={c} borderColor={borderColorFaint} />
+        <MenuItem icon="settings-outline" label={isRu ? 'Ещё' : 'More settings'} onPress={() => router.push('/(app)/settings' as any)} c={c} borderColor={borderColorFaint} />
+      </MenuSection>
+
+      {/* Business */}
+      <MenuSection label={isRu ? 'Бизнес' : 'Business'} c={c} borderColor={borderColor}>
         <MenuItem icon="business-outline" label={t('profile.createVenue')} hint={t('profile.createVenueHint')} onPress={() => {
           const baseUrl = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/api\/v1\/?$/, '');
           Linking.openURL(`${baseUrl}/dashboard/create-venue`);
         }} c={c} borderColor={borderColorFaint} />
-      </View>
+      </MenuSection>
 
       <TouchableOpacity
         style={{
@@ -218,6 +242,29 @@ export default function ProfileScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function MenuSection({ label, c, borderColor, children }: {
+  label: string; c: any; borderColor: string; children: React.ReactNode;
+}) {
+  return (
+    <View style={{ marginHorizontal: spacing.xl, marginBottom: spacing.lg }}>
+      <Text style={{
+        fontSize: typography.size.bodySm, fontWeight: typography.weight.semibold,
+        color: c.text.tertiary, textTransform: 'uppercase',
+        letterSpacing: typography.letterSpacing.caps, marginBottom: spacing.sm,
+        paddingHorizontal: spacing.xs,
+      }}>
+        {label}
+      </Text>
+      <View style={{
+        backgroundColor: c.bg.secondary, borderRadius: radius.xl,
+        overflow: 'hidden', borderWidth: 1, borderColor,
+      }}>
+        {children}
+      </View>
+    </View>
   );
 }
 

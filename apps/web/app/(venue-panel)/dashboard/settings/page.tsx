@@ -8,13 +8,16 @@ import { createClient } from '@/lib/supabase/client';
 import { VENUE_TYPES } from '@eyestalk/shared/constants';
 import { useVenue } from '@/components/dashboard/venue-context';
 import { useTheme } from '@/components/dashboard/theme-context';
+import { useToast } from '@/components/dashboard/toast';
 
 export default function SettingsPage() {
   const t = useTranslations('dashboard');
   const tVenues = useTranslations('venues');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { current, removeVenue, updateVenue } = useVenue();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [venue, setVenue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,7 +75,7 @@ export default function SettingsPage() {
     setSaving(true);
 
     const supabase = createClient();
-    await supabase.from('venues')
+    const { error } = await supabase.from('venues')
       .update({
         name: form.name,
         type: form.type,
@@ -82,6 +85,12 @@ export default function SettingsPage() {
       })
       .eq('id', venue.id);
 
+    if (error) {
+      toast(error.message, 'error');
+    } else {
+      updateVenue(venue.id, { name: form.name, logo_url: logoUrl });
+      toast('Settings saved', 'success');
+    }
     setSaving(false);
   };
 
@@ -111,6 +120,7 @@ export default function SettingsPage() {
 
       setLogoUrl(data.logo_url);
       updateVenue(venue.id, { logo_url: data.logo_url });
+      toast('Logo uploaded', 'success');
     } catch (err: any) {
       console.error('Logo upload error:', err);
       setLogoError(err.message || 'Upload failed');
@@ -139,6 +149,7 @@ export default function SettingsPage() {
 
       setLogoUrl(null);
       updateVenue(venue.id, { logo_url: null });
+      toast('Logo removed', 'success');
     } catch (err: any) {
       console.error('Logo remove error:', err);
       setLogoError(err.message || 'Remove failed');
@@ -166,6 +177,7 @@ export default function SettingsPage() {
       router.refresh();
     } catch (err) {
       console.error('Delete venue error:', err);
+      toast('Failed to delete venue', 'error');
       setDeleting(false);
     }
   };
@@ -186,17 +198,16 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-8" style={{ color: 'var(--text-primary)' }}>{t('settings')}</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{t('settings')}</h1>
+      <p style={{ color: 'var(--text-tertiary)' }} className="mb-6">{t('settingsHint')}</p>
 
       {/* Theme Toggle */}
       <div className="mb-10 rounded-2xl p-6" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
         <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-          {t('settings') === 'Настройки' ? 'Тема оформления' : 'Appearance'}
+          {t('themeTitle')}
         </h2>
         <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>
-          {t('settings') === 'Настройки'
-            ? 'Выберите светлую или тёмную тему для панели управления'
-            : 'Choose between light or dark theme for the dashboard'}
+          {t('themeHint')}
         </p>
 
         <div className="flex gap-3">
@@ -212,10 +223,10 @@ export default function SettingsPage() {
             <span className="text-2xl">🌙</span>
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {t('settings') === 'Настройки' ? 'Тёмная' : 'Dark'}
+                {t('themeDark')}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                {t('settings') === 'Настройки' ? 'По умолчанию' : 'Default'}
+                {t('themeDarkHint')}
               </p>
             </div>
           </button>
@@ -232,10 +243,10 @@ export default function SettingsPage() {
             <span className="text-2xl">☀️</span>
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {t('settings') === 'Настройки' ? 'Светлая' : 'Light'}
+                {t('themeLight')}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                {t('settings') === 'Настройки' ? 'Дневной режим' : 'Day mode'}
+                {t('themeLightHint')}
               </p>
             </div>
           </button>
@@ -245,12 +256,10 @@ export default function SettingsPage() {
       {/* Venue Logo */}
       <div className="mb-10 rounded-2xl p-6" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--glass-border)' }}>
         <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-          {t('settings') === 'Настройки' ? 'Логотип' : 'Logo'}
+          {t('logoTitle')}
         </h2>
         <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>
-          {t('settings') === 'Настройки'
-            ? 'Загрузите логотип, который будет отображаться на карте'
-            : 'Upload a logo to display on the map'}
+          {t('logoHint')}
         </p>
 
         <div className="flex items-center gap-6">
@@ -292,8 +301,8 @@ export default function SettingsPage() {
               {uploadingLogo
                 ? '...'
                 : logoUrl
-                  ? (t('settings') === 'Настройки' ? 'Заменить' : 'Replace')
-                  : (t('settings') === 'Настройки' ? 'Загрузить' : 'Upload')}
+                  ? t('logoReplace')
+                  : t('logoUpload')}
             </button>
             {logoUrl && (
               <button
@@ -302,11 +311,11 @@ export default function SettingsPage() {
                 className="px-5 py-2 rounded-xl text-sm font-medium transition-colors"
                 style={{ color: 'var(--accent-error)', opacity: uploadingLogo ? 0.5 : 1 }}
               >
-                {t('settings') === 'Настройки' ? 'Удалить' : 'Remove'}
+                {t('logoRemove')}
               </button>
             )}
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              JPG, PNG, WebP · max 2 MB
+              {t('logoSpec')}
             </p>
             {logoError && (
               <p className="text-xs font-medium" style={{ color: 'var(--accent-error, #ef4444)' }}>
@@ -381,7 +390,7 @@ export default function SettingsPage() {
           disabled={saving}
           className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
         >
-          {saving ? '...' : t('settings') === 'Настройки' ? 'Сохранить' : 'Save'}
+          {saving ? '...' : tCommon('save')}
         </button>
 
         {/* Danger Zone */}

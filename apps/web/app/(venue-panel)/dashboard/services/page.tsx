@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useVenue } from '@/components/dashboard/venue-context';
+import { useToast } from '@/components/dashboard/toast';
+import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -538,6 +540,7 @@ function ServiceItem({ svc, selected, onSelect, onToggleActive, onDelete, onSche
 export default function VenueServicesPage() {
   const t = useTranslations('dashboard');
   const { current } = useVenue();
+  const { toast } = useToast();
 
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -545,6 +548,7 @@ export default function VenueServicesPage() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [schedSvc, setSchedSvc] = useState<ServiceRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deletingSvc, setDeletingSvc] = useState<ServiceRow | null>(null);
 
   // Calendar state
   const today = useMemo(() => new Date(), []);
@@ -664,13 +668,19 @@ export default function VenueServicesPage() {
     loadServices();
   };
 
-  const deleteService = async (svc: ServiceRow) => {
-    if (!confirm(t('serviceDeleteConfirm', { title: svc.title }))) return;
-    setBusyId(svc.id);
+  const deleteService = (svc: ServiceRow) => {
+    setDeletingSvc(svc);
+  };
+
+  const confirmDeleteService = async () => {
+    if (!deletingSvc) return;
+    setBusyId(deletingSvc.id);
     const supabase = createClient();
-    await supabase.from('venue_services').delete().eq('id', svc.id);
+    await supabase.from('venue_services').delete().eq('id', deletingSvc.id);
     setBusyId(null);
     setSelectedServiceId(null);
+    setDeletingSvc(null);
+    toast('Service deleted', 'success');
     loadServices();
   };
 
@@ -689,7 +699,8 @@ export default function VenueServicesPage() {
       ends_at: end.toISOString(),
     });
     setAddingSlot(false);
-    if (error) { alert(error.message); return; }
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Slot added', 'success');
     void notifyServiceSubscribers(svc.id);
     setSingleSlotStart('');
     loadMonthSlots();
@@ -699,7 +710,8 @@ export default function VenueServicesPage() {
   const deleteSlot = async (slotId: string) => {
     const supabase = createClient();
     const { error } = await supabase.from('venue_service_slots').delete().eq('id', slotId);
-    if (error) { alert(error.message); return; }
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Slot removed', 'success');
     loadMonthSlots();
     loadDaySlots();
   };
@@ -918,6 +930,17 @@ export default function VenueServicesPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deletingSvc}
+        title={t('serviceDelete')}
+        description={deletingSvc ? t('serviceDeleteConfirm', { title: deletingSvc.title }) : ''}
+        confirmLabel={t('serviceDelete')}
+        cancelLabel={t('serviceCancel')}
+        destructive
+        onConfirm={confirmDeleteService}
+        onCancel={() => setDeletingSvc(null)}
+      />
     </div>
   );
 }

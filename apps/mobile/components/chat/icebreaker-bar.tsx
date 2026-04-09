@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 
 interface Props {
   onSelect: (question: string) => void;
@@ -7,6 +9,8 @@ interface Props {
 
 export function IcebreakerBar({ onSelect }: Props) {
   const { t } = useTranslation();
+  const { c, isDark } = useTheme();
+  const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
 
   const questions = [
     t('icebreakers.q1'),
@@ -15,12 +19,12 @@ export function IcebreakerBar({ onSelect }: Props) {
   ];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('icebreakers.title')}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <View style={s.container}>
+      <Text style={s.title}>{t('icebreakers.title')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scroll}>
         {questions.map((q, i) => (
-          <TouchableOpacity key={i} style={styles.chip} onPress={() => onSelect(q)}>
-            <Text style={styles.chipText}>{q}</Text>
+          <TouchableOpacity key={i} style={s.chip} onPress={() => onSelect(q)}>
+            <Text style={s.chipText}>{q}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -28,20 +32,24 @@ export function IcebreakerBar({ onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1A1929',
-  },
-  title: {
-    color: '#6C5CE7', fontSize: 12, fontWeight: '700', paddingHorizontal: 16,
-    marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5,
-  },
-  scroll: { paddingHorizontal: 12, gap: 8 },
-  chip: {
-    backgroundColor: '#1A1929', borderRadius: 16,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: '#6C5CE7',
-    maxWidth: 200,
-  },
-  chipText: { color: '#FFFFFE', fontSize: 13, lineHeight: 18 },
-});
+function createStyles(c: ThemeColors, isDark: boolean) {
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  return StyleSheet.create({
+    container: {
+      paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: borderColor,
+    },
+    title: {
+      color: c.accent.primary, fontSize: typography.size.bodySm, fontWeight: typography.weight.bold,
+      paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
+      textTransform: 'uppercase', letterSpacing: typography.letterSpacing.small,
+    },
+    scroll: { paddingHorizontal: spacing.md, gap: spacing.sm },
+    chip: {
+      backgroundColor: c.bg.secondary, borderRadius: radius.lg,
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+      borderWidth: 1, borderColor: c.accent.primary,
+      maxWidth: 200,
+    },
+    chipText: { color: c.text.primary, fontSize: typography.size.bodySm, lineHeight: 18 },
+  });
+}

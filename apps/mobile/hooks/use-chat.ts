@@ -103,6 +103,7 @@ export function useSendMessage(chatId: string) {
 
 export interface UserChat {
   chat_id: string;
+  last_read_at: string | null;
   chats: {
     id: string;
     venue_id: string;
@@ -114,6 +115,7 @@ export interface UserChat {
   };
   peer: { nickname: string; avatar_url: string | null } | null;
   last_message: { content: string; created_at: string; sender_id: string; type: string } | null;
+  unread_count: number;
 }
 
 export function useUserChats() {
@@ -126,6 +128,7 @@ export function useUserChats() {
         .from('chat_participants')
         .select(`
           chat_id,
+          last_read_at,
           chats!inner(
             id, venue_id, type, name, is_active, created_at,
             venues(name, type)
@@ -165,10 +168,30 @@ export function useUserChats() {
         if (!lastMsgMap[m.chat_id]) lastMsgMap[m.chat_id] = m;
       });
 
+      const unreadMap: Record<string, number> = {};
+      for (const item of items as any[]) {
+        const lastRead = item.last_read_at;
+        if (!lastRead) {
+          const msgs = (lastMsgsResult.data || []).filter(
+            (m: any) => m.chat_id === item.chat_id && m.sender_id !== session!.user.id,
+          );
+          unreadMap[item.chat_id] = msgs.length;
+        } else {
+          const msgs = (lastMsgsResult.data || []).filter(
+            (m: any) =>
+              m.chat_id === item.chat_id &&
+              m.sender_id !== session!.user.id &&
+              m.created_at > lastRead,
+          );
+          unreadMap[item.chat_id] = msgs.length;
+        }
+      }
+
       const enriched = items.map((item: any) => ({
         ...item,
         peer: peerMap[item.chat_id] || null,
         last_message: lastMsgMap[item.chat_id] || null,
+        unread_count: unreadMap[item.chat_id] || 0,
       }));
 
       enriched.sort((a: any, b: any) => {

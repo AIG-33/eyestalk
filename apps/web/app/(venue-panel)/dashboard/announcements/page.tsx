@@ -149,7 +149,14 @@ export default function AnnouncementsPage() {
         </h3>
 
         {loading ? (
-          <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="rounded-xl p-4 animate-pulse" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="h-3 bg-gray-800 rounded w-1/4 mb-2" />
+                <div className="h-4 bg-gray-800 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
         ) : announcements.length === 0 ? (
           <div
             className="rounded-2xl p-12 text-center"
