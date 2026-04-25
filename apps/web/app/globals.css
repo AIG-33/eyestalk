@@ -253,6 +253,76 @@ input:focus, textarea:focus, select:focus {
 }
 .animate-pulse-brand { animation: pulse-brand 1.8s ease-in-out infinite; }
 
+/* ── Legal pages (Privacy, Terms) long-form prose ─────── */
+.legal-prose {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  line-height: 1.65;
+  font-size: 15px;
+}
+.legal-prose h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.2px;
+  color: var(--text-primary);
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25;
+}
+.legal-prose h3 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.legal-prose p {
+  color: var(--text-secondary);
+  margin: 0.75rem 0;
+}
+.legal-prose ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+  color: var(--text-secondary);
+  margin: 0.75rem 0;
+}
+.legal-prose ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+  color: var(--text-secondary);
+  margin: 0.75rem 0;
+}
+.legal-prose li {
+  margin: 0.35rem 0;
+}
+.legal-prose strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.legal-prose a {
+  color: var(--accent-primary-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal-prose a:hover {
+  opacity: 0.85;
+}
+.legal-prose hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 2rem 0;
+}
+.legal-prose .lead {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+[data-theme="light"] .legal-prose hr {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
 /* Light theme overrides for Tailwind utility classes used in dashboard */
 [data-theme="light"] {
   .bg-gray-900 { background-color: #FFFFFF !important; }
