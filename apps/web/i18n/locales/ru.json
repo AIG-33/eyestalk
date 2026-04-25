@@ -248,7 +248,10 @@
     "passwordUpdated": "Пароль обновлён — перенаправляем…",
     "passwordMismatch": "Пароли не совпадают",
     "passwordTooShort": "Пароль должен быть не менее 8 символов",
-    "recoverySessionMissing": "Ссылка устарела или некорректна — запросите новую"
+    "recoverySessionMissing": "Ссылка устарела или некорректна — запросите новую",
+    "continueWithGoogle": "Войти через Google",
+    "or": "или",
+    "oauthError": "Не удалось войти. Попробуйте снова."
   },
   "venues": {
     "myVenue": "Моё заведение",

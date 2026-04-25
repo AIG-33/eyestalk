@@ -248,7 +248,10 @@
     "passwordUpdated": "Password updated — redirecting…",
     "passwordMismatch": "Passwords don't match",
     "passwordTooShort": "Password must be at least 8 characters",
-    "recoverySessionMissing": "Recovery link expired or invalid — please request a new one"
+    "recoverySessionMissing": "Recovery link expired or invalid — please request a new one",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or",
+    "oauthError": "Couldn't finish sign-in. Try again."
   },
   "venues": {
     "myVenue": "My Venue",
