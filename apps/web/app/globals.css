@@ -1,53 +1,180 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────
+   EyesTalk · web tokens (mirror of Design/colors_and_type.css)
+   Source of truth: apps/mobile/theme/tokens.ts (dark) +
+                    Design/colors_and_type.css (web)
+   Optimized for dark environments (clubs, bars, lounges).
+   ───────────────────────────────────────────────────────── */
+
 :root,
 [data-theme="dark"] {
-  --bg-primary: #0D0D1A;
+  /* Backgrounds */
+  --bg-primary:   #0D0D1A;
   --bg-secondary: #161630;
-  --bg-tertiary: #1E1E3F;
-  --surface: #2A2A5A;
-  --text-primary: #E8E8F0;
+  --bg-tertiary:  #1E1E3F;
+  --bg-surface:   #2A2A5A;
+  --surface:      #2A2A5A; /* legacy alias */
+
+  /* Text */
+  --text-primary:   #E8E8F0;
   --text-secondary: #A0A0B8;
-  --text-tertiary: #5A5A78;
-  --accent-primary: #7C6FF7;
-  --accent-light: #A29BFE;
-  --accent-success: #00E5A0;
-  --accent-pink: #FF6B9D;
-  --accent-warning: #FFD93D;
-  --accent-error: #FF4757;
-  --accent-info: #00D4FF;
-  --glow-primary: 0 0 15px rgba(124,111,247,0.4), 0 0 30px rgba(124,111,247,0.15);
-  --glow-success: 0 0 12px rgba(0,229,160,0.4);
-  --glass-bg: rgba(255,255,255,0.08);
-  --glass-border: rgba(255,255,255,0.08);
+  --text-tertiary:  #5A5A78;
+  --fg-1:           #E8E8F0; /* design alias */
+  --fg-2:           #A0A0B8;
+  --fg-3:           #5A5A78;
+
+  /* Brand accents */
+  --accent-primary:        #7C6FF7;
+  --accent-primary-light:  #A29BFE;
+  --accent-light:          #A29BFE; /* legacy alias */
+  --accent-success:        #00E5A0;
+  --accent-pink:           #FF6B9D;
+  --accent-warning:        #FFD93D;
+  --accent-error:          #FF4757;
+  --accent-info:           #00D4FF;
+
+  /* Glow halos (used in box-shadow) */
+  --glow-primary: 0 0 15px rgba(124,111,247,0.40), 0 0 30px rgba(124,111,247,0.15);
+  --glow-success: 0 0 12px rgba(0,229,160,0.40);
+  --glow-pink:    0 0 12px rgba(255,107,157,0.40);
+  --glow-warn:    0 0 10px rgba(255,217,61,0.30);
+  --glow-error:   0 0 12px rgba(255,71,87,0.40);
+  --glow-info:    0 0 10px rgba(0,212,255,0.30);
+
+  /* Glass / surfaces */
+  --glass-bg:           rgba(255,255,255,0.08);
+  --glass-border:       rgba(255,255,255,0.08);
+  --glass-border-hover: rgba(255,255,255,0.12);
+
+  /* Status */
+  --status-online:    #00E5A0;
+  --status-in-venue:  #7C6FF7;
+  --status-away:      #5A5A78;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #7C6FF7 0%, #A29BFE 100%);
+  --gradient-match:   linear-gradient(135deg, #FF6B9D 0%, #7C6FF7 100%);
+  --gradient-premium: linear-gradient(135deg, #FFD93D 0%, #FF6B9D 100%);
+  --gradient-surface: linear-gradient(180deg, #161630 0%, #0D0D1A 100%);
+
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg-primary: #F5F5FA;
+  --bg-primary:   #F5F5FA;
   --bg-secondary: #FFFFFF;
-  --bg-tertiary: #EEEEF5;
-  --surface: #DDDDE8;
-  --text-primary: #1A1A2E;
+  --bg-tertiary:  #EEEEF5;
+  --bg-surface:   #DDDDE8;
+  --surface:      #DDDDE8;
+
+  --text-primary:   #1A1A2E;
   --text-secondary: #555570;
-  --text-tertiary: #8888A0;
-  --accent-primary: #6C5CE7;
-  --accent-light: #7C6FF7;
-  --accent-success: #00C98D;
-  --accent-pink: #FF6B9D;
-  --accent-warning: #E6B800;
-  --accent-error: #E63946;
-  --accent-info: #00B4D8;
+  --text-tertiary:  #8888A0;
+  --fg-1:           #1A1A2E;
+  --fg-2:           #555570;
+  --fg-3:           #8888A0;
+
+  --accent-primary:        #6C5CE7;
+  --accent-primary-light:  #7C6FF7;
+  --accent-light:          #7C6FF7;
+  --accent-success:        #00C98D;
+  --accent-pink:           #FF6B9D;
+  --accent-warning:        #E6B800;
+  --accent-error:          #E63946;
+  --accent-info:           #00B4D8;
+
   --glow-primary: 0 2px 8px rgba(108,92,231,0.15);
   --glow-success: 0 2px 8px rgba(0,201,141,0.15);
-  --glass-bg: rgba(0,0,0,0.03);
-  --glass-border: rgba(0,0,0,0.08);
+  --glow-pink:    0 2px 8px rgba(255,107,157,0.15);
+  --glow-warn:    0 2px 8px rgba(230,184,0,0.15);
+  --glow-error:   0 2px 8px rgba(230,57,70,0.15);
+  --glow-info:    0 2px 8px rgba(0,180,216,0.15);
+
+  --glass-bg:           rgba(0,0,0,0.03);
+  --glass-border:       rgba(0,0,0,0.08);
+  --glass-border-hover: rgba(0,0,0,0.12);
+
+  --gradient-primary: linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%);
+  --gradient-match:   linear-gradient(135deg, #FF6B9D 0%, #6C5CE7 100%);
+  --gradient-premium: linear-gradient(135deg, #E6B800 0%, #FF6B9D 100%);
+  --gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #F5F5FA 100%);
+
   color-scheme: light;
+}
+
+/* ── Typography / spacing / motion tokens ─────────────── */
+:root {
+  --font-display: 'Clash Display', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-accent:  'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --size-display-xl: 36px;
+  --size-display-lg: 28px;
+  --size-display-md: 24px;
+  --size-heading-lg: 22px;
+  --size-heading-md: 18px;
+  --size-heading-sm: 16px;
+  --size-body-lg:    16px;
+  --size-body-md:    14px;
+  --size-body-sm:    12px;
+  --size-label:      12px;
+  --size-micro:      10px;
+
+  --weight-regular:    400;
+  --weight-medium:     500;
+  --weight-semibold:   600;
+  --weight-bold:       700;
+  --weight-extrabold:  800;
+
+  --tracking-display:  -0.5px;
+  --tracking-heading:  -0.2px;
+  --tracking-body:     0;
+  --tracking-small:    0.3px;
+  --tracking-caps:     1.5px;
+
+  --lh-display: 1.1;
+  --lh-heading: 1.2;
+  --lh-body:    1.5;
+
+  --sp-2xs: 2px;
+  --sp-xs:  4px;
+  --sp-sm:  8px;
+  --sp-md:  12px;
+  --sp-lg:  16px;
+  --sp-xl:  20px;
+  --sp-2xl: 24px;
+  --sp-3xl: 32px;
+  --sp-4xl: 48px;
+
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  20px;
+  --r-2xl: 24px;
+  --r-full: 9999px;
+
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.20);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.30);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.40);
+  --shadow-xl: 0 16px 24px rgba(0,0,0,0.50);
+
+  --t-quick:    150ms;
+  --t-standard: 250ms;
+  --t-emphasis: 400ms;
+  --t-dramatic: 600ms;
+
+  --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-out:      cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 ::selection {
@@ -76,7 +203,8 @@ input:focus, textarea:focus, select:focus {
   padding: 0.75rem 1rem;
   color: var(--text-primary);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color var(--t-standard) var(--ease-standard),
+              box-shadow var(--t-standard) var(--ease-standard);
 }
 
 .input-field:focus {
@@ -84,17 +212,46 @@ input:focus, textarea:focus, select:focus {
   box-shadow: var(--glow-primary);
 }
 
-.glow-primary {
-  box-shadow: var(--glow-primary);
+/* ── Brand utility classes ──────────────────────────── */
+.glow-primary    { box-shadow: var(--glow-primary); }
+.glow-success    { box-shadow: var(--glow-success); }
+.glow-pink       { box-shadow: var(--glow-pink); }
+.glow-warn       { box-shadow: var(--glow-warn); }
+.glow-error      { box-shadow: var(--glow-error); }
+
+.bg-gradient-primary { background: var(--gradient-primary); }
+.bg-gradient-match   { background: var(--gradient-match); }
+.bg-gradient-premium { background: var(--gradient-premium); }
+
+.text-gradient-primary {
+  background: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--size-body-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-3);
 }
 
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .animate-slide-up {
-  animation: slide-up 0.25s ease-out;
+  animation: slide-up var(--t-standard) var(--ease-out);
 }
+
+@keyframes pulse-brand {
+  0%, 100% { box-shadow: var(--glow-primary); }
+  50%      { box-shadow: 0 0 22px rgba(124,111,247,0.55), 0 0 44px rgba(124,111,247,0.25); }
+}
+.animate-pulse-brand { animation: pulse-brand 1.8s ease-in-out infinite; }
 
 /* Light theme overrides for Tailwind utility classes used in dashboard */
 [data-theme="light"] {

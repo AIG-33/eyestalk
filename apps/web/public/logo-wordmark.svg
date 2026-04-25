@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" fill="none">
+  
+  <g transform="translate(0,15)">
+    <path d="M85 12&#xA;             C 139 12 179 38 179 74&#xA;             C 179 110 139 136 85 136&#xA;             C 71 136 57.5 134.4 45 131.5&#xA;             L 28 156&#xA;             C 26.5 158 23.5 156.8 24.2 154.4&#xA;             L 31 132.5&#xA;             C 5 122 -9 100 -9 74&#xA;             C -9 38 31 12 85 12 Z" fill="#7C6FF7"></path>
+    <circle cx="49" cy="74" r="29" fill="#FFFFFF"></circle>
+    <circle cx="121" cy="74" r="29" fill="#FFFFFF"></circle>
+    <path d="M71 74 C 75 66 95 66 99 74 C 95 82 75 82 71 74 Z" fill="#FFFFFF"></path>
+    <circle cx="49" cy="74" r="14.5" fill="#7C6FF7"></circle>
+    <circle cx="121" cy="74" r="14.5" fill="#7C6FF7"></circle>
+  </g>
+  
+  <text x="210" y="128" font-family="&#39;Clash Display&#39;,&#39;Space Grotesk&#39;,&#39;Inter&#39;,sans-serif" font-weight="700" font-size="108" letter-spacing="-3" fill="#FFFFFF">EyesTalk</text>
+</svg>

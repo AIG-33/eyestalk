@@ -42,15 +42,28 @@ export default function OnboardingScreen() {
     router.replace('/(auth)/sign-in');
   };
 
-  const renderItem = ({ item, index }: { item: typeof STEPS[0]; index: number }) => (
+  const renderItem = ({ item }: { item: typeof STEPS[0] }) => (
     <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
+      {/* Brand glow at the top of the room */}
       <LinearGradient
-        colors={[`${item.gradient[0]}15`, 'transparent']}
+        colors={[`${item.gradient[0]}2E`, 'transparent']}
         style={styles.slideGlow}
+        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        pointerEvents="none"
       />
-      <View style={[styles.emojiContainer, { shadowColor: item.gradient[0] }]}>
+
+      {/* Brand-tinted emoji bubble with double glow halo */}
+      <View
+        style={[
+          styles.emojiContainer,
+          {
+            shadowColor: item.gradient[0],
+          },
+        ]}
+      >
         <Text style={styles.emoji}>{item.emoji}</Text>
       </View>
+
       <Text style={styles.title}>
         {t(`onboarding.${item.key}Title`)}
       </Text>
@@ -65,7 +78,7 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       {/* Skip */}
-      <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+      <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.7}>
         <Text style={styles.skipText}>{t('onboarding.skipOnboarding')}</Text>
       </TouchableOpacity>
 
@@ -100,7 +113,7 @@ export default function OnboardingScreen() {
             ];
             const dotWidth = scrollX.interpolate({
               inputRange,
-              outputRange: [8, 24, 8],
+              outputRange: [6, 24, 6],
               extrapolate: 'clamp',
             });
             const dotOpacity = scrollX.interpolate({
@@ -161,26 +174,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['3xl'],
   },
   slideGlow: {
-    position: 'absolute', top: '20%', width: 300, height: 300,
-    borderRadius: 150, alignSelf: 'center',
+    position: 'absolute', top: 0, left: 0, right: 0,
+    height: 320,
   },
   emojiContainer: {
-    width: 120, height: 120, borderRadius: 60,
-    backgroundColor: colors.bg.secondary,
+    width: 140, height: 140, borderRadius: 70,
+    backgroundColor: 'rgba(124,111,247,0.12)',
+    borderWidth: 1, borderColor: 'rgba(124,111,247,0.25)',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing['3xl'],
-    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 24,
-    elevation: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    // Outer brand glow halo
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 40,
+    elevation: 14,
   },
-  emoji: { fontSize: 56 },
+  emoji: {
+    fontSize: 76,
+  },
   title: {
-    fontSize: typography.size.displayMd, fontWeight: typography.weight.extrabold,
-    color: colors.text.primary, textAlign: 'center', marginBottom: spacing.lg,
+    fontSize: typography.size.displayLg,
+    fontWeight: typography.weight.extrabold,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    letterSpacing: typography.letterSpacing.display,
   },
   description: {
-    fontSize: typography.size.bodyLg, color: colors.text.secondary,
-    textAlign: 'center', lineHeight: typography.size.bodyLg * 1.6,
+    fontSize: typography.size.bodyLg,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.size.bodyLg * 1.5,
+    maxWidth: 320,
   },
   bottom: {
     paddingHorizontal: spacing.xl, paddingBottom: spacing['4xl'],
@@ -188,7 +213,7 @@ const styles = StyleSheet.create({
   },
   dotsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: {
-    height: 8, borderRadius: 4, backgroundColor: colors.accent.primary,
+    height: 6, borderRadius: 3, backgroundColor: colors.accent.primary,
   },
   nextBtn: { width: '100%', borderRadius: radius.lg, overflow: 'hidden' },
   nextBtnGradient: {

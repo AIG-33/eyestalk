@@ -6,6 +6,12 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'EyesTalk — Venue Dashboard',
   description: 'Manage your venue, activities, and guest engagement with EyesTalk.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/logo-app-icon.svg',
+  },
 };
 
 export default async function RootLayout({

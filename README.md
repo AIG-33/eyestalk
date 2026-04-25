@@ -95,10 +95,22 @@ pnpm dev:mobile
 
 ### 4. Supabase Auth Settings
 
-In Dashboard → Authentication → Settings:
+In Dashboard → Authentication → URL Configuration:
 - **Site URL**: `https://your-vercel-domain.vercel.app`
-- **Redirect URLs**: add `eyestalk://` (for mobile deep linking)
-- Enable **Email** provider, disable email confirmations for dev
+- **Redirect URLs** (allow-list — required for password recovery & magic links):
+  - `https://your-vercel-domain.vercel.app/**` (web)
+  - `http://localhost:3000/**` (web dev)
+  - `eyestalk://**` (mobile production deep link)
+  - `exp://**` (mobile dev / Expo Go) — optional
+- Enable **Email** provider; disable email confirmations for dev.
+
+**Password recovery flow uses these URLs**:
+- Web: `<origin>/auth/callback?next=/update-password`
+- Mobile: `eyestalk://reset-password` (resolved via `expo-linking.createURL`)
+
+For production, configure custom SMTP (Dashboard → Authentication → SMTP) — the
+default Supabase email service is rate-limited (~3-4 emails/hour) and is not
+intended for real users.
 
 ### Custom Fonts
 

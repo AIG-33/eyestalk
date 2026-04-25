@@ -73,12 +73,26 @@ export function DashboardSidebar() {
     >
       {/* Logo */}
       <div className="p-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="EyesTalk" width={28} height={28} />
-          <h1 className="text-xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <Image
+            src="/logo-mark.svg"
+            alt="EyesTalk"
+            width={32}
+            height={32}
+            priority
+            style={{ filter: 'drop-shadow(0 0 12px rgba(124,111,247,0.45))' }}
+          />
+          <h1
+            className="text-xl font-extrabold"
+            style={{
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.4px',
+            }}
+          >
             EyesTalk
           </h1>
-        </div>
+        </Link>
       </div>
 
       {/* Venue Selector */}

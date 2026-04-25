@@ -35,6 +35,7 @@ import {
   type MapRegionBounds,
 } from '@/lib/geo';
 import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
+import { LogoMark } from '@/components/ui/logo-mark';
 
 /** Approx. height of compact venue carousel strip (cards + padding). */
 const COMPACT_VENUE_STRIP_HEIGHT = 92;
@@ -346,11 +347,7 @@ export default function MapScreen() {
         <View style={styles.topBarRow}>
           <View style={styles.logoCol}>
             <View style={styles.logoRow}>
-              <Image
-                source={require('@/assets/logo-purple.png')}
-                style={styles.logoIcon}
-                resizeMode="contain"
-              />
+              <LogoMark size={28} />
               <Text style={[styles.logo, { color: c.text.primary }]}>
                 EyesTalk
               </Text>

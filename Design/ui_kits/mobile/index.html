@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>EyesTalk · Mobile UI kit</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700,800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#08080F;color:#E8E8F0;font-family:Inter,system-ui,sans-serif;min-height:100vh}
+  body{background:radial-gradient(60% 50% at 20% 10%,rgba(124,111,247,0.10),transparent 70%),
+                  radial-gradient(50% 50% at 90% 100%,rgba(255,107,157,0.08),transparent 70%),#08080F}
+  .stage{display:flex;flex-direction:column;align-items:center;gap:30px;padding:40px 20px 80px}
+  .heading{font-family:'Clash Display',Inter,sans-serif;font-weight:800;font-size:38px;letter-spacing:-0.7px;text-align:center;margin:0}
+  .sub{color:#A0A0B8;text-align:center;max-width:560px;font-size:15px;line-height:1.5;margin:0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,420px));gap:48px 32px;justify-content:center;width:100%}
+  .label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#5A5A78;text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="Components.jsx"></script>
+<script type="text/babel" src="Frame.jsx"></script>
+<script type="text/babel" src="Onboarding.jsx"></script>
+<script type="text/babel" src="SignIn.jsx"></script>
+<script type="text/babel" src="Map.jsx"></script>
+<script type="text/babel" src="VenueSheet.jsx"></script>
+<script type="text/babel" src="Chat.jsx"></script>
+<script type="text/babel" src="Profile.jsx"></script>
+<script type="text/babel" src="Tokens.jsx"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+function App() {
+  // interactive flow lives in the first frame; the others are showcase frames
+  const [view, setView] = React.useState('onboarding');
+  const [openVenue, setOpenVenue] = React.useState(null);
+  const [chatPeer, setChatPeer] = React.useState(null);
+
+  let interactive;
+  if (view === 'onboarding')      interactive = <Onboarding onDone={() => setView('signin')}/>;
+  else if (view === 'signin')     interactive = <SignIn onIn={() => setView('map')}/>;
+  else if (view === 'map')        interactive = <MapScreen onOpenVenue={v => setOpenVenue(v)} onTabChange={t => { if(t==='profile') setView('profile'); else if(t==='tokens') setView('tokens'); else if(t==='chats') { setChatPeer({n:'Maya', color:'linear-gradient(135deg,#FF6B9D,#7C6FF7)'}); setView('chat'); } }}/>;
+  else if (view === 'chat')       interactive = <Chat peer={chatPeer} onBack={() => setView('map')}/>;
+  else if (view === 'profile')    interactive = <Profile onTabChange={t => { if(t==='map') setView('map'); else if(t==='tokens') setView('tokens'); else if(t==='chats') { setChatPeer({n:'Maya', color:'linear-gradient(135deg,#FF6B9D,#7C6FF7)'}); setView('chat'); } }}/>;
+  else if (view === 'tokens')     interactive = <Tokens onTabChange={t => { if(t==='map') setView('map'); else if(t==='profile') setView('profile'); else if(t==='chats') { setChatPeer({n:'Maya', color:'linear-gradient(135deg,#FF6B9D,#7C6FF7)'}); setView('chat'); } }}/>;
+
+  return (
+    <div className="stage" data-screen-label="01 UI Kit · Mobile">
+      <h1 className="heading">EyesTalk · Mobile</h1>
+      <p className="sub">Click through the prototype on the left. The other frames are static showcases of each screen so you can compare them side by side.</p>
+
+      <div className="grid">
+        <div>
+          <Frame>
+            {interactive}
+            {view === 'map' && openVenue && (
+              <VenueSheet venue={openVenue}
+                onClose={() => setOpenVenue(null)}
+                onCheckin={() => { setOpenVenue(null); }}
+                onChat={(p) => { setChatPeer({n:p.n, color:p.color}); setOpenVenue(null); setView('chat'); }}/>
+            )}
+          </Frame>
+          <div className="label">Interactive · onboarding → map → chat</div>
+        </div>
+
+        <div>
+          <Frame><SignIn onIn={() => {}}/></Frame>
+          <div className="label">Sign in</div>
+        </div>
+
+        <div>
+          <Frame><MapScreen onOpenVenue={() => {}} onTabChange={() => {}}/></Frame>
+          <div className="label">Map · with markers</div>
+        </div>
+
+        <div>
+          <Frame><Chat peer={{n:'Maya', color:'linear-gradient(135deg,#FF6B9D,#7C6FF7)'}} onBack={() => {}}/></Frame>
+          <div className="label">5-minute chat</div>
+        </div>
+
+        <div>
+          <Frame><Profile onTabChange={() => {}}/></Frame>
+          <div className="label">Profile</div>
+        </div>
+
+        <div>
+          <Frame><Tokens onTabChange={() => {}}/></Frame>
+          <div className="label">Tokens</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Wait for components to load
+function boot() {
+  if (!window.Frame || !window.MapScreen || !window.Chat || !window.Profile || !window.Tokens || !window.SignIn || !window.Onboarding || !window.VenueSheet) {
+    setTimeout(boot, 60);
+    return;
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+}
+boot();
+</script>
+</body></html>

@@ -158,6 +158,7 @@ export const typography = {
   size: {
     displayXl: 36,
     displayLg: 28,
+    displayMd: 24,
     headingLg: 22,
     headingMd: 18,
     headingSm: 16,
@@ -179,6 +180,7 @@ export const typography = {
   lineHeight: {
     displayXl: 1.1,
     displayLg: 1.15,
+    displayMd: 1.2,
     headingLg: 1.2,
     headingMd: 1.25,
     headingSm: 1.3,

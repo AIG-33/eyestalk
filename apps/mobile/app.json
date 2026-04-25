@@ -23,6 +23,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.eyestalk.app",
+      "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:eyestalk.app"
       ],
@@ -104,7 +105,9 @@
       ],
       "expo-font",
       "expo-secure-store",
-      "expo-updates"
+      "expo-updates",
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

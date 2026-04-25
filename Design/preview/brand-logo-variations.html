@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Brand · Logo variations</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;background:var(--bg-primary);color:var(--fg-1);font-family:'Inter',sans-serif}
+  .wrap{padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .panel{background:var(--bg-secondary);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:140px}
+  .panel.lite{background:#FFFFFF}
+  .panel.lite .label{color:#5A5A78}
+  .panel.dark{background:#0D0D1A}
+  .panel.tinted{background:#1A1530}
+  .panel.brand{background:#7C6FF7}
+  .label{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600}
+  img{display:block}
+</style></head><body><div class="wrap">
+
+  <div class="panel">
+    <img src="../assets/logo-mark.svg" height="64" alt="">
+    <div class="label">Primary · on dark</div>
+  </div>
+
+  <div class="panel lite">
+    <img src="../assets/logo-mark.svg" height="64" alt="">
+    <div class="label">Primary · on light</div>
+  </div>
+
+  <div class="panel brand">
+    <img src="../assets/logo-mark-mono.svg" height="64" style="color:#FFFFFF" alt="">
+    <div class="label" style="color:rgba(255,255,255,0.85)">Mono · on brand</div>
+  </div>
+
+  <div class="panel">
+    <img src="../assets/logo-app-icon.svg" width="84" height="84" style="border-radius:18px" alt="">
+    <div class="label">App icon · 512</div>
+  </div>
+
+  <div class="panel">
+    <img src="../assets/favicon.svg" width="48" height="48" alt="">
+    <div class="label">Favicon · 32</div>
+  </div>
+
+  <div class="panel" style="background:linear-gradient(135deg,#9A8FFF,#5A4FE3)">
+    <img src="../assets/logo-mark-mono.svg" height="64" style="color:#3D2EB8" alt="">
+    <div class="label" style="color:rgba(255,255,255,0.85)">Mono · on gradient</div>
+  </div>
+
+</div></body></html>

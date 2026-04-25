@@ -30,3 +30,7 @@ apps/mobile/android/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Design scratch (local-only references, not part of the spec)
+Design/scraps/
+Design/uploads/

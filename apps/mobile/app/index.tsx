@@ -13,6 +13,7 @@ const FADE_OUT_MS = 600;
 export default function Index() {
   const session = useAuthStore((s) => s.session);
   const authLoading = useAuthStore((s) => s.isLoading);
+  const isRecovering = useAuthStore((s) => s.isRecovering);
   const { data: activeCheckin, isLoading: checkinLoading } = useActiveCheckin();
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
@@ -53,6 +54,10 @@ export default function Index() {
         <LoadingScreen />
       </Animated.View>
     );
+  }
+
+  if (isRecovering) {
+    return <Redirect href="/(auth)/update-password" />;
   }
 
   if (session) {

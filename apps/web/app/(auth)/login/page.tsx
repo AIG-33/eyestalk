@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
@@ -45,14 +46,20 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-12">
           <Image
-            src="/logo.png"
+            src="/logo-mark.svg"
             alt="EyesTalk"
-            width={80}
-            height={80}
+            width={84}
+            height={84}
+            priority
             className="mb-6"
+            style={{ filter: 'drop-shadow(0 0 24px rgba(124,111,247,0.55))' }}
           />
           <h1 className="text-4xl font-extrabold tracking-tight"
-            style={{ color: 'var(--text-primary)' }}
+            style={{
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.5px',
+            }}
           >
             EyesTalk
           </h1>
@@ -119,6 +126,16 @@ export default function LoginPage() {
           >
             {loading ? '...' : t('signIn')}
           </button>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {t('forgotPassword')}
+            </Link>
+          </div>
         </form>
       </div>
     </div>

@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Brand · Logo</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;background:var(--bg-primary);color:var(--fg-1);font-family:'Inter',sans-serif}
+  .wrap{padding:20px;display:grid;grid-template-columns:1fr;gap:14px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .panel{background:var(--bg-secondary);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px;display:flex;align-items:center;gap:14px}
+  .panel.lite{background:#FFFFFF;color:#1A1A2E}
+  .panel.lite .label{color:#5A5A78}
+  .label{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600}
+  .stack{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .name{font-family:'Inter',sans-serif;font-weight:800;letter-spacing:-0.5px;font-size:22px}
+  .sizes{display:flex;align-items:center;gap:14px;flex:1;justify-content:flex-end}
+  img{display:block}
+</style></head><body><div class="wrap">
+  <div class="row">
+    <div class="panel">
+      <img src="../assets/logo-mark.svg" width="84" height="84" alt="">
+      <div class="stack"><div class="label">Mark · on dark</div><div class="name">EyesTalk</div></div>
+    </div>
+    <div class="panel lite">
+      <img src="../assets/logo-mark.svg" width="84" height="84" alt="">
+      <div class="stack"><div class="label">Mark · on light</div><div class="name" style="color:#1A1A2E">EyesTalk</div></div>
+    </div>
+  </div>
+  <div class="panel" style="justify-content:space-between">
+    <div class="stack"><div class="label">Size ladder</div><div style="font-size:11px;color:var(--fg-3)">64 · 48 · 32 · 24 · 16</div></div>
+    <div class="sizes">
+      <img src="../assets/logo-mark.svg" width="64" height="64">
+      <img src="../assets/logo-mark.svg" width="48" height="48">
+      <img src="../assets/logo-mark.svg" width="32" height="32">
+      <img src="../assets/logo-mark.svg" width="24" height="24">
+      <img src="../assets/logo-mark.svg" width="16" height="16">
+    </div>
+  </div>
+</div></body></html>
