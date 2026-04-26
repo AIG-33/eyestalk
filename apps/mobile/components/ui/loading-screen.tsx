@@ -1,123 +1,150 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { LogoMark } from '@/components/ui/logo-mark';
+import { colors, typography, spacing } from '@/theme';
 
-const { width: SW, height: SH } = Dimensions.get('window');
-const LOGO = 120;
-const NAVY = '#1B1464';
-const PURPLE = '#7C6FF7';
-const PURPLE_LIGHT = '#A29BFE';
+const { height: SH } = Dimensions.get('window');
+const LOGO = 96;
 
 export function LoadingScreen() {
-  const logoScale = useRef(new Animated.Value(0.3)).current;
+  const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const nameOpacity = useRef(new Animated.Value(0)).current;
-  const nameTranslateY = useRef(new Animated.Value(12)).current;
+  const nameTranslateY = useRef(new Animated.Value(8)).current;
   const sloganOpacity = useRef(new Animated.Value(0)).current;
-  const sloganTranslateY = useRef(new Animated.Value(8)).current;
-  const barWidth = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const barProgress = useRef(new Animated.Value(0)).current;
+  const haloPulse = useRef(new Animated.Value(0)).current;
   const ring1 = useRef(new Animated.Value(0)).current;
   const ring2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.delay(200),
+      Animated.delay(150),
       Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, friction: 4, tension: 30, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.timing(nameOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(nameTranslateY, { toValue: 0, friction: 6, useNativeDriver: true }),
+        Animated.timing(nameOpacity, { toValue: 1, duration: 450, useNativeDriver: true }),
+        Animated.spring(nameTranslateY, { toValue: 0, friction: 7, useNativeDriver: true }),
       ]),
-      Animated.parallel([
-        Animated.timing(sloganOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.spring(sloganTranslateY, { toValue: 0, friction: 6, useNativeDriver: true }),
-      ]),
+      Animated.timing(sloganOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
 
-    const pulseLoop = Animated.loop(
+    const halo = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(haloPulse, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(haloPulse, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     );
-    pulseLoop.start();
+    halo.start();
 
     const makeRing = (anim: Animated.Value, delay: number) =>
-      Animated.loop(Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(anim, { toValue: 1, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ]));
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, { toValue: 1, duration: 2400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      );
     const r1 = makeRing(ring1, 0);
-    const r2 = makeRing(ring2, 1100);
+    const r2 = makeRing(ring2, 1200);
     r1.start();
     r2.start();
 
-    const barLoop = Animated.loop(
+    const bar = Animated.loop(
       Animated.sequence([
-        Animated.timing(barWidth, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
-        Animated.timing(barWidth, { toValue: 0, duration: 800, easing: Easing.in(Easing.cubic), useNativeDriver: false }),
-        Animated.delay(400),
+        Animated.timing(barProgress, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+        Animated.timing(barProgress, { toValue: 0, duration: 700, easing: Easing.in(Easing.cubic), useNativeDriver: false }),
+        Animated.delay(300),
       ]),
     );
-    barLoop.start();
+    bar.start();
 
-    return () => { pulseLoop.stop(); r1.stop(); r2.stop(); barLoop.stop(); };
-  }, []);
+    return () => { halo.stop(); r1.stop(); r2.stop(); bar.stop(); };
+  }, [barProgress, haloPulse, logoOpacity, logoScale, nameOpacity, nameTranslateY, ring1, ring2, sloganOpacity]);
 
-  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.08] });
-  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.06, 0.18] });
+  const haloScale = haloPulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] });
+  const haloOpacity = haloPulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] });
 
   const ringStyle = (anim: Animated.Value) => ({
-    opacity: anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 0.15, 0] }),
-    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 2.2] }) }],
+    opacity: anim.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0.45, 0.2, 0] }),
+    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 2.4] }) }],
   });
 
-  const animatedBarWidth = barWidth.interpolate({ inputRange: [0, 1], outputRange: [0, 100] });
+  const barWidth = barProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 120] });
 
   return (
     <View style={s.container}>
-      <View style={s.topDecor}>
-        <View style={[s.decorCircle, s.decorTopLeft]} />
-        <View style={[s.decorCircle, s.decorTopRight]} />
+      <LinearGradient
+        colors={[colors.bg.secondary, colors.bg.primary]}
+        style={StyleSheet.absoluteFillObject}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+
+      {/* Ambient corner glows */}
+      <View pointerEvents="none" style={s.cornerGlowTop}>
+        <LinearGradient
+          colors={['rgba(124,111,247,0.18)', 'rgba(124,111,247,0)']}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+        />
+      </View>
+      <View pointerEvents="none" style={s.cornerGlowBottom}>
+        <LinearGradient
+          colors={['rgba(255,107,157,0.12)', 'rgba(255,107,157,0)']}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.8, y: 1 }}
+          end={{ x: 0.2, y: 0 }}
+        />
       </View>
 
       <View style={s.center}>
         <View style={s.logoWrap}>
+          {/* Pulsing rings */}
           <Animated.View style={[s.ring, ringStyle(ring1)]} />
           <Animated.View style={[s.ring, ringStyle(ring2)]} />
 
-          <Animated.View style={[s.glow, { opacity: glowOpacity, transform: [{ scale: glowScale }] }]} />
+          {/* Halo glow behind the mark */}
+          <Animated.View
+            style={[
+              s.halo,
+              { opacity: haloOpacity, transform: [{ scale: haloScale }] },
+            ]}
+          />
 
           <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
-            <Image source={require('@/assets/logo-purple.png')} style={s.logo} resizeMode="contain" />
+            <LogoMark size={LOGO} color={colors.accent.primary} />
           </Animated.View>
         </View>
 
         <Animated.View style={{ opacity: nameOpacity, transform: [{ translateY: nameTranslateY }] }}>
           <Text style={s.appName}>
-            <Text style={s.nameBold}>Eyes</Text>
+            <Text style={s.nameStrong}>Eyes</Text>
             <Text style={s.nameLight}>Talk</Text>
           </Text>
         </Animated.View>
 
-        <Animated.View style={{ opacity: sloganOpacity, transform: [{ translateY: sloganTranslateY }] }}>
+        <Animated.View style={{ opacity: sloganOpacity }}>
           <View style={s.sloganLine} />
-          <Text style={s.slogan}>Look up. Speak up. Link up.</Text>
+          <Text style={s.slogan}>Look up · Speak up · Link up</Text>
         </Animated.View>
       </View>
 
       <View style={s.bottomArea}>
         <View style={s.barTrack}>
-          <Animated.View style={[s.barFill, { width: animatedBarWidth }]} />
+          <Animated.View style={[s.barFill, { width: barWidth }]}>
+            <LinearGradient
+              colors={colors.gradient.primary}
+              style={StyleSheet.absoluteFillObject}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+            />
+          </Animated.View>
         </View>
-      </View>
-
-      <View style={s.bottomDecor}>
-        <View style={[s.decorCircle, s.decorBottomLeft]} />
-        <View style={[s.decorCircle, s.decorBottomRight]} />
       </View>
     </View>
   );
@@ -126,35 +153,25 @@ export function LoadingScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bg.primary,
     overflow: 'hidden',
   },
 
-  topDecor: { position: 'absolute', top: 0, left: 0, right: 0, height: SH * 0.3 },
-  bottomDecor: { position: 'absolute', bottom: 0, left: 0, right: 0, height: SH * 0.25 },
-  decorCircle: {
+  cornerGlowTop: {
     position: 'absolute',
-    borderRadius: 999,
+    top: -SH * 0.15,
+    left: -80,
+    right: -80,
+    height: SH * 0.45,
+    opacity: 0.9,
   },
-  decorTopLeft: {
-    width: 220, height: 220,
-    backgroundColor: 'rgba(124,111,247,0.04)',
-    top: -80, left: -60,
-  },
-  decorTopRight: {
-    width: 140, height: 140,
-    backgroundColor: 'rgba(162,155,254,0.05)',
-    top: -20, right: -30,
-  },
-  decorBottomLeft: {
-    width: 180, height: 180,
-    backgroundColor: 'rgba(162,155,254,0.04)',
-    bottom: -90, left: -40,
-  },
-  decorBottomRight: {
-    width: 260, height: 260,
-    backgroundColor: 'rgba(124,111,247,0.03)',
-    bottom: -120, right: -80,
+  cornerGlowBottom: {
+    position: 'absolute',
+    bottom: -SH * 0.15,
+    left: -80,
+    right: -80,
+    height: SH * 0.4,
+    opacity: 0.9,
   },
 
   center: {
@@ -165,59 +182,64 @@ const s = StyleSheet.create({
   },
 
   logoWrap: {
-    width: LOGO * 2.2,
-    height: LOGO * 2.2,
+    width: LOGO * 2.4,
+    height: LOGO * 2.4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.lg,
   },
   ring: {
     position: 'absolute',
-    width: LOGO * 1.4,
-    height: LOGO * 1.4,
-    borderRadius: LOGO * 0.7,
-    borderWidth: 2,
-    borderColor: PURPLE_LIGHT,
+    width: LOGO * 1.6,
+    height: LOGO * 1.6,
+    borderRadius: (LOGO * 1.6) / 2,
+    borderWidth: 1.5,
+    borderColor: colors.accent.primaryLight,
   },
-  glow: {
+  halo: {
     position: 'absolute',
-    width: LOGO * 1.8,
-    height: LOGO * 1.8,
-    borderRadius: LOGO * 0.9,
-    backgroundColor: PURPLE_LIGHT,
-  },
-  logo: {
-    width: LOGO,
-    height: LOGO,
+    width: LOGO * 2,
+    height: LOGO * 2,
+    borderRadius: LOGO,
+    backgroundColor: colors.accent.primary,
+    shadowColor: colors.accent.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 40,
+    elevation: 24,
   },
 
   appName: {
-    fontSize: 38,
-    letterSpacing: 1,
+    fontSize: typography.size.displayXl,
+    letterSpacing: typography.letterSpacing.display,
+    textAlign: 'center',
   },
-  nameBold: {
-    fontWeight: '900',
-    color: NAVY,
+  nameStrong: {
+    fontFamily: typography.family.displayFallback,
+    fontWeight: typography.weight.extrabold,
+    color: colors.text.primary,
   },
   nameLight: {
-    fontWeight: '300',
-    color: PURPLE,
+    fontFamily: typography.family.displayFallback,
+    fontWeight: typography.weight.regular,
+    color: colors.accent.primaryLight,
   },
 
   sloganLine: {
-    width: 40,
+    width: 36,
     height: 2,
-    backgroundColor: PURPLE_LIGHT,
+    backgroundColor: colors.accent.primary,
     alignSelf: 'center',
-    marginTop: 14,
-    marginBottom: 10,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
     borderRadius: 1,
+    opacity: 0.7,
   },
   slogan: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: PURPLE,
-    letterSpacing: 2.2,
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+    letterSpacing: typography.letterSpacing.caps,
     textTransform: 'uppercase',
     textAlign: 'center',
   },
@@ -227,15 +249,15 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   barTrack: {
-    width: 100,
+    width: 120,
     height: 3,
-    backgroundColor: 'rgba(124,111,247,0.1)',
+    backgroundColor: 'rgba(124,111,247,0.15)',
     borderRadius: 2,
     overflow: 'hidden',
   },
   barFill: {
     height: 3,
-    backgroundColor: PURPLE,
     borderRadius: 2,
+    overflow: 'hidden',
   },
 });

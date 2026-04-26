@@ -3,7 +3,7 @@
     "name": "EyesTalk",
     "slug": "eyestalk",
     "owner": "gmaxby",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
@@ -18,7 +18,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#0D0D1A"
     },
     "ios": {
       "supportsTablet": false,
@@ -38,7 +38,7 @@
       "package": "com.eyestalk.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#0D0D1A"
       },
       "config": {
         "googleMaps": {
@@ -94,7 +94,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#6C5CE7"
+          "color": "#7C6FF7"
         }
       ],
       [
