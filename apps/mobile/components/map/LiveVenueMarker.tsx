@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Platform, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
@@ -7,13 +7,29 @@ import { VENUE_EMOJI } from '@/lib/venue-constants';
 const IS_ANDROID = Platform.OS === 'android';
 
 /**
- * react-native-maps custom View markers are broken on Android with
- * New Architecture (Expo SDK 54 / RN 0.81+). The bitmap snapshot taken
- * when tracksViewChanges flips to false is corrupted. Workaround:
- * keep tracksViewChanges={true} on Android and use a minimal view tree.
+ * Android map markers: known issues with react-native-maps + Google Maps SDK
+ * + Expo New Architecture (SDK 54+, RN 0.81+):
+ *
+ *   1. View → bitmap snapshot computes outer bounds incorrectly when the
+ *      inner view has borderWidth + borderRadius, clipping the bottom of
+ *      the marker (https://github.com/react-native-maps/react-native-maps/issues/5877).
+ *      Fix: wrap the marker in an outer transparent <View> with a fixed
+ *      width/height larger than the marker — gives SDK a stable bitmap size.
+ *
+ *   2. tracksViewChanges={true} permanently re-snapshots every frame
+ *      (laggy + battery). tracksViewChanges={false} from the start
+ *      snapshots before remote venue.logo_url has loaded → empty marker.
+ *      Fix: keep tracksViewChanges=true *only* until the image has loaded
+ *      (or for a short tick if no image), then flip to false.
+ *
+ *   3. Frequent setState (selection/active changes) — flip tracksViewChanges
+ *      back to true briefly so the new visual state is captured.
  */
 
 const MARKER_SIZE = 44;
+// Outer wrapper must be larger than marker + max border (≈ 3px) on every side
+// AND give Google Maps SDK enough headroom for shadow/bitmap padding.
+const WRAPPER_SIZE = MARKER_SIZE + 24;
 const EMOJI_FONT = IS_ANDROID ? 20 : 19;
 
 interface Props {
@@ -57,6 +73,26 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     [borderWidth, borderColor],
   );
 
+  // ── Android: state-controlled tracksViewChanges ──
+  const [trackChanges, setTrackChanges] = useState(true);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!IS_ANDROID) return;
+    if (hasLogo && !imageLoaded) return;
+    const t = setTimeout(() => setTrackChanges(false), 250);
+    return () => clearTimeout(t);
+  }, [imageLoaded, hasLogo]);
+
+  useEffect(() => {
+    if (!IS_ANDROID) return;
+    setTrackChanges(true);
+    const t = setTimeout(() => setTrackChanges(false), 250);
+    return () => clearTimeout(t);
+  }, [isSelected, recentlyActive, hasActivity]);
+
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   if (IS_ANDROID) {
     return (
       <Marker
@@ -66,18 +102,24 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
         }}
         anchor={{ x: 0.5, y: 0.5 }}
         onPress={() => onPress(venue)}
-        tracksViewChanges
+        tracksViewChanges={trackChanges}
       >
-        <View collapsable={false} style={markerStyle}>
-          {hasLogo ? (
-            <Image
-              source={{ uri: venue.logo_url! }}
-              style={s.androidLogo}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text style={s.androidEmoji}>{emoji}</Text>
-          )}
+        {/* Outer transparent wrapper with FIXED dimensions — without it
+            Android Google Maps clips the bottom of the marker bitmap. */}
+        <View collapsable={false} style={s.androidWrapper}>
+          <View collapsable={false} style={markerStyle}>
+            {hasLogo ? (
+              <Image
+                source={{ uri: venue.logo_url! }}
+                style={s.androidLogo}
+                resizeMode="cover"
+                onLoad={handleImageLoad}
+                onError={handleImageLoad}
+              />
+            ) : (
+              <Text style={s.androidEmoji}>{emoji}</Text>
+            )}
+          </View>
         </View>
       </Marker>
     );
@@ -180,6 +222,13 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
 });
 
 const s = StyleSheet.create({
+  androidWrapper: {
+    width: WRAPPER_SIZE,
+    height: WRAPPER_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
   androidLogo: {
     width: MARKER_SIZE - 6,
     height: MARKER_SIZE - 6,

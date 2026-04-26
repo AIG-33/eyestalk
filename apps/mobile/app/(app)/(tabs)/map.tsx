@@ -188,9 +188,22 @@ function PulsingVenueBadge({
 
 // ─── Cluster renderer ────────────────────────────────────
 
-function renderCluster(cluster: any) {
+/**
+ * Cluster marker. Wrapped in a transparent fixed-size <View> on Android to
+ * avoid the same bottom-clipping bug as LiveVenueMarker.
+ * See LiveVenueMarker.tsx for full explanation.
+ */
+function ClusterMarker({ cluster }: { cluster: any }) {
   const { id, geometry, onPress, properties } = cluster;
   const count = properties.point_count;
+  const [tracking, setTracking] = useState(true);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const t = setTimeout(() => setTracking(false), 250);
+    return () => clearTimeout(t);
+  }, [count]);
+
   return (
     <Marker
       key={`cluster-${id}`}
@@ -199,14 +212,26 @@ function renderCluster(cluster: any) {
         longitude: geometry.coordinates[0],
       }}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges
+      tracksViewChanges={Platform.OS === 'android' ? tracking : true}
       onPress={onPress}
     >
-      <View style={styles.cluster} collapsable={false}>
-        <Text style={styles.clusterText}>{count}</Text>
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.clusterAndroidWrapper} collapsable={false}>
+          <View style={styles.cluster} collapsable={false}>
+            <Text style={styles.clusterText}>{count}</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.cluster} collapsable={false}>
+          <Text style={styles.clusterText}>{count}</Text>
+        </View>
+      )}
     </Marker>
   );
+}
+
+function renderCluster(cluster: any) {
+  return <ClusterMarker key={`cluster-${cluster.id}`} cluster={cluster} />;
 }
 
 // ─── Main screen ─────────────────────────────────────────
@@ -626,6 +651,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  clusterAndroidWrapper: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   clusterText: {
     color: '#FFFFFF',
