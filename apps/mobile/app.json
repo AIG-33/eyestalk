@@ -22,7 +22,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.eyestalk.app",
+      "bundleIdentifier": "com.eyestalkapp.app",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:eyestalk.app"
@@ -35,7 +35,7 @@
       }
     },
     "android": {
-      "package": "com.eyestalk.app",
+      "package": "com.eyestalkapp.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D1A"
