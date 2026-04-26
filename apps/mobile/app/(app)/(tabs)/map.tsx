@@ -189,9 +189,12 @@ function PulsingVenueBadge({
 // ─── Cluster renderer ────────────────────────────────────
 
 /**
- * Cluster marker. Wrapped in a transparent fixed-size <View> on Android to
- * avoid the same bottom-clipping bug as LiveVenueMarker.
- * See LiveVenueMarker.tsx for full explanation.
+ * Cluster marker. The Android Google Maps SDK clips custom <View> markers
+ * with borderWidth + borderRadius (see LiveVenueMarker.tsx). Number labels
+ * are dynamic so we cannot pre-render PNGs. Workaround: render a plain
+ * filled rounded-square *without* borderWidth (border replaced by a thin
+ * inset overlay), plus a transparent padding wrapper that gives the SDK
+ * a stable bitmap size. tracksViewChanges flips off after one frame.
  */
 function ClusterMarker({ cluster }: { cluster: any }) {
   const { id, geometry, onPress, properties } = cluster;
@@ -199,7 +202,6 @@ function ClusterMarker({ cluster }: { cluster: any }) {
   const [tracking, setTracking] = useState(true);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
     const t = setTimeout(() => setTracking(false), 250);
     return () => clearTimeout(t);
   }, [count]);
@@ -212,20 +214,16 @@ function ClusterMarker({ cluster }: { cluster: any }) {
         longitude: geometry.coordinates[0],
       }}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={Platform.OS === 'android' ? tracking : true}
+      tracksViewChanges={tracking}
       onPress={onPress}
     >
-      {Platform.OS === 'android' ? (
-        <View style={styles.clusterAndroidWrapper} collapsable={false}>
-          <View style={styles.cluster} collapsable={false}>
-            <Text style={styles.clusterText}>{count}</Text>
-          </View>
-        </View>
-      ) : (
+      <View style={styles.clusterAndroidWrapper} collapsable={false}>
         <View style={styles.cluster} collapsable={false}>
+          {/* inset border via inner overlay — avoids native borderWidth bug */}
+          <View pointerEvents="none" style={styles.clusterInset} />
           <Text style={styles.clusterText}>{count}</Text>
         </View>
-      )}
+      </View>
     </Marker>
   );
 }
@@ -645,16 +643,25 @@ const styles = StyleSheet.create({
   cluster: {
     width: 40,
     height: 40,
-    borderRadius: Platform.OS === 'android' ? 10 : 20,
+    borderRadius: Platform.OS === 'android' ? 8 : 20,
     backgroundColor: '#7C6FF7',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 4,
+  },
+  clusterInset: {
+    position: 'absolute',
+    top: 1,
+    left: 1,
+    right: 1,
+    bottom: 1,
+    borderRadius: Platform.OS === 'android' ? 7 : 19,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   clusterAndroidWrapper: {
-    width: 64,
-    height: 64,
+    width: 72,
+    height: 72,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Image, Platform, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Image, Platform } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import { VENUE_EMOJI } from '@/lib/venue-constants';
@@ -7,30 +7,27 @@ import { VENUE_EMOJI } from '@/lib/venue-constants';
 const IS_ANDROID = Platform.OS === 'android';
 
 /**
- * Android map markers: known issues with react-native-maps + Google Maps SDK
- * + Expo New Architecture (SDK 54+, RN 0.81+):
+ * Map markers strategy:
  *
- *   1. View → bitmap snapshot computes outer bounds incorrectly when the
- *      inner view has borderWidth + borderRadius, clipping the bottom of
- *      the marker (https://github.com/react-native-maps/react-native-maps/issues/5877).
- *      Fix: wrap the marker in an outer transparent <View> with a fixed
- *      width/height larger than the marker — gives SDK a stable bitmap size.
+ *   ANDROID — native PNG image markers via <Marker image={require(...)} />.
+ *   This bypasses the View → bitmap snapshot pipeline, which on Android
+ *   Google Maps SDK + New Architecture (Expo SDK 54+, RN 0.81+) was
+ *   clipping the bottom/left of custom <View> markers regardless of
+ *   borderRadius, padding wrappers, or tracksViewChanges tweaks.
+ *   Native pin assets are drawn directly by the SDK and never clipped.
  *
- *   2. tracksViewChanges={true} permanently re-snapshots every frame
- *      (laggy + battery). tracksViewChanges={false} from the start
- *      snapshots before remote venue.logo_url has loaded → empty marker.
- *      Fix: keep tracksViewChanges=true *only* until the image has loaded
- *      (or for a short tick if no image), then flip to false.
- *
- *   3. Frequent setState (selection/active changes) — flip tracksViewChanges
- *      back to true briefly so the new visual state is captured.
+ *   iOS — custom <View> markers (with venue.logo_url, activity ring,
+ *   and check-in count badge). View markers render correctly on iOS.
  */
 
+const ANDROID_MARKER = {
+  default: require('@/assets/markers/venue.png'),
+  selected: require('@/assets/markers/venue-selected.png'),
+  active: require('@/assets/markers/venue-active.png'),
+};
+
 const MARKER_SIZE = 44;
-// Outer wrapper must be larger than marker + max border (≈ 3px) on every side
-// AND give Google Maps SDK enough headroom for shadow/bitmap padding.
-const WRAPPER_SIZE = MARKER_SIZE + 24;
-const EMOJI_FONT = IS_ANDROID ? 20 : 19;
+const EMOJI_FONT = 19;
 
 interface Props {
   venue: VenueWithStats;
@@ -49,6 +46,31 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
   const hasActivity = venue.active_checkins > 0;
   const emoji = VENUE_EMOJI[venue.type] || '📍';
 
+  // ── Android: native image marker, no view → bitmap ──
+  if (IS_ANDROID) {
+    const image =
+      isSelected
+        ? ANDROID_MARKER.selected
+        : recentlyActive || hasActivity
+          ? ANDROID_MARKER.active
+          : ANDROID_MARKER.default;
+
+    return (
+      <Marker
+        coordinate={{
+          latitude: Number(venue.latitude),
+          longitude: Number(venue.longitude),
+        }}
+        anchor={{ x: 0.5, y: 0.5 }}
+        onPress={() => onPress(venue)}
+        image={image}
+        tracksViewChanges={false}
+      />
+    );
+  }
+
+  // ── iOS: custom View marker (works fine; supports venue logo + badges) ──
+
   const borderColor = isSelected
     ? '#FFFFFF'
     : recentlyActive
@@ -63,7 +85,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     () => ({
       width: MARKER_SIZE,
       height: MARKER_SIZE,
-      borderRadius: IS_ANDROID ? 8 : MARKER_SIZE / 2,
+      borderRadius: MARKER_SIZE / 2,
       backgroundColor: '#7C6FF7' as const,
       borderWidth,
       borderColor,
@@ -72,60 +94,6 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     }),
     [borderWidth, borderColor],
   );
-
-  // ── Android: state-controlled tracksViewChanges ──
-  const [trackChanges, setTrackChanges] = useState(true);
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!IS_ANDROID) return;
-    if (hasLogo && !imageLoaded) return;
-    const t = setTimeout(() => setTrackChanges(false), 250);
-    return () => clearTimeout(t);
-  }, [imageLoaded, hasLogo]);
-
-  useEffect(() => {
-    if (!IS_ANDROID) return;
-    setTrackChanges(true);
-    const t = setTimeout(() => setTrackChanges(false), 250);
-    return () => clearTimeout(t);
-  }, [isSelected, recentlyActive, hasActivity]);
-
-  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
-
-  if (IS_ANDROID) {
-    return (
-      <Marker
-        coordinate={{
-          latitude: Number(venue.latitude),
-          longitude: Number(venue.longitude),
-        }}
-        anchor={{ x: 0.5, y: 0.5 }}
-        onPress={() => onPress(venue)}
-        tracksViewChanges={trackChanges}
-      >
-        {/* Outer transparent wrapper with FIXED dimensions — without it
-            Android Google Maps clips the bottom of the marker bitmap. */}
-        <View collapsable={false} style={s.androidWrapper}>
-          <View collapsable={false} style={markerStyle}>
-            {hasLogo ? (
-              <Image
-                source={{ uri: venue.logo_url! }}
-                style={s.androidLogo}
-                resizeMode="cover"
-                onLoad={handleImageLoad}
-                onError={handleImageLoad}
-              />
-            ) : (
-              <Text style={s.androidEmoji}>{emoji}</Text>
-            )}
-          </View>
-        </View>
-      </Marker>
-    );
-  }
-
-  // ── iOS: circular markers with activity ring & badge ──
 
   const pad = 12;
   const outer = MARKER_SIZE + pad * 2;
@@ -219,23 +187,4 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
       </View>
     </Marker>
   );
-});
-
-const s = StyleSheet.create({
-  androidWrapper: {
-    width: WRAPPER_SIZE,
-    height: WRAPPER_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  androidLogo: {
-    width: MARKER_SIZE - 6,
-    height: MARKER_SIZE - 6,
-    borderRadius: 6,
-  },
-  androidEmoji: {
-    fontSize: EMOJI_FONT,
-    textAlign: 'center',
-  },
 });
