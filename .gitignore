@@ -26,6 +26,9 @@ packages/supabase/.temp/
 apps/mobile/ios/
 apps/mobile/android/
 
+# Google Play service account (used by `eas submit`)
+apps/mobile/play-service-account.json
+
 # Debug
 npm-debug.log*
 yarn-debug.log*
