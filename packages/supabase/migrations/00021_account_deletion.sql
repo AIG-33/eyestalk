@@ -8,8 +8,8 @@
 -- and chat history is desirable while still scrubbing identifiable data.
 --
 -- After a 30-day grace period the corresponding auth.users row is purged by a
--- background job (see scripts/purge-deleted-accounts.ts), at which point the
--- ON DELETE CASCADE on profiles.id removes the anonymised profile row.
+-- background job; the ON DELETE CASCADE on profiles.id then removes the
+-- anonymised profile row.
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
@@ -19,18 +19,28 @@ CREATE INDEX IF NOT EXISTS profiles_deleted_at_idx
   WHERE deleted_at IS NOT NULL;
 
 -- Hide soft-deleted users from the public-safe view used by the mobile app.
-CREATE OR REPLACE VIEW public.profiles_public AS
+-- DROP + CREATE (rather than CREATE OR REPLACE) so we can change the column
+-- list to match what actually exists in the live schema.
+DROP VIEW IF EXISTS public.profiles_public;
+
+CREATE VIEW public.profiles_public AS
   SELECT
     id,
     nickname,
     avatar_url,
     bio,
-    created_at,
-    age,
-    gender,
+    age_range,
+    interests,
+    industry,
+    hobbies,
+    favorite_movie,
+    favorite_band,
+    about_me,
     instagram,
     telegram,
-    tiktok
+    linkedin,
+    is_verified,
+    created_at
   FROM public.profiles
   WHERE deleted_at IS NULL;
 
@@ -59,15 +69,20 @@ BEGIN
 
   UPDATE public.profiles
   SET
-    nickname     = v_anon_nick,
-    avatar_url   = NULL,
-    bio          = NULL,
-    instagram    = NULL,
-    telegram     = NULL,
-    tiktok       = NULL,
-    interests    = '{}',
-    deleted_at   = now(),
-    updated_at   = now()
+    nickname        = v_anon_nick,
+    avatar_url      = NULL,
+    bio             = NULL,
+    industry        = NULL,
+    hobbies         = NULL,
+    favorite_movie  = NULL,
+    favorite_band   = NULL,
+    about_me        = NULL,
+    instagram       = NULL,
+    telegram        = NULL,
+    linkedin        = NULL,
+    interests       = '{}',
+    deleted_at      = now(),
+    updated_at      = now()
   WHERE id = v_user_id;
 
   -- Drop ancillary identifiable rows that have ON DELETE CASCADE off profiles.
