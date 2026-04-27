@@ -4,8 +4,12 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start",
+    "dev": "expo start --dev-client",
+    "dev:web": "expo start --web",
+    "dev:tunnel": "expo start --dev-client --tunnel",
     "android": "expo run:android",
+    "android:fast": "expo start --dev-client --android",
+    "emulator": "$ANDROID_HOME/emulator/emulator -avd PixelDev -no-snapshot-save",
     "ios": "expo run:ios",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

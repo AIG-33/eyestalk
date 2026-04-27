@@ -3,6 +3,10 @@
   "private": true,
   "scripts": {
     "dev:mobile": "turbo run dev --filter=@eyestalk/mobile",
+    "dev:mobile:web": "pnpm --filter @eyestalk/mobile dev:web",
+    "dev:android": "pnpm --filter @eyestalk/mobile android",
+    "dev:android:fast": "pnpm --filter @eyestalk/mobile android:fast",
+    "emulator": "pnpm --filter @eyestalk/mobile emulator",
     "dev:web": "turbo run dev --filter=@eyestalk/web",
     "build": "turbo run build",
     "lint": "turbo run lint",
