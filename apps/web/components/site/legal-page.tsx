@@ -18,7 +18,7 @@ export function LegalPage({
   title: string;
   meta: string;
   lang: LegalLang;
-  basePath: '/privacy' | '/terms';
+  basePath: '/privacy' | '/terms' | '/delete-account';
   defaultLang: LegalLang;
   children: React.ReactNode;
 }) {

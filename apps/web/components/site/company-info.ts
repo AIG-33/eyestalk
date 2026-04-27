@@ -42,9 +42,9 @@ export const COMPANY = {
   governingLawCourtsCityRu: 'Дубай',
 
   // Document versions / dates
-  privacyVersion: '1.0',
-  privacyEffectiveDate: 'April 25, 2026',
-  privacyEffectiveDateRu: '25 апреля 2026 г.',
+  privacyVersion: '1.1',
+  privacyEffectiveDate: 'April 27, 2026',
+  privacyEffectiveDateRu: '27 апреля 2026 г.',
   termsVersion: '1.0',
   termsEffectiveDate: 'April 25, 2026',
   termsEffectiveDateRu: '25 апреля 2026 г.',

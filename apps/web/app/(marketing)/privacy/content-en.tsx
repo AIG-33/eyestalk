@@ -417,7 +417,78 @@ export function PrivacyEN() {
         </li>
       </ul>
 
-      <h2>14. Changes to this Policy</h2>
+      <h2>14. Mobile app permissions</h2>
+      <p>
+        The {COMPANY.brand} mobile app requests the following operating-system
+        permissions. Each is requested only when the related feature is used,
+        and you can revoke any of them at any time from your device settings.
+      </p>
+      <ul>
+        <li>
+          <strong>Location (precise &amp; approximate)</strong> — used while
+          the app is open to show nearby venues on the map and to verify that
+          you are inside a venue&apos;s geofence when you check in. We do not
+          collect background location and we do not build a continuous
+          location history.
+        </li>
+        <li>
+          <strong>Camera</strong> — used solely to scan QR codes for venue
+          check-in. We do not record photos or video and we do not access the
+          microphone.
+        </li>
+        <li>
+          <strong>Photos / media library</strong> — used only when you choose
+          to set or replace your profile picture or upload an additional
+          profile photo.
+        </li>
+        <li>
+          <strong>Push notifications</strong> — used to deliver in-app event
+          notifications you opted into (waves, mutual interests, venue
+          announcements). You can disable them in OS settings without
+          affecting other features.
+        </li>
+      </ul>
+      <p>
+        We <strong>do not</strong> request permissions for the microphone,
+        contacts, calendar, body sensors, SMS, call logs, accounts beyond
+        sign-in, advertising ID, or files outside what you explicitly upload.
+      </p>
+
+      <h2>15. Account deletion (Google Play / Apple App Store)</h2>
+      <p>
+        You can delete your account and the personal data we hold about you
+        at any time:
+      </p>
+      <ul>
+        <li>
+          <strong>Inside the app</strong> — open <em>Profile → Settings →
+          Delete account</em> and confirm. Your profile is anonymised
+          immediately and the residual data is purged within 30 days.
+        </li>
+        <li>
+          <strong>From the web</strong>, including without signing in — visit{' '}
+          <a href="/delete-account">{COMPANY.url}/delete-account</a> for the
+          full instructions and contact route.
+        </li>
+      </ul>
+      <p>
+        We comply with the Google Play User Data policy (account deletion
+        from Apr 2024) and the Apple App Store guideline 5.1.1(v) (in-app
+        account deletion since Jun 2022).
+      </p>
+
+      <h2>16. Tracking and advertising</h2>
+      <p>
+        We <strong>do not track you</strong> across other companies&apos; apps
+        and websites. We do not use third-party advertising SDKs, we do not
+        share data with advertising networks, and we do not use your data
+        for behavioural advertising. The advertising identifier (Apple IDFA /
+        Android Advertising ID) is not collected. Under Apple App Tracking
+        Transparency we declare &quot;Data Not Linked to You: None&quot; and
+        &quot;Data Used to Track You: None&quot;.
+      </p>
+
+      <h2>17. Changes to this Policy</h2>
       <p>
         We may update this Policy from time to time. The current version
         and effective date are shown at the top of the page. Material
@@ -427,7 +498,7 @@ export function PrivacyEN() {
         Policy.
       </p>
 
-      <h2>15. Contact</h2>
+      <h2>18. Contact</h2>
       <p>
         Questions, requests and complaints regarding this Policy or your
         personal data:

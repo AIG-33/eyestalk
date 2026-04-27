@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { useTheme, typography, spacing, radius } from '@/theme';
@@ -35,7 +36,17 @@ export default function SettingsScreen() {
           text: t('common.yes'),
           style: 'destructive',
           onPress: async () => {
-            await supabase.auth.signOut();
+            try {
+              await api.delete('/api/v1/account');
+            } catch (e) {
+              const msg = e instanceof ApiError ? e.message : String(e);
+              Alert.alert(
+                t('profile.deleteAccount'),
+                t('profile.deleteAccountFailed', { defaultValue: 'Could not delete account: {{msg}}. Please try again or contact support.', msg }),
+              );
+              return;
+            }
+            await supabase.auth.signOut().catch(() => undefined);
             clearSession();
             router.replace('/(auth)/sign-in');
           },
