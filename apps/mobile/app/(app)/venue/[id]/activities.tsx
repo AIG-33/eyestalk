@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -187,15 +188,22 @@ export default function ActivitiesScreen() {
 
         {isPoll && (item.config as any)?.options && (
           <View style={s.pollPreview}>
-            {((item.config as any).options as string[]).slice(0, 3).map((opt: string, i: number) => (
-              <View key={i} style={s.pollOption}>
-                <View style={[s.pollDot, { backgroundColor: accent.text }]} />
-                <Text style={s.pollOptionText} numberOfLines={1}>{opt}</Text>
-              </View>
-            ))}
-            {((item.config as any).options as string[]).length > 3 && (
+            {(((item.config as any).options as Array<string | { label?: string; key?: string }>) ?? [])
+              .slice(0, 3)
+              .map((opt, i: number) => {
+                const label = typeof opt === 'string'
+                  ? opt
+                  : (opt?.label ?? opt?.key ?? '');
+                return (
+                  <View key={i} style={s.pollOption}>
+                    <View style={[s.pollDot, { backgroundColor: accent.text }]} />
+                    <Text style={s.pollOptionText} numberOfLines={1}>{label}</Text>
+                  </View>
+                );
+              })}
+            {(((item.config as any).options as unknown[])?.length ?? 0) > 3 && (
               <Text style={s.pollMore}>
-                +{((item.config as any).options as string[]).length - 3} more
+                +{((item.config as any).options as unknown[]).length - 3} more
               </Text>
             )}
           </View>

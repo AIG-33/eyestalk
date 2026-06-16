@@ -72,6 +72,45 @@ goes a long way — write to us in the app or at admin@eyestalk.app.
 • Stability fixes for the venue map on Android.
 ```
 
+## Graphic assets (Play Console → Main store listing → Graphics)
+
+| Slot | Required size | File |
+|---|---|---|
+| App icon | 512×512 PNG (32-bit, no alpha) | derive from `apps/mobile/assets/icon.png` (already 1024×1024 — Play accepts auto-downscale, or resize to 512) |
+| Feature graphic | **1024×500 PNG / JPG** (no alpha, no store badges, no device frames) | `apps/mobile/store-listing/assets/feature-graphic-1024x500.png` |
+| Phone screenshots | 1080×2400 portrait, RGB, no alpha (current set, 8 frames) | `apps/mobile/store-listing/screenshots/android/01–08-*.png` |
+| 7" tablet screenshots | optional | skip for first release |
+| 10" tablet screenshots | optional | skip for first release |
+
+> **Demo data note.** The screenshots are captured against a Dubai-themed demo
+> dataset (3 venues — Sky Lounge DIFC, Cloud 9 Karaoke, Vault Billiards — and 3
+> demo users Aria / Karim / Lina with a multilingual venue-general chat, active
+> waves, an activities trio and bookable venue services). Run
+> `node apps/web/scripts/seed-demo-data.mjs` to refresh that dataset before
+> re-shooting; the script is idempotent.
+
+### Phone screenshots — captions for Play Console
+
+Upload them in this order; the captions go in the "Description" field that
+appears under each screenshot in Play Console.
+
+1. **Discover live venues around you** — `01-map-venues-nearby.png`
+   (Caption: *Dark map, real-time venue pins, "you're here" banner the moment you check in.*)
+2. **Walk in. You're connected.** — `02-venue-spotlight.png`
+   (Caption: *Venue page with live "X here now", check-in confirmation and one-tap actions.*)
+3. **See who's actually in the room** — `03-people-in-the-room.png`
+   (Caption: *Stealth-friendly profiles — nickname, age range, interests. No real names.*)
+4. **Chat with everyone in the venue** — `04-venue-chat.png`
+   (Caption: *Venue announcements, multilingual group chat, taps to wave at anyone.*)
+5. **Vote, compete, win — right here** — `05-activities-live.png`
+   (Caption: *Live polls, contests and auctions hosted by the venue.*)
+6. **Your stealth-friendly profile** — `06-profile-tokens.png`
+   (Caption: *Nickname + interests + token balance. Earn tokens by checking in.*)
+7. **One inbox for venue + 1-on-1 chats** — `07-chats-inbox.png`
+   (Caption: *"You're both here now" highlights venue rooms and people you can meet right now.*)
+8. **You decide who sees you** — `08-stealth-status.png`
+   (Caption: *Toggle visibility, set your status — "Want to chat", "Looking for company", or stay hidden.*)
+
 ## Categorization (Play Console answers)
 
 | Field | Value |
