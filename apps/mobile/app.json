@@ -3,7 +3,7 @@
     "name": "EyesTalk",
     "slug": "eyestalk",
     "owner": "gmaxby",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
