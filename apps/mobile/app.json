@@ -17,7 +17,7 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#0D0D1A"
     },
     "ios": {
@@ -39,7 +39,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundImage": "./assets/adaptive-icon-bg.png",
-        "backgroundColor": "#7C6FF7"
+        "backgroundColor": "#0D0D1A"
       },
       "config": {
         "googleMaps": {

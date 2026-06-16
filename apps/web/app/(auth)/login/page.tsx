@@ -66,7 +66,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-12">
           <Image
-            src="/logo-mark.svg"
+            src="/logo-app-icon.svg"
             alt="EyesTalk"
             width={84}
             height={84}

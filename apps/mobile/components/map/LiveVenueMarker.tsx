@@ -27,18 +27,30 @@ const ANDROID_FALLBACK = {
 };
 
 /** Marker logo px size — controls how large the SDK draws the native image.
- *  Kept small so venue markers sit just slightly above Google's own POI pins. */
+ *  Android draws <Marker image> at the bitmap's intrinsic pixel size, so we
+ *  normalize EVERY logo to exactly this many px (see sizedLogo). Kept small so
+ *  venue markers sit just slightly above Google's own POI pins. */
 const ANDROID_LOGO_PX = 72;
 const MARKER = 44; // iOS view marker diameter (dp)
 const PAD = 12;
 const OUTER = MARKER + PAD * 2;
 const PURPLE = '#7C6FF7';
 
-/** Resize a dicebear (or any sized) logo URL down for crisp small markers. */
+/**
+ * Normalize any logo URL to a fixed-size circular PNG so every Android marker
+ * is identical in size — regardless of the source image's real dimensions.
+ *
+ * The native Google Maps SDK draws `<Marker image={{ uri }}>` at the bitmap's
+ * intrinsic pixel size. Relying on a `?size=` query only works for backends
+ * that honour it (e.g. dicebear); arbitrary logos (Supabase storage, brand
+ * PNGs) ignore it and render huge. We route them all through the weserv image
+ * proxy with explicit w/h, guaranteeing a uniform ANDROID_LOGO_PX on screen.
+ */
 function sizedLogo(url: string): { uri: string } {
-  const uri = /[?&]size=\d+/.test(url)
-    ? url.replace(/([?&])size=\d+/, `$1size=${ANDROID_LOGO_PX}`)
-    : url + (url.includes('?') ? '&' : '?') + `size=${ANDROID_LOGO_PX}`;
+  const src = url.replace(/^https?:\/\//, '');
+  const uri =
+    `https://images.weserv.nl/?url=ssl:${encodeURIComponent(src)}` +
+    `&w=${ANDROID_LOGO_PX}&h=${ANDROID_LOGO_PX}&fit=cover&output=png`;
   return { uri };
 }
 

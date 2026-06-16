@@ -79,7 +79,7 @@ export function Wordmark({
               },
             ]}
           />
-          <LogoMark size={markSize} gradient />
+          <LogoMark size={markSize} glass />
         </View>
       )}
 

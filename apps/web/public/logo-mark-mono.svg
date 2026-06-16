@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 170" fill="none">
   <defs>
-    <mask id="m">
-      <rect x="0" y="0" width="220" height="170" fill="#fff"></rect>
-      <circle cx="74" cy="74" r="29" fill="#000"></circle>
-      <circle cx="146" cy="74" r="29" fill="#000"></circle>
-      <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#000"></path>
-      <circle cx="74" cy="74" r="14.5" fill="#fff"></circle>
-      <circle cx="146" cy="74" r="14.5" fill="#fff"></circle>
+    <mask id="k">
+      <rect x="0" y="0" width="220" height="170" fill="#fff"/>
+      <circle cx="74" cy="74" r="29" fill="#000"/>
+      <circle cx="146" cy="74" r="29" fill="#000"/>
+      <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#000"/>
+      <circle cx="74" cy="74" r="16" fill="#fff"/>
+      <circle cx="146" cy="74" r="16" fill="#fff"/>
     </mask>
   </defs>
-  <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="#FFFFFF" mask="url(#m)"></path>
+  <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="#FFFFFF" mask="url(#k)"/>
 </svg>

@@ -1,18 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2A1F6E"></stop>
-      <stop offset="1" stop-color="#0D0826"></stop>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"></rect>
-  <g transform="translate(72,140) scale(1.7)">
-    
-    <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="#9A8FFF"></path>
-    <circle cx="74" cy="74" r="29" fill="#FFFFFF"></circle>
-    <circle cx="146" cy="74" r="29" fill="#FFFFFF"></circle>
-    <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#FFFFFF"></path>
-    <circle cx="74" cy="74" r="14.5" fill="#3D2EB8"></circle>
-    <circle cx="146" cy="74" r="14.5" fill="#3D2EB8"></circle>
-  </g>
-</svg>
+    <defs>
+      <clipPath id="round"><rect width="512" height="512" rx="114.5344" ry="114.5344"/></clipPath>
+    </defs>
+    <g clip-path="url(#round)">
+      
+    <defs>
+      <radialGradient id="gBlue" cx="0.30" cy="0.28" r="0.62">
+        <stop offset="0" stop-color="#4F6BF0" stop-opacity="0.85"/>
+        <stop offset="1" stop-color="#4F6BF0" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="gMag" cx="0.72" cy="0.76" r="0.6">
+        <stop offset="0" stop-color="#C0407A" stop-opacity="0.8"/>
+        <stop offset="1" stop-color="#C0407A" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="gVio" cx="0.5" cy="0.46" r="0.5">
+        <stop offset="0" stop-color="#8B7DF0" stop-opacity="0.65"/>
+        <stop offset="1" stop-color="#8B7DF0" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="512" height="512" fill="#0D0D1A"/>
+    <rect width="512" height="512" fill="url(#gBlue)"/>
+    <rect width="512" height="512" fill="url(#gMag)"/>
+    <rect width="512" height="512" fill="url(#gVio)"/>
+      
+    <g transform="translate(107.52000000000001,141.26545454545453) scale(1.3498181818181818)">
+      <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="rgba(255,255,255,0.13)"
+            stroke="rgba(255,255,255,0.52)" stroke-width="1.9261853448275863"/>
+      <circle cx="74" cy="74" r="29" fill="#FFFFFF"/>
+      <circle cx="146" cy="74" r="29" fill="#FFFFFF"/>
+      <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#FFFFFF"/>
+      <circle cx="74" cy="74" r="16" fill="#636DF3"/>
+      <circle cx="146" cy="74" r="16" fill="#636DF3"/>
+    </g>
+    </g>
+  </svg>

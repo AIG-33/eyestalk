@@ -373,7 +373,7 @@ export default function LandingPage() {
           }}
         >
           <Image
-            src="/logo-mark.svg"
+            src="/logo-app-icon.svg"
             alt="EyesTalk"
             width={64}
             height={64}

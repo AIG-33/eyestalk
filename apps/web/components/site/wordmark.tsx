@@ -30,12 +30,12 @@ export function Wordmark({
     >
       {showMark && (
         <Image
-          src="/logo-mark.svg"
+          src="/logo-app-icon.svg"
           alt="EyesTalk"
           width={mark}
           height={mark}
           priority
-          style={{ filter: 'drop-shadow(0 0 16px rgba(124,111,247,0.55))' }}
+          style={{ filter: 'drop-shadow(0 0 16px rgba(124,111,247,0.45))' }}
         />
       )}
       <span

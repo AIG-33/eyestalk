@@ -1,19 +1,20 @@
 /**
- * Generate EyesTalk brand assets in the new flat identity:
- *   a violet-gradient superellipse icon holding a white speech-bubble mark
- *   (glasses + eyes knocked out). Matches brand/svg + brand-tokens.json.
+ * Generate every EyesTalk brand asset from a single source of truth: the
+ * "glass on glow" identity — a frosted translucent glasses speech-bubble with
+ * a soft white rim and royal-blue pupils, floating on a dark radial glow
+ * (blue → violet → magenta), exactly matching brand/master-logo-1024.png.
  *
  * Run from `apps/mobile`:
  *   node scripts/generate-brand.mjs
  *
  * Produces (under assets/):
- *   icon.png             1024  opaque gradient square + white mark (iOS)
- *   adaptive-icon.png    1024  transparent white mark (Android foreground)
- *   adaptive-icon-bg.png 1024  violet gradient (Android background)
- *   splash-icon.png      1024  gradient mark + soft glow (on #0D0D1A splash)
- *   favicon.png            48  mini gradient icon
- *   notification-icon.png  96  white silhouette (Android status bar)
- *   brand-logo.png       1024  showcase card to share
+ *   icon.png             1024  opaque glow + glass mark (iOS app icon)
+ *   adaptive-icon.png    1024  transparent glass mark in safe zone (Android fg)
+ *   adaptive-icon-bg.png 1024  glow only (Android bg layer)
+ *   splash-icon.png      1024  opaque glow + glass mark (cover splash)
+ *   favicon.png            64  rounded mini icon
+ *   notification-icon.png  96  white silhouette (Android status bar, alpha)
+ *   brand-logo.png       1024  shareable showcase (== app icon)
  */
 
 import sharp from 'sharp';
@@ -24,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(__dirname, '..', 'assets');
 
-// ── Brand mark geometry (brand/svg, viewBox 220×170) ──
+// ── Brand mark geometry (viewBox 220×170) ──
 const BUBBLE =
   'M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 ' +
   'C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 ' +
@@ -33,12 +34,13 @@ const CONNECTOR = 'M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z';
 const MARK_W = 220;
 const MARK_H = 170;
 
+// ── Palette (sampled from master-logo-1024.png) ──
+const BG = '#0D0D1A';
+const GLOW_BLUE = '#4F6BF0';
+const GLOW_VIOLET = '#8B7DF0';
+const GLOW_MAGENTA = '#C0407A';
+const PUPIL = '#636DF3';
 const PURPLE = '#7C6FF7';
-const PURPLE_LIGHT = '#A29BFE';
-const PURPLE_DEEP = '#5A4FE0';
-const BLUE = '#4F6BF0';
-const PINK = '#FF6B9D';
-const SPLASH_BG = '#0D0D1A';
 
 function markTransform(S, ratio) {
   const markW = S * ratio;
@@ -49,7 +51,46 @@ function markTransform(S, ratio) {
   return { scale, tx, ty };
 }
 
-/** White speech-bubble mark with the eyes/bridge knocked out (transparent). */
+/** Dark radial glow background (blue TL → violet centre → magenta BR). */
+function glowLayers(S) {
+  return `
+    <defs>
+      <radialGradient id="gBlue" cx="0.30" cy="0.28" r="0.62">
+        <stop offset="0" stop-color="${GLOW_BLUE}" stop-opacity="0.85"/>
+        <stop offset="1" stop-color="${GLOW_BLUE}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="gMag" cx="0.72" cy="0.76" r="0.6">
+        <stop offset="0" stop-color="${GLOW_MAGENTA}" stop-opacity="0.8"/>
+        <stop offset="1" stop-color="${GLOW_MAGENTA}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="gVio" cx="0.5" cy="0.46" r="0.5">
+        <stop offset="0" stop-color="${GLOW_VIOLET}" stop-opacity="0.65"/>
+        <stop offset="1" stop-color="${GLOW_VIOLET}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="${S}" height="${S}" fill="${BG}"/>
+    <rect width="${S}" height="${S}" fill="url(#gBlue)"/>
+    <rect width="${S}" height="${S}" fill="url(#gMag)"/>
+    <rect width="${S}" height="${S}" fill="url(#gVio)"/>`;
+}
+
+/** Frosted-glass glasses mark. strokeBase scales with the mark. */
+function glassMark(S, ratio) {
+  const { scale, tx, ty } = markTransform(S, ratio);
+  const sw = 2.6 / scale; // keep rim ~constant in px regardless of scale
+  return `
+    <g transform="translate(${tx},${ty}) scale(${scale})">
+      <path d="${BUBBLE}" fill="rgba(255,255,255,0.13)"
+            stroke="rgba(255,255,255,0.52)" stroke-width="${sw}"/>
+      <circle cx="74" cy="74" r="29" fill="#FFFFFF"/>
+      <circle cx="146" cy="74" r="29" fill="#FFFFFF"/>
+      <path d="${CONNECTOR}" fill="#FFFFFF"/>
+      <circle cx="74" cy="74" r="16" fill="${PUPIL}"/>
+      <circle cx="146" cy="74" r="16" fill="${PUPIL}"/>
+    </g>`;
+}
+
+/** White silhouette mark (knockout eyes) for mono / notification. */
 function whiteKnockoutMark(S, ratio, id = 'k') {
   const { scale, tx, ty } = markTransform(S, ratio);
   return `
@@ -59,8 +100,8 @@ function whiteKnockoutMark(S, ratio, id = 'k') {
         <circle cx="74" cy="74" r="29" fill="#000"/>
         <circle cx="146" cy="74" r="29" fill="#000"/>
         <path d="${CONNECTOR}" fill="#000"/>
-        <circle cx="74" cy="74" r="14.5" fill="#fff"/>
-        <circle cx="146" cy="74" r="14.5" fill="#fff"/>
+        <circle cx="74" cy="74" r="16" fill="#fff"/>
+        <circle cx="146" cy="74" r="16" fill="#fff"/>
       </mask>
     </defs>
     <g transform="translate(${tx},${ty}) scale(${scale})">
@@ -68,134 +109,197 @@ function whiteKnockoutMark(S, ratio, id = 'k') {
     </g>`;
 }
 
-/** Gradient bubble with solid white eyes + gradient pupils (for dark splash). */
-function gradientMark(S, ratio) {
-  const { scale, tx, ty } = markTransform(S, ratio);
-  return `
-    <g transform="translate(${tx},${ty}) scale(${scale})">
-      <path d="${BUBBLE}" fill="url(#grad)"/>
-      <circle cx="74" cy="74" r="29" fill="#FFFFFF"/>
-      <circle cx="146" cy="74" r="29" fill="#FFFFFF"/>
-      <path d="${CONNECTOR}" fill="#FFFFFF"/>
-      <circle cx="74" cy="74" r="14.5" fill="url(#grad)"/>
-      <circle cx="146" cy="74" r="14.5" fill="url(#grad)"/>
-    </g>`;
-}
-
-const GRAD_DEF = `
-  <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="${PURPLE}"/>
-    <stop offset="1" stop-color="${PURPLE_LIGHT}"/>
-  </linearGradient>`;
-
-/** Opaque violet-gradient square + white mark (iOS app icon — iOS masks corners). */
+/** Opaque square: glow + glass mark (iOS icon, splash, showcase). */
 function iconSvg(S, ratio = 0.56) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
-    <defs>${GRAD_DEF}</defs>
-    <rect width="${S}" height="${S}" fill="url(#grad)"/>
-    ${whiteKnockoutMark(S, ratio, 'iconMask')}
+    ${glowLayers(S)}
+    ${glassMark(S, ratio)}
   </svg>`;
 }
 
-/** Rounded gradient square + white mark (favicon / unmasked contexts). */
-function roundedIconSvg(S, ratio = 0.6) {
-  const r = S * 0.2237; // iOS superellipse approximation
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
-    <defs>${GRAD_DEF}</defs>
-    <rect width="${S}" height="${S}" rx="${r}" ry="${r}" fill="url(#grad)"/>
-    ${whiteKnockoutMark(S, ratio, 'favMask')}
-  </svg>`;
-}
-
-/** Transparent white mark for the Android adaptive-icon foreground. */
-function adaptiveForegroundSvg(S, ratio = 0.42) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
-    ${whiteKnockoutMark(S, ratio, 'adMask')}
-  </svg>`;
-}
-
-/** Plain violet-gradient fill for the Android adaptive-icon background. */
-function adaptiveBgSvg(S) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
-    <defs>${GRAD_DEF}</defs>
-    <rect width="${S}" height="${S}" fill="url(#grad)"/>
-  </svg>`;
-}
-
-/** Transparent gradient mark + soft violet glow (splash on #0D0D1A). */
-function splashSvg(S, ratio = 0.5) {
+/** Rounded square version (web app icon / favicon — unmasked contexts). */
+function roundedIconSvg(S, ratio = 0.58) {
+  const r = S * 0.2237;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
     <defs>
-      ${GRAD_DEF}
-      <filter id="halo" x="-80%" y="-80%" width="260%" height="260%">
-        <feGaussianBlur stdDeviation="${S * 0.05}"/>
-      </filter>
+      <clipPath id="round"><rect width="${S}" height="${S}" rx="${r}" ry="${r}"/></clipPath>
     </defs>
-    <g filter="url(#halo)">
-      <circle cx="${S / 2}" cy="${S / 2}" r="${S * ratio * 0.62}" fill="${PURPLE}" opacity="0.40"/>
+    <g clip-path="url(#round)">
+      ${glowLayers(S)}
+      ${glassMark(S, ratio)}
     </g>
-    ${gradientMark(S, ratio)}
   </svg>`;
 }
 
-/** Monochrome white silhouette (Android notification icon — alpha only). */
+/** Transparent glass mark in the adaptive-icon safe zone (Android foreground). */
+function adaptiveForegroundSvg(S, ratio = 0.40) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
+    ${glassMark(S, ratio)}
+  </svg>`;
+}
+
+/** Glow only — Android adaptive background layer. */
+function glowBgSvg(S) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
+    ${glowLayers(S)}
+  </svg>`;
+}
+
+/** White silhouette (alpha only) — Android notification icon. */
 function monoSvg(S, ratio = 0.74) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
     ${whiteKnockoutMark(S, ratio, 'monoMask')}
   </svg>`;
 }
 
-/** Shareable showcase: dark card + ambient glow + gradient mark. */
-function showcaseSvg(S) {
-  const r = S * 0.08;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}">
-    <defs>
-      ${GRAD_DEF}
-      <radialGradient id="card" cx="0.5" cy="0.4" r="0.8">
-        <stop offset="0" stop-color="#1A1830"/>
-        <stop offset="1" stop-color="#0A0A14"/>
-      </radialGradient>
-      <filter id="amb" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur stdDeviation="${S * 0.1}"/>
-      </filter>
-      <clipPath id="cardClip">
-        <rect x="${S * 0.06}" y="${S * 0.06}" width="${S * 0.88}" height="${S * 0.88}" rx="${r}" ry="${r}"/>
-      </clipPath>
-    </defs>
-    <rect width="${S}" height="${S}" fill="#0A0A14"/>
-    <rect x="${S * 0.06}" y="${S * 0.06}" width="${S * 0.88}" height="${S * 0.88}"
-          rx="${r}" ry="${r}" fill="url(#card)"/>
-    <g clip-path="url(#cardClip)" filter="url(#amb)">
-      <circle cx="${S * 0.34}" cy="${S * 0.34}" r="${S * 0.24}" fill="${PURPLE}" opacity="0.5"/>
-      <circle cx="${S * 0.66}" cy="${S * 0.40}" r="${S * 0.2}" fill="${BLUE}" opacity="0.4"/>
-      <circle cx="${S * 0.64}" cy="${S * 0.68}" r="${S * 0.24}" fill="${PINK}" opacity="0.38"/>
-      <circle cx="${S * 0.36}" cy="${S * 0.68}" r="${S * 0.2}" fill="${PURPLE_DEEP}" opacity="0.36"/>
-    </g>
-    ${gradientMark(S, 0.48)}
-  </svg>`;
-}
-
 async function render(svg, size, file, { flatten = false } = {}) {
   let img = sharp(Buffer.from(svg)).resize(size, size);
-  if (flatten) img = img.flatten({ background: PURPLE });
+  if (flatten) img = img.flatten({ background: BG });
   await img.png({ compressionLevel: 9 }).toFile(path.join(OUT, file));
   console.log(`✓ ${file}  (${size}×${size})`);
 }
 
+// ── Shared scalable SVGs (web + mobile + brand kit) ──
+
+/** Bare frosted glass mark (transparent, viewBox 220×170). */
+function bareMarkSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MARK_W} ${MARK_H}" fill="none">
+  <path d="${BUBBLE}" fill="rgba(255,255,255,0.13)" stroke="rgba(255,255,255,0.55)" stroke-width="2.6"/>
+  <circle cx="74" cy="74" r="29" fill="#FFFFFF"/>
+  <circle cx="146" cy="74" r="29" fill="#FFFFFF"/>
+  <path d="${CONNECTOR}" fill="#FFFFFF"/>
+  <circle cx="74" cy="74" r="16" fill="${PUPIL}"/>
+  <circle cx="146" cy="74" r="16" fill="${PUPIL}"/>
+</svg>
+`;
+}
+
+/** Single-colour silhouette mark with knocked-out eyes (viewBox 220×170). */
+function silhouetteMarkSvg(fill) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MARK_W} ${MARK_H}" fill="none">
+  <defs>
+    <mask id="k">
+      <rect x="0" y="0" width="${MARK_W}" height="${MARK_H}" fill="#fff"/>
+      <circle cx="74" cy="74" r="29" fill="#000"/>
+      <circle cx="146" cy="74" r="29" fill="#000"/>
+      <path d="${CONNECTOR}" fill="#000"/>
+      <circle cx="74" cy="74" r="16" fill="#fff"/>
+      <circle cx="146" cy="74" r="16" fill="#fff"/>
+    </mask>
+  </defs>
+  <path d="${BUBBLE}" fill="${fill}" mask="url(#k)"/>
+</svg>
+`;
+}
+
+/** Wordmark lockup: rounded glow icon + Eyes/Talk text. `light` for light bg. */
+function wordmarkLockupSvg({ light = false } = {}) {
+  const eyes = light ? '#0D0D1A' : '#FFFFFF';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" fill="none">
+  <defs>
+    <linearGradient id="talk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A29BFE"/>
+      <stop offset="1" stop-color="#7C6FF7"/>
+    </linearGradient>
+    <radialGradient id="wBlue" cx="0.30" cy="0.28" r="0.62">
+      <stop offset="0" stop-color="${GLOW_BLUE}" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="${GLOW_BLUE}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="wMag" cx="0.72" cy="0.76" r="0.6">
+      <stop offset="0" stop-color="${GLOW_MAGENTA}" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="${GLOW_MAGENTA}" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="wRound"><rect x="10" y="20" width="160" height="160" rx="40" ry="40"/></clipPath>
+  </defs>
+  <g clip-path="url(#wRound)">
+    <rect x="10" y="20" width="160" height="160" fill="${BG}"/>
+    <rect x="10" y="20" width="160" height="160" fill="url(#wBlue)"/>
+    <rect x="10" y="20" width="160" height="160" fill="url(#wMag)"/>
+  </g>
+  <g transform="translate(40,52) scale(0.43)">
+    <path d="${BUBBLE}" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.6)" stroke-width="6"/>
+    <circle cx="74" cy="74" r="29" fill="#FFFFFF"/>
+    <circle cx="146" cy="74" r="29" fill="#FFFFFF"/>
+    <path d="${CONNECTOR}" fill="#FFFFFF"/>
+    <circle cx="74" cy="74" r="16" fill="${PUPIL}"/>
+    <circle cx="146" cy="74" r="16" fill="${PUPIL}"/>
+  </g>
+  <text x="200" y="130" font-family="'Clash Display','Space Grotesk','Inter',sans-serif" font-weight="700" font-size="108" letter-spacing="-4">
+    <tspan fill="${eyes}">Eyes</tspan><tspan fill="url(#talk)">Talk</tspan>
+  </text>
+</svg>
+`;
+}
+
+async function writeSvgEverywhere() {
+  const repo = path.resolve(__dirname, '..', '..', '..');
+  const webPub = path.join(repo, 'apps', 'web', 'public');
+  const mobAssets = OUT;
+  const brandSvg = path.join(repo, 'brand', 'svg');
+
+  const mark = bareMarkSvg();
+  const mono = silhouetteMarkSvg('#FFFFFF');
+  const black = silhouetteMarkSvg('#0D0D1A');
+  const appIcon = roundedIconSvg(512, 0.58);
+  const wmDark = wordmarkLockupSvg({ light: false });
+  const wmLight = wordmarkLockupSvg({ light: true });
+
+  const writes = [
+    // web/public
+    [path.join(webPub, 'logo-mark.svg'), mark],
+    [path.join(webPub, 'logo-mark-mono.svg'), mono],
+    [path.join(webPub, 'logo-app-icon.svg'), appIcon],
+    [path.join(webPub, 'favicon.svg'), appIcon],
+    [path.join(webPub, 'logo-wordmark.svg'), wmDark],
+    // mobile assets
+    [path.join(mobAssets, 'logo-mark.svg'), mark],
+    [path.join(mobAssets, 'logo-mark-mono.svg'), mono],
+    [path.join(mobAssets, 'logo-wordmark.svg'), wmDark],
+    // brand kit
+    [path.join(brandSvg, 'mark-gradient.svg'), mark],
+    [path.join(brandSvg, 'mark-white.svg'), mono],
+    [path.join(brandSvg, 'mark-black.svg'), black],
+    [path.join(brandSvg, 'mark-flat.svg'), appIcon],
+    [path.join(brandSvg, 'wordmark-on-dark.svg'), wmDark],
+    [path.join(brandSvg, 'wordmark-on-light.svg'), wmLight],
+  ];
+  for (const [file, svg] of writes) {
+    await fs.writeFile(file, svg);
+    console.log(`✓ ${path.relative(repo, file)}`);
+  }
+
+  // Web raster logo (used on auth pages etc.)
+  await sharp(Buffer.from(appIcon))
+    .resize(512, 512)
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(webPub, 'logo.png'));
+  console.log('✓ apps/web/public/logo.png  (512×512)');
+
+  // Apple touch icon (Safari/iOS home screen needs a raster PNG)
+  await sharp(Buffer.from(appIcon))
+    .resize(180, 180)
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(webPub, 'apple-touch-icon.png'));
+  console.log('✓ apps/web/public/apple-touch-icon.png  (180×180)');
+}
+
 await fs.mkdir(OUT, { recursive: true });
 
-// iOS app icon — opaque (no alpha)
+// iOS app icon — opaque glow + glass mark
 await render(iconSvg(1024), 1024, 'icon.png', { flatten: true });
-// Android adaptive icon — foreground mark inside the ~66% safe zone + bg layer
+// Android adaptive icon — glass mark foreground + glow background layer
 await render(adaptiveForegroundSvg(1024), 1024, 'adaptive-icon.png');
-await render(adaptiveBgSvg(1024), 1024, 'adaptive-icon-bg.png');
-// Splash mark on the dark splash backdrop
-await render(splashSvg(1024), 1024, 'splash-icon.png');
-// Web favicon (rounded mini icon)
-await render(roundedIconSvg(64), 48, 'favicon.png');
-// Android notification icon (monochrome)
+await render(glowBgSvg(1024), 1024, 'adaptive-icon-bg.png');
+// Splash — full glow + mark (resizeMode cover)
+await render(iconSvg(1024, 0.46), 1024, 'splash-icon.png', { flatten: true });
+// Web/mobile favicon (rounded mini icon)
+await render(roundedIconSvg(128), 64, 'favicon.png');
+// Android notification icon (monochrome white)
 await render(monoSvg(96), 96, 'notification-icon.png');
-// Shareable showcase
-await render(showcaseSvg(1024), 1024, 'brand-logo.png');
+// Shareable showcase (== app icon)
+await render(iconSvg(1024), 1024, 'brand-logo.png', { flatten: true });
 
-console.log('\nBrand assets generated (flat violet identity).');
+// Shared scalable SVGs across web + mobile + brand kit
+await writeSvgEverywhere();
+
+console.log('\nBrand assets generated (glass-on-glow identity).');

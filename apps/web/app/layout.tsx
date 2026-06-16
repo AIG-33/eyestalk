@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     'Real-time, location-based social app for bars, clubs, lounges and more. Check in to a venue, see who is here, send a wave, and start a chat.',
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    apple: '/logo-app-icon.svg',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     title: 'EyesTalk — From a glance to a conversation',

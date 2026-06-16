@@ -10,13 +10,14 @@
  * `<Marker image={require(...)} />` skips view→bitmap entirely and
  * draws the PNG natively.
  *
- * Produces (under assets/markers/), each at @1x/@2x/@3x for crisp small markers:
+ * Produces (under assets/markers/) a single fixed-size PNG per variant:
  *   venue.png            default purple rounded square + EyesTalk eyes
  *   venue-selected.png   default + white outer ring
  *   venue-active.png     default + green ring (for active checkins)
  *
- * Base display size is 44dp (BASE_SIZE); density variants keep it sharp while
- * staying just slightly larger than Google's native POI pins.
+ * Android draws <Marker image> at the bitmap's intrinsic PIXEL size (it ignores
+ * density buckets), so we emit ONE PNG at OUTPUT_PX. This keeps every fallback
+ * marker exactly the same on-screen size as the (proxied) logo markers.
  */
 
 import sharp from 'sharp';
@@ -27,8 +28,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'assets', 'markers');
 
-const SIZE = 44; // logical (dp) marker size; rendered at @1x/@2x/@3x below
-const SCALES = [1, 2, 3];
+const SIZE = 44; // SVG design units (viewBox); rasterized to OUTPUT_PX below
+const OUTPUT_PX = 72; // fixed on-screen marker size (matches proxied logos)
 const PURPLE = '#7C6FF7';
 const PURPLE_DARK = '#5A4FE0';
 const WHITE = '#FFFFFF';
@@ -104,17 +105,19 @@ const VARIANTS = [
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
+// Remove stale density variants from the previous (multi-scale) scheme.
+for (const f of await fs.readdir(OUT_DIR).catch(() => [])) {
+  if (/@\dx\.png$/.test(f)) await fs.rm(path.join(OUT_DIR, f));
+}
+
 for (const { name, opts } of VARIANTS) {
   const svg = venueSvg(opts);
-  for (const scale of SCALES) {
-    const px = SIZE * scale;
-    const file = scale === 1 ? `${name}.png` : `${name}@${scale}x.png`;
-    await sharp(Buffer.from(svg))
-      .resize(px, px)
-      .png({ compressionLevel: 9 })
-      .toFile(path.join(OUT_DIR, file));
-    console.log(`✓ ${file}  (${px}×${px})`);
-  }
+  const file = `${name}.png`;
+  await sharp(Buffer.from(svg))
+    .resize(OUTPUT_PX, OUTPUT_PX)
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(OUT_DIR, file));
+  console.log(`✓ ${file}  (${OUTPUT_PX}×${OUTPUT_PX})`);
 }
 
 console.log('\nMarkers generated.');
