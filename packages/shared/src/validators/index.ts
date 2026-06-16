@@ -9,6 +9,7 @@ import {
   ACTIVITY_TYPES,
   MAX_NICKNAME_LENGTH,
   MAX_INTERESTS,
+  MAX_LOOKING_FOR_INTERESTS,
 } from '../constants';
 
 export const profileSchema = z.object({
@@ -20,6 +21,10 @@ export const profileSchema = z.object({
   age_range: z.enum(AGE_RANGES),
   avatar_url: z.string().url().optional().nullable(),
   interests: z.array(z.enum(INTEREST_OPTIONS)).max(MAX_INTERESTS),
+  looking_for_interests: z
+    .array(z.enum(INTEREST_OPTIONS))
+    .max(MAX_LOOKING_FOR_INTERESTS)
+    .optional(),
   status_tag: z.enum(STATUS_TAGS).optional().nullable(),
 });
 

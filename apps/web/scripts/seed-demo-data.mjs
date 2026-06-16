@@ -72,6 +72,13 @@ function dicebear(seed) {
     `?seed=${encodeURIComponent(seed)}&backgroundColor=7C6FF7&size=400&radius=50`;
 }
 
+// Fun, distinct venue logos so the map markers are easy to tell apart.
+// Uses the colourful "shapes" collection with a per-venue background colour.
+function venueLogo(seed, bg) {
+  return `https://api.dicebear.com/7.x/shapes/png` +
+    `?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&size=400&radius=20`;
+}
+
 async function getUserByEmail(email) {
   // listUsers paginates; 1 page of 200 is plenty for this project.
   const { data, error } = await sb.auth.admin.listUsers({ page: 1, perPage: 200 });
@@ -445,7 +452,7 @@ const VENUES = [
     latitude: 25.21111,
     longitude: 55.27905,
     geofence_radius: 80,
-    logo_url: dicebear('Sky Lounge'),
+    logo_url: venueLogo('Sky Lounge DIFC sunset', '0ea5e9'),
     cover_url:
       'https://images.unsplash.com/photo-1519214605650-76a613ee3245?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'premium',
@@ -461,7 +468,7 @@ const VENUES = [
     latitude: 25.08075,
     longitude: 55.13380,
     geofence_radius: 60,
-    logo_url: dicebear('Cloud 9'),
+    logo_url: venueLogo('Cloud 9 Karaoke neon', 'ec4899'),
     cover_url:
       'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'premium',
@@ -477,7 +484,7 @@ const VENUES = [
     latitude: 25.08850,
     longitude: 55.14500,
     geofence_radius: 50,
-    logo_url: dicebear('Vault Billiards'),
+    logo_url: venueLogo('Vault Billiards whiskey', 'f59e0b'),
     cover_url:
       'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'basic',

@@ -17,6 +17,8 @@ interface Venue {
 export interface VenueWithStats extends Venue {
   active_checkins: number;
   open_to_chat: number;
+  /** Active+visible checked-in people whose interests match what you're looking for. */
+  interest_matches: number;
 }
 
 export function useAllVenues() {
@@ -54,9 +56,41 @@ export function useAllVenues() {
         ...v,
         active_checkins: countMap[v.id] || 0,
         open_to_chat: 0,
+        interest_matches: 0,
       }));
     },
     staleTime: 30_000,
+  });
+}
+
+/**
+ * Per-venue count of active + visible checked-in people whose interests
+ * overlap `interests` (what the viewer is looking for). Backed by the
+ * `venue_interest_match_counts` RPC. Resilient: returns an empty map if the
+ * RPC/column isn't deployed yet, so the map keeps working.
+ */
+export function useVenueMatchCounts(interests: string[]) {
+  const key = [...interests].sort().join(',');
+  return useQuery({
+    queryKey: ['venue-match-counts', key],
+    enabled: interests.length > 0,
+    staleTime: 30_000,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await supabase.rpc('venue_interest_match_counts', {
+        p_interests: interests,
+      });
+
+      if (error) {
+        console.warn('[useVenueMatchCounts] RPC unavailable:', error.message);
+        return {};
+      }
+
+      const map: Record<string, number> = {};
+      (data as { venue_id: string; match_count: number }[] | null)?.forEach((row) => {
+        map[row.venue_id] = Number(row.match_count) || 0;
+      });
+      return map;
+    },
   });
 }
 

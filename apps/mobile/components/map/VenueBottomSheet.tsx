@@ -161,6 +161,17 @@ export function VenueBottomSheet({
                 </Text>
               )}
             </View>
+            {venue.interest_matches > 0 && (
+              <View style={styles.matchPill}>
+                <Text style={styles.matchText}>
+                  ✨{' '}
+                  {t('map.matchesInVenue', {
+                    count: venue.interest_matches,
+                    defaultValue: `${venue.interest_matches} match your interests`,
+                  })}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -448,6 +459,21 @@ const styles = StyleSheet.create({
   },
   distText: {
     fontSize: typography.size.bodySm,
+  },
+  matchPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,107,157,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    marginTop: 4,
+  },
+  matchText: {
+    color: '#FF6B9D',
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
   },
 
   peopleRow: {

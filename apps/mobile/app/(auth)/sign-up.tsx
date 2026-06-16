@@ -78,7 +78,7 @@ export default function SignUpScreen() {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <LogoMark size={84} />
+            <LogoMark size={84} glass />
             <Text style={styles.heroLine}>{t('auth.createAccount')}</Text>
             <Text style={styles.tagline}>{t('auth.signUpHint')}</Text>
           </View>

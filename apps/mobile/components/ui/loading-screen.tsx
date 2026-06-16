@@ -117,7 +117,7 @@ export function LoadingScreen() {
           />
 
           <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
-            <LogoMark size={LOGO} color={colors.accent.primary} />
+            <LogoMark size={LOGO} glass />
           </Animated.View>
         </View>
 

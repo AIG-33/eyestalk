@@ -72,6 +72,8 @@
     "ageRangeHint": "Помогает людям найти ровесников",
     "interests": "Интересы",
     "interestsHint": "Выберите до 5 интересов — мы подсветим, что у вас общего с другими",
+    "lookingFor": "Кого ищу",
+    "lookingForHint": "Выберите интересы людей, которых хотите встретить — карта покажет заведения, где есть подходящие люди рядом.",
     "continue": "Продолжить",
     "language": "Язык",
     "languageHint": "Переключение языка приложения между русским и английским",
@@ -120,7 +122,10 @@
     "taglineCheckedIn": "Вы на месте! Посмотрите, кто рядом.",
     "allTypes": "Все",
     "viewDetails": "Подробнее",
-    "checkedInPeople": "{{count}} внутри"
+    "checkedInPeople": "{{count}} внутри",
+    "matchesToggle": "Совпадения",
+    "matchesInVenue": "{{count}} по вашим интересам",
+    "matchesEmptyHint": "Заполните «Кого ищу» в профиле"
   },
   "venueTypes": {
     "restaurant": "Ресторан",
@@ -189,7 +194,8 @@
     "services": "Услуги",
     "servicesHint": "Бронь столов, дорожек и другого за токены",
     "checkinRequiredServices": "Зачекиньтесь в это заведение, чтобы забронировать услугу",
-    "checkinToBook": "Зачекиньтесь для брони"
+    "checkinToBook": "Зачекиньтесь для брони",
+    "interestMatch": "совпадение"
   },
   "venueServices": {
     "title": "Услуги",

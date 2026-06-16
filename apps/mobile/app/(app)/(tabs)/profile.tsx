@@ -131,6 +131,33 @@ export default function ProfileScreen() {
             ))}
           </View>
         )}
+
+        {profile?.looking_for_interests && profile.looking_for_interests.length > 0 && (
+          <View style={{ alignItems: 'center', marginTop: spacing.md, paddingHorizontal: spacing['3xl'] }}>
+            <Text style={{ fontSize: typography.size.bodySm, fontWeight: typography.weight.semibold, color: c.accent.pink, marginBottom: spacing.sm }}>
+              ✨ {t('profile.lookingFor')}
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' }}>
+              {profile.looking_for_interests.map((interest) => (
+                <View
+                  key={interest}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: radius.full,
+                    borderWidth: 1,
+                    backgroundColor: 'rgba(255,107,157,0.12)',
+                    borderColor: 'rgba(255,107,157,0.4)',
+                  }}
+                >
+                  <Text style={{ fontSize: typography.size.bodySm, fontWeight: typography.weight.semibold, color: c.accent.pink }}>
+                    {t(`interests.${interest}`, { defaultValue: interest })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Token balance */}

@@ -11,6 +11,7 @@ interface Profile {
   avatar_url: string | null;
   bio: string | null;
   interests: string[];
+  looking_for_interests: string[];
   is_verified: boolean;
   is_banned: boolean;
   token_balance: number;
@@ -54,6 +55,7 @@ export function useUpdateProfile() {
       nickname?: string;
       age_range?: string;
       interests?: string[];
+      looking_for_interests?: string[];
       avatar_url?: string | null;
       bio?: string | null;
       industry?: string | null;

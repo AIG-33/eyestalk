@@ -136,5 +136,7 @@ export const MICRO_CHAT_DURATION_MINUTES = 5;
 export const MICRO_CHAT_MESSAGE_LIMIT = 10;
 export const DEFAULT_GEOFENCE_RADIUS_METERS = 50;
 export const MAX_INTERESTS = 5;
+// "Looking for" allows a wider net than your own interests so matching is useful.
+export const MAX_LOOKING_FOR_INTERESTS = 8;
 export const MAX_NICKNAME_LENGTH = 30;
 export const MAX_PROFILE_PHOTOS = 6;

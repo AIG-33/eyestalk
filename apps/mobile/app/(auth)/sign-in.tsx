@@ -69,7 +69,7 @@ export default function SignInScreen() {
         >
           {/* Hero — left aligned, two-tone title */}
           <View style={styles.hero}>
-            <LogoMark size={84} />
+            <LogoMark size={84} glass />
 
             <Text style={styles.heroLine}>From a glance</Text>
             <Text style={[styles.heroLine, styles.heroLineAccent]}>

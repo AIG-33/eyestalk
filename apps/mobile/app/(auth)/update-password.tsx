@@ -70,7 +70,7 @@ export default function UpdatePasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <LogoMark size={72} />
+            <LogoMark size={72} glass />
             <Text style={styles.title}>
               {done ? t('auth.passwordUpdated') : t('auth.newPasswordTitle')}
             </Text>

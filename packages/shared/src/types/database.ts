@@ -17,6 +17,7 @@ export interface Database {
           avatar_url: string | null;
           bio: string | null;
           interests: string[];
+          looking_for_interests: string[];
           is_verified: boolean;
           is_banned: boolean;
           token_balance: number;
@@ -38,6 +39,7 @@ export interface Database {
           avatar_url?: string | null;
           bio?: string | null;
           interests?: string[];
+          looking_for_interests?: string[];
           is_verified?: boolean;
           is_banned?: boolean;
           token_balance?: number;
@@ -59,6 +61,7 @@ export interface Database {
           avatar_url?: string | null;
           bio?: string | null;
           interests?: string[];
+          looking_for_interests?: string[];
           is_verified?: boolean;
           is_banned?: boolean;
           token_balance?: number;

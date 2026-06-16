@@ -31,6 +31,8 @@ interface Props {
   activeCheckin: any;
   /** Distance from bottom of map tab content (0 = flush with tab bar seam). */
   bottomOffset: number;
+  /** When true, sort by interest matches first and surface a match badge. */
+  matchMode?: boolean;
   onSelectVenue: (venue: VenueWithStats) => void;
 }
 
@@ -39,32 +41,36 @@ export function NearbyVenueCards({
   userLocation,
   activeCheckin,
   bottomOffset,
+  matchMode = false,
   onSelectVenue,
 }: Props) {
   const { i18n } = useTranslation();
   const { c, isDark } = useTheme();
 
+  const distanceTo = (v: VenueWithStats) =>
+    userLocation
+      ? getDistanceMeters(
+          userLocation.latitude,
+          userLocation.longitude,
+          Number(v.latitude),
+          Number(v.longitude),
+        )
+      : 0;
+
   const sortedVenues = useMemo(() => {
     if (!venues?.length) return [];
-    if (!userLocation) {
-      return [...venues].sort((a, b) => a.name.localeCompare(b.name));
+    const byDistance = (a: VenueWithStats, b: VenueWithStats) =>
+      userLocation ? distanceTo(a) - distanceTo(b) : a.name.localeCompare(b.name);
+
+    if (matchMode) {
+      // Most matching people first, then nearest.
+      return [...venues].sort(
+        (a, b) => b.interest_matches - a.interest_matches || byDistance(a, b),
+      );
     }
-    return [...venues].sort((a, b) => {
-      const distA = getDistanceMeters(
-        userLocation.latitude,
-        userLocation.longitude,
-        Number(a.latitude),
-        Number(a.longitude),
-      );
-      const distB = getDistanceMeters(
-        userLocation.latitude,
-        userLocation.longitude,
-        Number(b.latitude),
-        Number(b.longitude),
-      );
-      return distA - distB;
-    });
-  }, [venues, userLocation]);
+    return [...venues].sort(byDistance);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venues, userLocation, matchMode]);
 
   if (!sortedVenues.length) return null;
 
@@ -83,6 +89,8 @@ export function NearbyVenueCards({
       : null;
     const isHere =
       String(activeCheckin?.venue_id ?? '') === String(item.id ?? '');
+    const hasMatch = matchMode && item.interest_matches > 0;
+    const dimmed = matchMode && item.interest_matches === 0;
 
     return (
       <TouchableOpacity
@@ -96,12 +104,15 @@ export function NearbyVenueCards({
             backgroundColor: isDark
               ? 'rgba(22,22,48,0.94)'
               : 'rgba(255,255,255,0.96)',
-            borderColor: isHere
-              ? 'rgba(0,229,160,0.45)'
-              : isDark
-                ? 'rgba(255,255,255,0.08)'
-                : 'rgba(0,0,0,0.06)',
+            borderColor: hasMatch
+              ? 'rgba(255,107,157,0.5)'
+              : isHere
+                ? 'rgba(0,229,160,0.45)'
+                : isDark
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'rgba(0,0,0,0.06)',
           },
+          dimmed && styles.cardDimmed,
         ]}
       >
         <View
@@ -133,6 +144,11 @@ export function NearbyVenueCards({
         </Text>
 
         <View style={styles.cardMeta}>
+          {hasMatch && (
+            <View style={styles.cardMatch}>
+              <Text style={styles.cardMatchText}>✨ {item.interest_matches}</Text>
+            </View>
+          )}
           {item.active_checkins > 0 && (
             <View style={styles.cardLive}>
               <View style={styles.cardLiveDot} />
@@ -195,6 +211,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...shadows.sm,
   },
+  cardDimmed: {
+    opacity: 0.45,
+  },
   cardIcon: {
     width: 28,
     height: 28,
@@ -240,6 +259,16 @@ const styles = StyleSheet.create({
     fontSize: typography.size.micro,
     fontWeight: typography.weight.bold,
     color: '#00E5A0',
+  },
+  cardMatch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  cardMatchText: {
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
+    color: '#FF6B9D',
   },
   cardDist: {
     flexDirection: 'row',

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
+import { useProfile } from '@/hooks/use-profile';
 import { useSendWave } from '@/hooks/use-send-wave';
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
@@ -35,6 +36,13 @@ export default function PeopleScreen() {
   const { c, isDark } = useTheme();
   const queryClient = useQueryClient();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
+  const { data: profile } = useProfile();
+
+  const lookingForSet = useMemo(() => {
+    const lf = profile?.looking_for_interests ?? [];
+    const effective = lf.length ? lf : (profile?.interests ?? []);
+    return new Set(effective);
+  }, [profile]);
 
   const userId = session?.user?.id;
 
@@ -113,6 +121,9 @@ export default function PeopleScreen() {
     const nickname = profile.nickname ?? '?';
     const alreadyWaved = sentWaves.includes(item.user_id);
     const interests = (profile.interests || []).slice(0, 3);
+    const isMatch =
+      lookingForSet.size > 0 &&
+      (profile.interests || []).some((i: string) => lookingForSet.has(i));
 
     return (
       <View style={s.row}>
@@ -136,6 +147,13 @@ export default function PeopleScreen() {
                 <View style={s.statusBadge}>
                   <Text style={s.statusText}>
                     {t(`status.${item.status_tag}`, { defaultValue: item.status_tag })}
+                  </Text>
+                </View>
+              )}
+              {isMatch && (
+                <View style={s.matchBadge}>
+                  <Text style={s.matchText}>
+                    ✨ {t('venue.interestMatch', { defaultValue: 'match' })}
                   </Text>
                 </View>
               )}
@@ -165,7 +183,7 @@ export default function PeopleScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [s, c, sentWaves, sendWave.isPending, handleSendWave, t, handleBlockUser, venueId]);
+  }, [s, c, sentWaves, sendWave.isPending, handleSendWave, t, handleBlockUser, venueId, lookingForSet]);
 
   return (
     <View style={s.container}>
@@ -289,6 +307,14 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     statusText: {
       fontSize: typography.size.micro, fontWeight: typography.weight.medium,
       color: c.accent.primary,
+    },
+    matchBadge: {
+      backgroundColor: 'rgba(255,107,157,0.14)',
+      borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1,
+    },
+    matchText: {
+      fontSize: typography.size.micro, fontWeight: typography.weight.medium,
+      color: c.accent.pink,
     },
     interests: {
       fontSize: typography.size.bodySm, color: c.text.tertiary,

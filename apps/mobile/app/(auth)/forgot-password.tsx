@@ -81,7 +81,7 @@ export default function ForgotPasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <LogoMark size={72} />
+            <LogoMark size={72} glass />
             <Text style={styles.title}>
               {sentTo ? t('auth.resetEmailSent') : t('auth.forgotTitle')}
             </Text>

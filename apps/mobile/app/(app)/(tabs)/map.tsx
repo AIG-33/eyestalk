@@ -18,7 +18,12 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocation } from '@/hooks/use-location';
-import { useAllVenues, type VenueWithStats } from '@/hooks/use-venues';
+import {
+  useAllVenues,
+  useVenueMatchCounts,
+  type VenueWithStats,
+} from '@/hooks/use-venues';
+import { useProfile } from '@/hooks/use-profile';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
 import { useRealtimeCheckins } from '@/hooks/use-realtime-checkins';
 import { LiveVenueMarker } from '@/components/map/LiveVenueMarker';
@@ -35,7 +40,7 @@ import {
   type MapRegionBounds,
 } from '@/lib/geo';
 import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { Wordmark } from '@/components/ui/wordmark';
 
 /** Approx. height of compact venue carousel strip (cards + padding). */
 const COMPACT_VENUE_STRIP_HEIGHT = 92;
@@ -246,6 +251,7 @@ export default function MapScreen() {
   const { data: activeCheckin } = useActiveCheckin();
   const { checkinMutation } = useCheckin();
   const recentCheckins = useRealtimeCheckins();
+  const { data: profile } = useProfile();
   const { visible: showOnboarding, dismiss: dismissOnboarding } =
     useMapOnboardingVisible();
 
@@ -253,6 +259,16 @@ export default function MapScreen() {
     null,
   );
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [matchMode, setMatchMode] = useState(false);
+
+  const effectiveInterests = useMemo(() => {
+    const lf = profile?.looking_for_interests ?? [];
+    return lf.length ? lf : (profile?.interests ?? []);
+  }, [profile]);
+
+  const { data: matchMap } = useVenueMatchCounts(
+    matchMode ? effectiveInterests : [],
+  );
   const [markersReady, setMarkersReady] = useState(false);
   const [mapRegion, setMapRegion] = useState<MapRegionBounds>(() => ({
     latitude: MAP_BOOT_REGION.latitude,
@@ -268,9 +284,15 @@ export default function MapScreen() {
 
   const filteredVenues = useMemo(() => {
     if (!venues) return [];
-    if (!typeFilter) return venues;
-    return venues.filter((v) => v.type === typeFilter);
-  }, [venues, typeFilter]);
+    const base = typeFilter
+      ? venues.filter((v) => v.type === typeFilter)
+      : venues;
+    if (!matchMode) return base;
+    return base.map((v) => ({
+      ...v,
+      interest_matches: matchMap?.[v.id] ?? 0,
+    }));
+  }, [venues, typeFilter, matchMode, matchMap]);
 
   const venuesInViewport = useMemo(() => {
     return filteredVenues.filter((v) =>
@@ -369,12 +391,7 @@ export default function MapScreen() {
       >
         <View style={styles.topBarRow}>
           <View style={styles.logoCol}>
-            <View style={styles.logoRow}>
-              <LogoMark size={28} />
-              <Text style={[styles.logo, { color: c.text.primary }]}>
-                EyesTalk
-              </Text>
-            </View>
+            <Wordmark fontSize={22} />
             <Text
               style={[styles.tagline, { color: c.text.secondary }]}
               numberOfLines={1}
@@ -416,6 +433,56 @@ export default function MapScreen() {
           selectedType={typeFilter}
           onSelectType={setTypeFilter}
         />
+
+        {/* ─── Matches toggle ───────────────────────── */}
+        <View style={styles.matchRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setMatchMode((m) => !m)}
+            style={[
+              styles.matchToggle,
+              matchMode
+                ? { backgroundColor: c.accent.pink, borderColor: c.accent.pink }
+                : {
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(0,0,0,0.04)',
+                    borderColor: isDark
+                      ? 'rgba(255,255,255,0.1)'
+                      : 'rgba(0,0,0,0.08)',
+                  },
+            ]}
+          >
+            <Text
+              style={[
+                styles.matchToggleText,
+                { color: matchMode ? '#FFFFFF' : c.text.secondary },
+              ]}
+            >
+              ✨ {t('map.matchesToggle')}
+            </Text>
+          </TouchableOpacity>
+
+          {matchMode && effectiveInterests.length === 0 && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push('/(app)/edit-profile' as any)}
+              style={[
+                styles.matchHint,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(255,107,157,0.12)'
+                    : 'rgba(255,107,157,0.1)',
+                  borderColor: 'rgba(255,107,157,0.4)',
+                },
+              ]}
+            >
+              <Text style={[styles.matchHintText, { color: c.accent.pink }]} numberOfLines={2}>
+                {t('map.matchesEmptyHint')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </LinearGradient>
 
       {/* ─── Map (mounts immediately; location centers user when ready) ─ */}
@@ -462,6 +529,7 @@ export default function MapScreen() {
               venue={venue}
               isSelected={selectedVenue?.id === venue.id}
               recentlyActive={recentCheckins.has(venue.id)}
+              matchMode={matchMode}
               onPress={handleMarkerPress}
             />
           ))}
@@ -517,6 +585,7 @@ export default function MapScreen() {
           userLocation={location}
           activeCheckin={activeCheckin}
           bottomOffset={0}
+          matchMode={matchMode}
           onSelectVenue={handleCardSelect}
         />
       )}
@@ -562,18 +631,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   logoCol: { gap: 2 },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  logoIcon: { width: 34, height: 34 },
-  logo: {
-    fontSize: typography.size.headingLg,
-    fontWeight: typography.weight.extrabold,
-    color: colors.text.primary,
-    letterSpacing: typography.letterSpacing.heading,
-  },
   tagline: {
     fontSize: typography.size.bodySm,
     marginLeft: 42,
@@ -638,6 +695,37 @@ const styles = StyleSheet.create({
   venueBadgeLiveText: {
     fontSize: typography.size.bodySm,
     fontWeight: typography.weight.semibold,
+  },
+
+  matchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  matchToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  matchToggleText: {
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
+  },
+  matchHint: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  matchHintText: {
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.medium,
   },
 
   cluster: {

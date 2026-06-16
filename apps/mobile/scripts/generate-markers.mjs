@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'assets', 'markers');
 
-const SIZE = 132; // 44dp @ 3x density — reasonable default
+const SIZE = 108; // matches ANDROID_LOGO_PX in LiveVenueMarker for consistent marker scale
 const PURPLE = '#7C6FF7';
 const PURPLE_DARK = '#5A4FE0';
 const WHITE = '#FFFFFF';

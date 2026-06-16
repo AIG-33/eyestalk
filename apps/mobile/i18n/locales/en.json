@@ -72,6 +72,8 @@
     "ageRangeHint": "Helps people find others in their age group",
     "interests": "Interests",
     "interestsHint": "Pick up to 5 interests — we'll highlight what you have in common with others",
+    "lookingFor": "Looking for",
+    "lookingForHint": "Pick the interests of the people you'd like to meet — the map can then show venues with matching people nearby.",
     "continue": "Continue",
     "language": "Language",
     "languageHint": "Switch the app language between English and Russian",
@@ -120,7 +122,10 @@
     "taglineCheckedIn": "You're in! See who's around.",
     "allTypes": "All",
     "viewDetails": "View Details",
-    "checkedInPeople": "{{count}} checked in"
+    "checkedInPeople": "{{count}} checked in",
+    "matchesToggle": "Matches",
+    "matchesInVenue": "{{count}} match your interests",
+    "matchesEmptyHint": "Set who you're looking for in your profile"
   },
   "venueTypes": {
     "restaurant": "Restaurant",
@@ -189,7 +194,8 @@
     "services": "Services",
     "servicesHint": "Book tables, lanes, or perks with tokens",
     "checkinRequiredServices": "Check in to this venue to book a service",
-    "checkinToBook": "Check in to book"
+    "checkinToBook": "Check in to book",
+    "interestMatch": "match"
   },
   "venueServices": {
     "title": "Services",

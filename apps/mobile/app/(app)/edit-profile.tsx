@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile, useUpdateProfile, useUploadAvatar } from '@/hooks/use-profile';
-import { AGE_RANGES, INTEREST_OPTIONS, MAX_INTERESTS } from '@eyestalk/shared/constants';
+import { AGE_RANGES, INTEREST_OPTIONS, MAX_INTERESTS, MAX_LOOKING_FOR_INTERESTS } from '@eyestalk/shared/constants';
 import { useTheme, typography, spacing, shadows, radius, component } from '@/theme';
 import type { ThemeColors } from '@/theme';
 
@@ -27,6 +27,7 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState('');
   const [ageRange, setAgeRange] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
+  const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [industry, setIndustry] = useState('');
   const [hobbies, setHobbies] = useState('');
   const [favoriteMovie, setFavoriteMovie] = useState('');
@@ -42,6 +43,7 @@ export default function EditProfileScreen() {
       setBio(profile.bio || '');
       setAgeRange(profile.age_range);
       setInterests(profile.interests || []);
+      setLookingFor(profile.looking_for_interests || []);
       setIndustry(profile.industry || '');
       setHobbies(profile.hobbies || '');
       setFavoriteMovie(profile.favorite_movie || '');
@@ -69,6 +71,14 @@ export default function EditProfileScreen() {
     });
   };
 
+  const toggleLookingFor = (interest: string) => {
+    setLookingFor((prev) => {
+      if (prev.includes(interest)) return prev.filter((i) => i !== interest);
+      if (prev.length >= MAX_LOOKING_FOR_INTERESTS) return prev;
+      return [...prev, interest];
+    });
+  };
+
   const handleSave = async () => {
     if (!nickname.trim()) {
       Alert.alert(isRu ? 'Ошибка' : 'Error', isRu ? 'Никнейм не может быть пустым' : 'Nickname cannot be empty');
@@ -78,6 +88,7 @@ export default function EditProfileScreen() {
       nickname: nickname.trim(),
       age_range: ageRange,
       interests,
+      looking_for_interests: lookingFor,
       bio: bio.trim() || null,
       industry: industry.trim() || null,
       hobbies: hobbies.trim() || null,
@@ -331,6 +342,27 @@ export default function EditProfileScreen() {
             ))}
           </View>
         </View>
+
+        {/* Looking for (interests of the people you want to meet) */}
+        <View style={s.section}>
+          <Text style={s.label}>
+            ✨ {t('profile.lookingFor')} ({lookingFor.length}/{MAX_LOOKING_FOR_INTERESTS})
+          </Text>
+          <Text style={s.fieldHint}>{t('profile.lookingForHint')}</Text>
+          <View style={s.chipGrid}>
+            {INTEREST_OPTIONS.map((interest) => (
+              <TouchableOpacity
+                key={interest}
+                style={[s.chip, lookingFor.includes(interest) && s.chipMatchActive]}
+                onPress={() => toggleLookingFor(interest)}
+              >
+                <Text style={[s.chipText, lookingFor.includes(interest) && s.chipTextActive]}>
+                  {t(`interests.${interest}`)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -432,6 +464,9 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     chipActive: {
       backgroundColor: c.accent.primary, borderColor: c.accent.primary,
       ...shadows.glowPrimary,
+    },
+    chipMatchActive: {
+      backgroundColor: c.accent.pink, borderColor: c.accent.pink,
     },
     chipText: {
       color: c.text.secondary, fontSize: typography.size.bodyMd,

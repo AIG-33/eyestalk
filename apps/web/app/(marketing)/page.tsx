@@ -34,6 +34,11 @@ const features: { emoji: string; title: string; body: string }[] = [
     body: 'Browse the people checked in to your venue, send a wave, and discover mutual interests without ever leaving the room.',
   },
   {
+    emoji: '✨',
+    title: 'Find your kind of crowd',
+    body: 'Tell us the interests you’re looking for, and the map shows which nearby venues have the most people who match — so you head to the room with the best vibe for you.',
+  },
+  {
     emoji: '💬',
     title: 'Micro-chats that auto-expire',
     body: '5-minute timed chats with a message limit, plus full chats once you match. Everything fades when you leave the venue.',
