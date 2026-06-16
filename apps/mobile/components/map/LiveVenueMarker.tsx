@@ -26,8 +26,9 @@ const ANDROID_FALLBACK = {
   active: require('@/assets/markers/venue-active.png'),
 };
 
-/** Marker logo px size — controls how large the SDK draws the native image. */
-const ANDROID_LOGO_PX = 108;
+/** Marker logo px size — controls how large the SDK draws the native image.
+ *  Kept small so venue markers sit just slightly above Google's own POI pins. */
+const ANDROID_LOGO_PX = 72;
 const MARKER = 44; // iOS view marker diameter (dp)
 const PAD = 12;
 const OUTER = MARKER + PAD * 2;

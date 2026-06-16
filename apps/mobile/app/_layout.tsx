@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Platform } from 'react-native';
+import { View, Platform, Text as RNText, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -80,10 +80,49 @@ try {
     'Inter-Medium': require('../assets/fonts/Inter-Medium.ttf'),
     'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
     'Inter-Bold': require('../assets/fonts/Inter-Bold.ttf'),
+    'ClashDisplay-Medium': require('../assets/fonts/ClashDisplay-Medium.otf'),
+    'ClashDisplay-Semibold': require('../assets/fonts/ClashDisplay-Semibold.otf'),
+    'ClashDisplay-Bold': require('../assets/fonts/ClashDisplay-Bold.otf'),
+    'SpaceGrotesk-Medium': require('../assets/fonts/SpaceGrotesk-500.ttf'),
+    'SpaceGrotesk-SemiBold': require('../assets/fonts/SpaceGrotesk-600.ttf'),
+    'SpaceGrotesk-Bold': require('../assets/fonts/SpaceGrotesk-700.ttf'),
   };
 } catch {
   fontMap = null;
 }
+
+// Make Inter the default body font everywhere (weight-aware), without touching
+// every StyleSheet. Components that set an explicit fontFamily (Clash Display
+// wordmark / Space Grotesk numerics) keep theirs.
+const INTER_BY_WEIGHT: Record<string, string> = {
+  '100': 'Inter-Regular', '200': 'Inter-Regular', '300': 'Inter-Regular',
+  '400': 'Inter-Regular', normal: 'Inter-Regular',
+  '500': 'Inter-Medium',
+  '600': 'Inter-SemiBold',
+  '700': 'Inter-Bold', '800': 'Inter-Bold', '900': 'Inter-Bold', bold: 'Inter-Bold',
+};
+
+(function patchDefaultFont() {
+  const anyText = RNText as any;
+  if (anyText.__eyestalkFontPatched) return;
+  const orig = anyText.render;
+  if (typeof orig !== 'function') return;
+  anyText.render = function patchedRender(...args: any[]) {
+    const el = orig.apply(this, args);
+    try {
+      const flat = StyleSheet.flatten(el.props.style) || {};
+      if (flat.fontFamily) return el;
+      const w = String(flat.fontWeight ?? '400');
+      const fam = INTER_BY_WEIGHT[w] ?? 'Inter-Regular';
+      return React.cloneElement(el, {
+        style: [el.props.style, { fontFamily: fam }],
+      });
+    } catch {
+      return el;
+    }
+  };
+  anyText.__eyestalkFontPatched = true;
+})();
 
 function useOptionalFonts() {
   const [ready, setReady] = useState(!fontMap);

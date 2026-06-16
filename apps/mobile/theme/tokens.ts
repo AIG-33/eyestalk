@@ -146,13 +146,23 @@ export const venueAmbient: Record<string, readonly [string, string]> = {
 
 // ─── Typography ──────────────────────────────────────────
 export const typography = {
+  // Exact PostScript/registered names loaded in app/_layout.tsx.
+  // RN custom fonts don't synthesize weights, so each weight is its own family.
   family: {
-    display: 'ClashDisplay',
-    body: 'Inter',
-    accent: 'SpaceGrotesk',
-    mono: 'JetBrainsMono',
-    displayFallback: 'System',
-    bodyFallback: 'System',
+    display: 'ClashDisplay-Bold',
+    displaySemibold: 'ClashDisplay-Semibold',
+    displayMedium: 'ClashDisplay-Medium',
+    body: 'Inter-Regular',
+    bodyMedium: 'Inter-Medium',
+    bodySemibold: 'Inter-SemiBold',
+    bodyBold: 'Inter-Bold',
+    accent: 'SpaceGrotesk-SemiBold',
+    accentMedium: 'SpaceGrotesk-Medium',
+    accentBold: 'SpaceGrotesk-Bold',
+    mono: 'SpaceGrotesk-Medium',
+    // Legacy aliases (older code referenced these) — now point at the real faces.
+    displayFallback: 'ClashDisplay-Bold',
+    bodyFallback: 'Inter-Regular',
   },
 
   size: {

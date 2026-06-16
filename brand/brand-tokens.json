@@ -1,0 +1,69 @@
+{
+  "brand": "EyesTalk",
+  "tagline": "From a glance to a conversation",
+  "concept": "Speech bubble holding two eyes (glasses) — the glance becomes the conversation.",
+  "colors": {
+    "bg": {
+      "primary":   "#0D0D1A",
+      "secondary": "#161630",
+      "tertiary":  "#1E1E3F",
+      "surface":   "#2A2A5A"
+    },
+    "fg": {
+      "primary":   "#E8E8F0",
+      "secondary": "#A0A0B8",
+      "tertiary":  "#5A5A78"
+    },
+    "accent": {
+      "primary":       "#7C6FF7",
+      "primary-light": "#A29BFE",
+      "success":       "#00E5A0",
+      "pink":          "#FF6B9D",
+      "warning":       "#FFD93D",
+      "error":         "#FF4757",
+      "info":          "#00D4FF"
+    },
+    "light-theme": {
+      "bg-primary": "#F5F5FA",
+      "bg-secondary": "#FFFFFF",
+      "fg-primary": "#1A1A2E",
+      "accent-primary": "#6C5CE7"
+    }
+  },
+  "gradients": {
+    "primary": "linear-gradient(135deg, #7C6FF7 0%, #A29BFE 100%)",
+    "match":   "linear-gradient(135deg, #FF6B9D 0%, #7C6FF7 100%)",
+    "premium": "linear-gradient(135deg, #FFD93D 0%, #FF6B9D 100%)"
+  },
+  "glow": {
+    "primary": "0 0 15px rgba(124,111,247,0.40), 0 0 30px rgba(124,111,247,0.15)",
+    "success": "0 0 12px rgba(0,229,160,0.40)",
+    "pink":    "0 0 12px rgba(255,107,157,0.40)"
+  },
+  "fonts": {
+    "display": {
+      "family": "Clash Display",
+      "weights": [600, 700],
+      "cdn": "https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap",
+      "usage": "Wordmark, screen titles, big numbers. Negative tracking (-2 to -4px)."
+    },
+    "body": {
+      "family": "Inter",
+      "weights": [400, 500, 600, 700],
+      "cdn": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+      "usage": "Everything else."
+    },
+    "accent": {
+      "family": "Space Grotesk",
+      "weights": [500, 600, 700],
+      "cdn": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap",
+      "usage": "Token amounts, code-like numerics."
+    }
+  },
+  "wordmark": {
+    "text": "EyesTalk",
+    "treatment": "Eyes in white (#FFFFFF or fg-primary on light), Talk in primary gradient (#A29BFE -> #7C6FF7).",
+    "live-dot": "Mint #00E5A0 dot trailing the wordmark, pulsing 1.8s ease-in-out (the signature 'live' pulse)."
+  },
+  "radius": { "icon": "22.37% (iOS superellipse)", "buttons": 16, "cards": 20, "venue-cards": 24, "pill": 9999 }
+}

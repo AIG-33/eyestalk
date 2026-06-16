@@ -71,8 +71,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
+    fontFamily: typography.family.displaySemibold,
     fontSize: typography.size.headingMd,
-    fontWeight: typography.weight.extrabold,
+    letterSpacing: -0.4,
     flexShrink: 1,
   },
   titleCentered: {

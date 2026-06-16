@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { Wordmark } from '@/components/site/wordmark';
 
 export async function SiteHeader() {
   const supabase = await createClient();
@@ -17,25 +17,8 @@ export async function SiteHeader() {
       }}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/logo-mark.svg"
-            alt="EyesTalk"
-            width={36}
-            height={36}
-            priority
-            style={{ filter: 'drop-shadow(0 0 16px rgba(124,111,247,0.55))' }}
-          />
-          <span
-            className="text-lg font-extrabold tracking-tight"
-            style={{
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '-0.4px',
-            }}
-          >
-            EyesTalk
-          </span>
+        <Link href="/" className="flex items-center">
+          <Wordmark fontSize={20} liveDot />
         </Link>
 
         <nav className="flex items-center gap-2 sm:gap-5">

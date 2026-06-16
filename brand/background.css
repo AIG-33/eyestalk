@@ -1,0 +1,24 @@
+/* ──────────────────────────────────────────────────────────
+   EyesTalk · Ambient brand background
+   The signature "glow in a dark room" backdrop.
+   Use behind splash, auth, hero and any full-screen brand moment.
+   Base must always be #0D0D1A (slightly indigo) — never flat #000.
+   ────────────────────────────────────────────────────────── */
+
+.eyestalk-bg {
+  background-color: #0D0D1A;
+  background-image:
+    radial-gradient(45% 45% at 32% 30%, rgba(124,111,247,0.55) 0%, rgba(124,111,247,0) 100%),
+    radial-gradient(42% 42% at 70% 74%, rgba(255,107,157,0.40) 0%, rgba(255,107,157,0) 100%),
+    radial-gradient(30% 30% at 86% 14%, rgba(0,229,160,0.16) 0%, rgba(0,229,160,0) 100%);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Softer variant — auth / profile screens (purple wash at the top only) */
+.eyestalk-bg--soft {
+  background-color: #0D0D1A;
+  background-image:
+    radial-gradient(60% 40% at 50% 0%, rgba(124,111,247,0.18) 0%, rgba(124,111,247,0) 70%);
+  background-repeat: no-repeat;
+}

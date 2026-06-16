@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { COMPANY } from './company-info';
+import { Wordmark } from '@/components/site/wordmark';
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -17,26 +17,8 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand block */}
           <div>
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo-mark.svg"
-                alt="EyesTalk"
-                width={40}
-                height={40}
-                style={{
-                  filter: 'drop-shadow(0 0 16px rgba(124,111,247,0.45))',
-                }}
-              />
-              <span
-                className="text-xl font-extrabold tracking-tight"
-                style={{
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-display)',
-                  letterSpacing: '-0.4px',
-                }}
-              >
-                EyesTalk
-              </span>
+            <Link href="/" className="flex items-center">
+              <Wordmark fontSize={22} />
             </Link>
             <p
               className="mt-3 max-w-xs text-sm"

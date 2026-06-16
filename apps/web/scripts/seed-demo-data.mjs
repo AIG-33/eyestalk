@@ -2,9 +2,10 @@
 //
 // Creates / refreshes:
 //   • 3 Dubai venues (rooftop bar, karaoke, billiards) owned by the CEO user
-//   • 3 demo users with fully filled profiles (avatar, bio, social links, interests)
-//   • Active check-ins for all four users at "Sky Lounge DIFC"
-//   • Venue-general chat with a realistic, multilingual conversation + 1 venue announcement
+//   • 12 demo users with fully filled profiles (avatar, bio, socials, interests,
+//     looking-for interests) spread 3–5 per venue
+//   • Active check-ins for every user at their own venue (so each venue shows a crowd)
+//   • A venue-general chat per venue with a realistic conversation + announcement
 //   • Two direct chats (CEO ↔ Aria, CEO ↔ Karim) with seed messages
 //   • Mutual-interest waves into CEO's inbox
 //   • 3 active activities (poll / contest / auction)
@@ -387,12 +388,19 @@ async function unlockAchievement(userId, slug) {
 
 const CEO_EMAIL = 'ceo@adorisgroup.com';
 
+// Each demo user is checked into `venue` and has both `interests` and
+// `looking_for_interests` so the map's interest-matching feature has rich,
+// varied data to show off. `checkinMinsAgo` keeps the check-in active (<4h).
 const DEMO_USERS = [
+  // ── Sky Lounge DIFC (rooftop sports bar) ──────────────────────────────────
   {
     email: 'aria@demo.eyestalk.app',
     nickname: 'Aria',
+    venue: 'Sky Lounge DIFC',
+    checkinMinsAgo: 90,
     age_range: '26-30',
-    interests: ['music', 'art', 'nightlife', 'photography'],
+    interests: ['music', 'art', 'nightlife', 'photography', 'dancing'],
+    looking_for_interests: ['music', 'dancing', 'art', 'nightlife'],
     bio: 'Resident DJ at Sky Lounge · visual artist · golden-hour person.',
     industry: 'Music & Visual Arts',
     hobbies: 'Vinyl crates, analog film, sunrise rooftops',
@@ -408,8 +416,11 @@ const DEMO_USERS = [
   {
     email: 'karim@demo.eyestalk.app',
     nickname: 'Karim',
+    venue: 'Sky Lounge DIFC',
+    checkinMinsAgo: 50,
     age_range: '22-25',
     interests: ['sports', 'gaming', 'tech', 'fitness'],
+    looking_for_interests: ['gaming', 'sports', 'fitness', 'tech'],
     bio: 'Software engineer · pickup-football organiser · always down for billiards.',
     industry: 'FinTech (Software)',
     hobbies: '5-a-side, FIFA tournaments, trail runs',
@@ -425,8 +436,11 @@ const DEMO_USERS = [
   {
     email: 'lina@demo.eyestalk.app',
     nickname: 'Lina',
+    venue: 'Sky Lounge DIFC',
+    checkinMinsAgo: 12,
     age_range: '26-30',
     interests: ['food', 'travel', 'photography', 'dancing'],
+    looking_for_interests: ['food', 'travel', 'dancing', 'photography'],
     bio: 'Food blogger · 38 countries · always hunting the best ramen in town.',
     industry: 'Food & Travel Media',
     hobbies: 'Hidden cafés, salsa, golden-hour street photo',
@@ -438,6 +452,190 @@ const DEMO_USERS = [
     linkedin: null,
     token_balance: 540,
     is_verified: true,
+  },
+  {
+    email: 'sofia@demo.eyestalk.app',
+    nickname: 'Sofia',
+    venue: 'Sky Lounge DIFC',
+    checkinMinsAgo: 33,
+    age_range: '26-30',
+    interests: ['art', 'photography', 'travel', 'nightlife', 'food'],
+    looking_for_interests: ['art', 'photography', 'nightlife', 'travel'],
+    bio: 'Architecture photographer chasing Dubai skylines. Rooftop golden hour is my religion.',
+    industry: 'Architecture & Photography',
+    hobbies: 'Drone shots, gallery hopping, espresso martinis',
+    favorite_movie: 'Her',
+    favorite_band: 'Bonobo',
+    about_me: 'I frame buildings for a living and people for fun. Show me your favourite view.',
+    instagram: 'sofia.frames',
+    telegram: null,
+    linkedin: 'sofia-frames',
+    token_balance: 410,
+    is_verified: true,
+  },
+  {
+    email: 'diego@demo.eyestalk.app',
+    nickname: 'Diego',
+    venue: 'Sky Lounge DIFC',
+    checkinMinsAgo: 70,
+    age_range: '31-35',
+    interests: ['sports', 'fitness', 'music', 'travel'],
+    looking_for_interests: ['sports', 'fitness', 'nightlife', 'music'],
+    bio: 'Padel addict & sports-bar regular. Here for the game and the after-party.',
+    industry: 'Sports Management',
+    hobbies: 'Padel, beach runs, live football',
+    favorite_movie: 'Ford v Ferrari',
+    favorite_band: 'Arctic Monkeys',
+    about_me: 'If the match is on, I am here. Loser buys the next round.',
+    instagram: 'diego.padel',
+    telegram: 'diego_padel',
+    linkedin: null,
+    token_balance: 150,
+    is_verified: false,
+  },
+
+  // ── Cloud 9 Karaoke (JBR) ─────────────────────────────────────────────────
+  {
+    email: 'mei@demo.eyestalk.app',
+    nickname: 'Mei',
+    venue: 'Cloud 9 Karaoke',
+    checkinMinsAgo: 20,
+    age_range: '22-25',
+    interests: ['music', 'dancing', 'nightlife', 'art', 'movies'],
+    looking_for_interests: ['music', 'dancing', 'nightlife'],
+    bio: 'Karaoke queen — will duet anyone on a 90s ballad. K-pop choreo on the side.',
+    industry: 'Creative Producer',
+    hobbies: 'Karaoke, dance covers, film photography',
+    favorite_movie: 'La La Land',
+    favorite_band: 'Red Velvet',
+    about_me: 'Pick the song, I will bring the harmonies. Tone-deaf welcome.',
+    instagram: 'mei.sings',
+    telegram: 'mei_sings',
+    linkedin: null,
+    token_balance: 380,
+    is_verified: true,
+  },
+  {
+    email: 'yusuf@demo.eyestalk.app',
+    nickname: 'Yusuf',
+    venue: 'Cloud 9 Karaoke',
+    checkinMinsAgo: 44,
+    age_range: '26-30',
+    interests: ['music', 'tech', 'gaming', 'movies'],
+    looking_for_interests: ['music', 'gaming', 'tech', 'movies'],
+    bio: 'Sound engineer who treats every karaoke night like a studio session.',
+    industry: 'Audio Engineering',
+    hobbies: 'Synths, retro games, sci-fi marathons',
+    favorite_movie: 'Blade Runner 2049',
+    favorite_band: 'Daft Punk',
+    about_me: 'I will make you sound better than you think. Bring the deep cuts.',
+    instagram: null,
+    telegram: 'yusuf_audio',
+    linkedin: 'yusuf-audio',
+    token_balance: 220,
+    is_verified: false,
+  },
+  {
+    email: 'priya@demo.eyestalk.app',
+    nickname: 'Priya',
+    venue: 'Cloud 9 Karaoke',
+    checkinMinsAgo: 9,
+    age_range: '26-30',
+    interests: ['dancing', 'music', 'food', 'travel', 'fitness'],
+    looking_for_interests: ['dancing', 'music', 'food'],
+    bio: 'Bollywood-to-Beyoncé on the mic. Off-duty I chase the city best biryani.',
+    industry: 'Marketing',
+    hobbies: 'Dance classes, food crawls, weekend hikes',
+    favorite_movie: 'Dil Chahta Hai',
+    favorite_band: 'A. R. Rahman',
+    about_me: 'Two songs in and I will have the whole room dancing. Join me.',
+    instagram: 'priya.beats',
+    telegram: null,
+    linkedin: null,
+    token_balance: 300,
+    is_verified: true,
+  },
+  {
+    email: 'noah@demo.eyestalk.app',
+    nickname: 'Noah',
+    venue: 'Cloud 9 Karaoke',
+    checkinMinsAgo: 58,
+    age_range: '31-35',
+    interests: ['music', 'reading', 'movies', 'photography'],
+    looking_for_interests: ['music', 'movies', 'reading'],
+    bio: 'Indie playlists, vinyl finds, and a soft spot for a power ballad after midnight.',
+    industry: 'Journalism',
+    hobbies: 'Record digging, open mics, street photo',
+    favorite_movie: 'Almost Famous',
+    favorite_band: 'The National',
+    about_me: 'I write about music; tonight I just want to sing it badly.',
+    instagram: 'noah.writes',
+    telegram: null,
+    linkedin: 'noah-writes',
+    token_balance: 175,
+    is_verified: false,
+  },
+
+  // ── Vault Billiards (Dubai Marina) ────────────────────────────────────────
+  {
+    email: 'omar@demo.eyestalk.app',
+    nickname: 'Omar',
+    venue: 'Vault Billiards',
+    checkinMinsAgo: 15,
+    age_range: '26-30',
+    interests: ['gaming', 'sports', 'tech', 'music'],
+    looking_for_interests: ['gaming', 'sports', 'tech'],
+    bio: 'Eight-ball shark by night, product designer by day. Bring your A-game.',
+    industry: 'Product Design',
+    hobbies: '9-ball leagues, mech keyboards, F1',
+    favorite_movie: 'The Color of Money',
+    favorite_band: 'Tame Impala',
+    about_me: 'First to 5 frames. Winner picks the next track on the jukebox.',
+    instagram: 'omar.breaks',
+    telegram: 'omar_breaks',
+    linkedin: null,
+    token_balance: 260,
+    is_verified: true,
+  },
+  {
+    email: 'elena@demo.eyestalk.app',
+    nickname: 'Elena',
+    venue: 'Vault Billiards',
+    checkinMinsAgo: 40,
+    age_range: '31-35',
+    interests: ['art', 'reading', 'travel', 'photography', 'food'],
+    looking_for_interests: ['art', 'travel', 'reading'],
+    bio: 'Curator who likes her cues straight and her negronis straighter.',
+    industry: 'Art Curation',
+    hobbies: 'Gallery nights, billiards, slow travel',
+    favorite_movie: 'Call Me by Your Name',
+    favorite_band: 'Khruangbin',
+    about_me: 'I will lose gracefully and out-talk you about Italy. Deal?',
+    instagram: 'elena.curates',
+    telegram: 'elena_curates',
+    linkedin: null,
+    token_balance: 320,
+    is_verified: true,
+  },
+  {
+    email: 'marco@demo.eyestalk.app',
+    nickname: 'Marco',
+    venue: 'Vault Billiards',
+    checkinMinsAgo: 25,
+    age_range: '26-30',
+    interests: ['sports', 'fitness', 'food', 'travel'],
+    looking_for_interests: ['sports', 'fitness', 'food'],
+    bio: 'Italian, competitive, and always up for a frame and a plate of pasta after.',
+    industry: 'Hospitality',
+    hobbies: 'Pool tournaments, cycling, cooking',
+    favorite_movie: 'Goodfellas',
+    favorite_band: 'Måneskin',
+    about_me: 'I rack, you break. Then we find the best carbonara in the Marina.',
+    instagram: 'marco.cue',
+    telegram: null,
+    linkedin: null,
+    token_balance: 190,
+    is_verified: false,
   },
 ];
 
@@ -505,6 +703,7 @@ async function main() {
     age_range: '31-35',
     avatar_url: dicebear('CEO Eyestalk'),
     interests: ['nightlife', 'music', 'tech', 'travel'],
+    looking_for_interests: ['music', 'nightlife', 'travel', 'art', 'photography'],
     bio: 'EyesTalk founder · always at the best new spot in town.',
     industry: 'Founder',
     hobbies: 'New venues, podcasts, courtside seats',
@@ -527,6 +726,7 @@ async function main() {
       age_range: u.age_range,
       avatar_url: dicebear(u.nickname),
       interests: u.interests,
+      looking_for_interests: u.looking_for_interests ?? [],
       bio: u.bio,
       industry: u.industry,
       hobbies: u.hobbies,
@@ -549,17 +749,26 @@ async function main() {
   }
   const sky = venueIds['Sky Lounge DIFC'];
 
-  // 4) Check-ins (everyone at Sky Lounge, staggered)
+  // 4) Check-ins — CEO + each demo user into their own venue (staggered, active)
   const now = Date.now();
-  await ensureCheckin(ceo.id,        sky, new Date(now - 25 * 60 * 1000));
-  await ensureCheckin(demos.Aria,    sky, new Date(now - 90 * 60 * 1000));
-  await ensureCheckin(demos.Karim,   sky, new Date(now - 50 * 60 * 1000));
-  await ensureCheckin(demos.Lina,    sky, new Date(now - 12 * 60 * 1000));
-  log('check-ins ready (everyone at Sky Lounge DIFC)');
+  await ensureCheckin(ceo.id, sky, new Date(now - 25 * 60 * 1000));
+  for (const u of DEMO_USERS) {
+    const vId = venueIds[u.venue];
+    if (!vId) continue;
+    await ensureCheckin(
+      demos[u.nickname],
+      vId,
+      new Date(now - (u.checkinMinsAgo ?? 30) * 60 * 1000),
+    );
+  }
+  log(
+    `check-ins ready (${DEMO_USERS.length} people across ` +
+      `${Object.keys(venueIds).length} venues)`,
+  );
 
-  // 5) Venue chat
+  // 5) Venue chat (Sky Lounge)
   const venueChatId = await ensureVenueGeneralChat(sky);
-  for (const id of [ceo.id, demos.Aria, demos.Karim, demos.Lina]) {
+  for (const id of [ceo.id, demos.Aria, demos.Karim, demos.Lina, demos.Sofia, demos.Diego]) {
     await ensureParticipant(venueChatId, id);
   }
   await resetMessages(venueChatId);
@@ -577,7 +786,32 @@ async function main() {
   await insertMessage(venueChatId, demos.Karim, "Who's voting in the Friday-night anthem poll? 🗳️", 'text', 5);
   await insertMessage(venueChatId, demos.Lina,  "Voted! 🌅 sunset house wins my heart", 'text', 3);
   await insertMessage(venueChatId, demos.Aria,  "🎧 set starts in 30 — come closer to the bar", 'text', 1);
-  log('venue chat seeded');
+  log('venue chat seeded (Sky Lounge)');
+
+  // 5b) Venue chats for the other two venues so they feel alive too
+  const cloud9 = venueIds['Cloud 9 Karaoke'];
+  const cloudChatId = await ensureVenueGeneralChat(cloud9);
+  for (const id of [demos.Mei, demos.Yusuf, demos.Priya, demos.Noah]) {
+    await ensureParticipant(cloudChatId, id);
+  }
+  await resetMessages(cloudChatId);
+  await insertMessage(cloudChatId, demos.Mei,   "📢 Crowd-vote is live — next song wins the room 🎤", 'announcement', 40);
+  await insertMessage(cloudChatId, demos.Yusuf, "Mics are dialed in, pod 3 sounds unreal tonight", 'text', 28);
+  await insertMessage(cloudChatId, demos.Priya, "Who's doing a duet with me? Bollywood or Beyoncé 💃", 'text', 14);
+  await insertMessage(cloudChatId, demos.Noah,  "Putting 'Africa' by Toto in the queue, no regrets", 'text', 6);
+  await insertMessage(cloudChatId, demos.Mei,   "Yes 🙌 see you in pod 3 in five", 'text', 2);
+
+  const vault = venueIds['Vault Billiards'];
+  const vaultChatId = await ensureVenueGeneralChat(vault);
+  for (const id of [demos.Omar, demos.Elena, demos.Marco]) {
+    await ensureParticipant(vaultChatId, id);
+  }
+  await resetMessages(vaultChatId);
+  await insertMessage(vaultChatId, demos.Omar,  "📢 Table 4 free — first to 5 frames, loser buys the round 🎱", 'announcement', 35);
+  await insertMessage(vaultChatId, demos.Marco, "I'm in. Bringing my own cue this time 😎", 'text', 18);
+  await insertMessage(vaultChatId, demos.Elena, "Watching with a negroni — winner gets gallery-opening tickets", 'text', 7);
+  await insertMessage(vaultChatId, demos.Omar,  "Deal. Rack 'em up 🔥", 'text', 1);
+  log('venue chats seeded (Cloud 9, Vault)');
 
   // 6) Direct chats
   const dmAria = await ensureDirectChat(sky, ceo.id, demos.Aria);

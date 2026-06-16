@@ -78,10 +78,10 @@ export default function LoginPage() {
             style={{
               color: 'var(--text-primary)',
               fontFamily: 'var(--font-display)',
-              letterSpacing: '-0.5px',
+              letterSpacing: '-1px',
             }}
           >
-            EyesTalk
+            Eyes<span className="text-gradient-primary">Talk</span>
           </h1>
           <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
             {t('venueOwnerLogin')}

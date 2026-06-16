@@ -1,42 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <radialGradient id="bg" cx="0.5" cy="0.42" r="0.8">
-      <stop offset="0" stop-color="#1A1830"></stop>
-      <stop offset="1" stop-color="#0A0A14"></stop>
-    </radialGradient>
-    <linearGradient id="pupil" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7C6FF7"></stop>
-      <stop offset="1" stop-color="#4F6BF0"></stop>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C6FF7"/>
+      <stop offset="1" stop-color="#A29BFE"/>
     </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"></stop>
-      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.05"></stop>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"></stop>
-    </linearGradient>
-    <filter id="ambient" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="56"></feGaussianBlur>
-    </filter>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#7C6FF7" flood-opacity="0.85"></feDropShadow>
-    </filter>
-    <clipPath id="card"><rect width="512" height="512" rx="112"></rect></clipPath>
+    <mask id="k">
+      <rect x="0" y="0" width="220" height="170" fill="#fff"/>
+      <circle cx="74" cy="74" r="29" fill="#000"/>
+      <circle cx="146" cy="74" r="29" fill="#000"/>
+      <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#000"/>
+      <circle cx="74" cy="74" r="14.5" fill="#fff"/>
+      <circle cx="146" cy="74" r="14.5" fill="#fff"/>
+    </mask>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"></rect>
-  <g clip-path="url(#card)" filter="url(#ambient)">
-    <circle cx="154" cy="154" r="143" fill="#7C6FF7" opacity="0.55"></circle>
-    <circle cx="328" cy="195" r="123" fill="#4F6BF0" opacity="0.42"></circle>
-    <circle cx="338" cy="358" r="143" fill="#FF6B9D" opacity="0.40"></circle>
-    <circle cx="174" cy="348" r="113" fill="#5A4FE0" opacity="0.38"></circle>
-  </g>
-  <g transform="translate(86,164) scale(1.54)">
-    <g filter="url(#glow)">
-      <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.55)" stroke-width="3.4"></path>
-    </g>
-    <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="url(#sheen)"></path>
-    <circle cx="74" cy="74" r="29" fill="#FFFFFF"></circle>
-    <circle cx="146" cy="74" r="29" fill="#FFFFFF"></circle>
-    <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#FFFFFF"></path>
-    <circle cx="74" cy="74" r="14.5" fill="url(#pupil)"></circle>
-    <circle cx="146" cy="74" r="14.5" fill="url(#pupil)"></circle>
+  <rect width="512" height="512" rx="114.5" ry="114.5" fill="url(#g)"/>
+  <g transform="translate(112.5,145.2) scale(1.304)">
+    <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="#FFFFFF" mask="url(#k)"/>
   </g>
 </svg>

@@ -297,17 +297,14 @@ export function VenueBottomSheet({
               },
             ]}
             onPress={() => {
-              const lat = Number(venue.latitude);
-              const lng = Number(venue.longitude);
-              const label = encodeURIComponent(venue.name);
-              Linking.openURL(
-                `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${label}`,
-              );
+              onClose();
+              router.push(`/(app)/venue/${venue.id}/people` as any);
             }}
           >
-            <Ionicons name="map-outline" size={18} color={c.text.secondary} />
+            <Ionicons name="people-outline" size={18} color={c.text.secondary} />
             <Text style={[styles.navBtnText, { color: c.text.secondary }]}>
-              Google Maps
+              {t('venue.people', { defaultValue: 'People' })}
+              {people && people.length > 0 ? ` · ${people.length}` : ''}
             </Text>
           </TouchableOpacity>
         </View>

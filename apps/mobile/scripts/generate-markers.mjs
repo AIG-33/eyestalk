@@ -10,10 +10,13 @@
  * `<Marker image={require(...)} />` skips view→bitmap entirely and
  * draws the PNG natively.
  *
- * Produces (under assets/markers/):
- *   venue.png            132×132   default purple rounded square + EyesTalk eyes
- *   venue-selected.png   132×132   default + white outer ring
- *   venue-active.png     132×132   default + green ring (for active checkins)
+ * Produces (under assets/markers/), each at @1x/@2x/@3x for crisp small markers:
+ *   venue.png            default purple rounded square + EyesTalk eyes
+ *   venue-selected.png   default + white outer ring
+ *   venue-active.png     default + green ring (for active checkins)
+ *
+ * Base display size is 44dp (BASE_SIZE); density variants keep it sharp while
+ * staying just slightly larger than Google's native POI pins.
  */
 
 import sharp from 'sharp';
@@ -24,7 +27,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'assets', 'markers');
 
-const SIZE = 108; // matches ANDROID_LOGO_PX in LiveVenueMarker for consistent marker scale
+const SIZE = 44; // logical (dp) marker size; rendered at @1x/@2x/@3x below
+const SCALES = [1, 2, 3];
 const PURPLE = '#7C6FF7';
 const PURPLE_DARK = '#5A4FE0';
 const WHITE = '#FFFFFF';
@@ -93,20 +97,24 @@ function venueSvg({ ringColor, ringWidth }) {
 }
 
 const VARIANTS = [
-  { name: 'venue.png',          opts: { ringColor: null, ringWidth: 0 } },
-  { name: 'venue-selected.png', opts: { ringColor: WHITE, ringWidth: 8 } },
-  { name: 'venue-active.png',   opts: { ringColor: GREEN, ringWidth: 6 } },
+  { name: 'venue',          opts: { ringColor: null, ringWidth: 0 } },
+  { name: 'venue-selected', opts: { ringColor: WHITE, ringWidth: 4 } },
+  { name: 'venue-active',   opts: { ringColor: GREEN, ringWidth: 3 } },
 ];
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
 for (const { name, opts } of VARIANTS) {
   const svg = venueSvg(opts);
-  await sharp(Buffer.from(svg))
-    .resize(SIZE, SIZE)
-    .png({ compressionLevel: 9 })
-    .toFile(path.join(OUT_DIR, name));
-  console.log(`✓ ${name}  (${SIZE}×${SIZE})`);
+  for (const scale of SCALES) {
+    const px = SIZE * scale;
+    const file = scale === 1 ? `${name}.png` : `${name}@${scale}x.png`;
+    await sharp(Buffer.from(svg))
+      .resize(px, px)
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(OUT_DIR, file));
+    console.log(`✓ ${file}  (${px}×${px})`);
+  }
 }
 
 console.log('\nMarkers generated.');

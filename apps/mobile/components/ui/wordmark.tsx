@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, type ViewStyle } from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { useTheme, typography } from '@/theme';
 
@@ -16,9 +18,9 @@ interface Props {
 }
 
 /**
- * EyesTalk "live wordmark lockup" — speech-bubble mark + two-tone wordmark
- * ("Eyes" strong, "Talk" lavender) with a breathing mint "live" dot.
- * The signature pulse used in headers, splash and the auth screen.
+ * EyesTalk "live wordmark lockup" — gradient speech-bubble mark + two-tone
+ * wordmark in Clash Display ("Eyes" white, "Talk" violet gradient) with a
+ * breathing mint "live" dot. The brand's signature header lockup.
  */
 export function Wordmark({
   fontSize = 22,
@@ -58,6 +60,11 @@ export function Wordmark({
   const markSize = Math.round(fontSize * 1.5);
   const dotSize = Math.max(6, Math.round(fontSize * 0.3));
 
+  const wordStyle = [
+    styles.word,
+    { fontSize, lineHeight: Math.round(fontSize * 1.12) },
+  ];
+
   return (
     <View style={[styles.row, style]}>
       {showMark && (
@@ -72,19 +79,25 @@ export function Wordmark({
               },
             ]}
           />
-          <LogoMark size={markSize} glass />
+          <LogoMark size={markSize} gradient />
         </View>
       )}
 
-      <Text
-        style={[
-          styles.word,
-          { fontSize, color: primaryColor ?? c.text.primary },
-        ]}
-      >
+      <Text style={[wordStyle, { color: primaryColor ?? c.text.primary }]}>
         Eyes
-        <Text style={{ color: c.accent.primaryLight }}>Talk</Text>
       </Text>
+      {/* "Talk" in the primary gradient (#A29BFE → #7C6FF7) */}
+      <MaskedView
+        maskElement={<Text style={[wordStyle, { color: '#000' }]}>Talk</Text>}
+      >
+        <LinearGradient
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          colors={['#A29BFE', '#7C6FF7']}
+        >
+          <Text style={[wordStyle, { opacity: 0 }]}>Talk</Text>
+        </LinearGradient>
+      </MaskedView>
 
       {liveDot && (
         <Animated.View
@@ -126,9 +139,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   word: {
-    fontFamily: typography.family.displayFallback,
-    fontWeight: typography.weight.extrabold,
-    letterSpacing: typography.letterSpacing.heading,
+    fontFamily: typography.family.display,
+    letterSpacing: -1,
   },
   dot: {
     shadowColor: '#00E5A0',

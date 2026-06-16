@@ -122,7 +122,7 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       textTransform: 'uppercase', letterSpacing: typography.letterSpacing.caps,
     },
     balanceValue: {
-      color: '#FFFFFF', fontSize: 56, fontWeight: typography.weight.extrabold,
+      color: '#FFFFFF', fontSize: 56, fontFamily: typography.family.accentBold,
       letterSpacing: typography.letterSpacing.display,
     },
     balanceCurrency: {
@@ -153,7 +153,7 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     txType: { color: c.text.tertiary, fontSize: typography.size.bodySm },
     txRight: { alignItems: 'flex-end' },
     txAmount: {
-      fontSize: typography.size.headingMd, fontWeight: typography.weight.extrabold,
+      fontSize: typography.size.headingMd, fontFamily: typography.family.accentBold,
     },
     txPositive: { color: c.accent.success },
     txNegative: { color: c.accent.error },

@@ -1,20 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 170" fill="none">
   <defs>
-    <linearGradient id="pupil" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#7C6FF7"></stop>
-      <stop offset="1" stop-color="#4F6BF0"></stop>
-    </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"></stop>
-      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.05"></stop>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"></stop>
+      <stop offset="1" stop-color="#A29BFE"></stop>
     </linearGradient>
   </defs>
-  <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.6)" stroke-width="3.6"></path>
-  <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="url(#sheen)"></path>
+  <path d="M110 12 C 164 12 204 38 204 74 C 204 110 164 136 110 136 C 96 136 82.5 134.4 70 131.5 L 53 156 C 51.5 158 48.5 156.8 49.2 154.4 L 56 132.5 C 30 122 16 100 16 74 C 16 38 56 12 110 12 Z" fill="url(#g)"></path>
   <circle cx="74" cy="74" r="29" fill="#FFFFFF"></circle>
   <circle cx="146" cy="74" r="29" fill="#FFFFFF"></circle>
   <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="#FFFFFF"></path>
-  <circle cx="74" cy="74" r="14.5" fill="url(#pupil)"></circle>
-  <circle cx="146" cy="74" r="14.5" fill="url(#pupil)"></circle>
+  <circle cx="74" cy="74" r="14.5" fill="#7C6FF7"></circle>
+  <circle cx="146" cy="74" r="14.5" fill="#7C6FF7"></circle>
 </svg>

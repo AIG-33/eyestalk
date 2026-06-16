@@ -105,10 +105,10 @@
 
 /* ── Typography / spacing / motion tokens ─────────────── */
 :root {
-  --font-display: 'Clash Display', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
-  --font-accent:  'Space Grotesk', 'Inter', system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-clash), 'Clash Display', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body:    var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-accent:  var(--font-space-grotesk), 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono:    var(--font-space-grotesk), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --size-display-xl: 36px;
   --size-display-lg: 28px;
@@ -180,6 +180,19 @@ body {
 ::selection {
   background-color: rgba(124,111,247,0.3);
   color: var(--text-primary);
+}
+
+/* EyesTalk wordmark "live" dot — the signature mint breathing pulse. */
+.wordmark-live-dot {
+  display: inline-block;
+  border-radius: 9999px;
+  background-color: #00E5A0;
+  box-shadow: 0 0 8px rgba(0,229,160,0.7);
+  animation: wordmark-pulse 1.8s ease-in-out infinite;
+}
+@keyframes wordmark-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.2); }
 }
 
 input, textarea, select {

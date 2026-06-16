@@ -37,6 +37,7 @@ import {
 import { VENUE_EMOJI } from '@/lib/venue-constants';
 import {
   isLatLngInMapRegion,
+  getDistanceMeters,
   type MapRegionBounds,
 } from '@/lib/geo';
 import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
@@ -59,13 +60,18 @@ const DARK_MAP_STYLE = [
 
 const LIGHT_MAP_STYLE: any[] = [];
 
-// Immediate map paint (Android waits for GPS otherwise). User is centered when location arrives.
+// Immediate map paint (Android waits for GPS otherwise). New users land on Dubai
+// — our launch region with the demo venues — and only recenter on their own
+// location if they're actually near a venue (see centerOnUser below).
 const MAP_BOOT_REGION = {
-  latitude: 52.2297,
-  longitude: 21.0122,
-  latitudeDelta: 8,
-  longitudeDelta: 8,
+  latitude: 25.145,
+  longitude: 55.21,
+  latitudeDelta: 0.38,
+  longitudeDelta: 0.38,
 } as const;
+
+/** Only auto-jump to the user's location if there's a venue within this range. */
+const NEAR_VENUE_METERS = 60000;
 
 // ─── Pulsing checkin badge (top bar) ─────────────────────
 
@@ -306,6 +312,17 @@ export default function MapScreen() {
 
   const centerOnUser = useCallback(() => {
     if (!location || !mapRef.current || centeredOnUserRef.current) return;
+    // Keep new users on the Dubai demo region unless they're actually near a venue.
+    const nearVenue = (venues ?? []).some(
+      (v) =>
+        getDistanceMeters(
+          location.latitude,
+          location.longitude,
+          Number(v.latitude),
+          Number(v.longitude),
+        ) <= NEAR_VENUE_METERS,
+    );
+    if (!nearVenue) return;
     centeredOnUserRef.current = true;
     mapRef.current.animateToRegion?.(
       {
@@ -316,7 +333,7 @@ export default function MapScreen() {
       },
       Platform.OS === 'android' ? 500 : 400,
     );
-  }, [location]);
+  }, [location, venues]);
 
   useEffect(() => {
     if (!location) return;

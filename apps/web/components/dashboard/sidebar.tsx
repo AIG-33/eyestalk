@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useVenue } from './venue-context';
+import { Wordmark } from '@/components/site/wordmark';
 
 const navItems = [
   { href: '/dashboard', icon: '📊', labelKey: 'title', hintKey: 'titleHint' },
@@ -73,25 +74,8 @@ export function DashboardSidebar() {
     >
       {/* Logo */}
       <div className="p-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <Image
-            src="/logo-mark.svg"
-            alt="EyesTalk"
-            width={32}
-            height={32}
-            priority
-            style={{ filter: 'drop-shadow(0 0 12px rgba(124,111,247,0.45))' }}
-          />
-          <h1
-            className="text-xl font-extrabold"
-            style={{
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '-0.4px',
-            }}
-          >
-            EyesTalk
-          </h1>
+        <Link href="/dashboard" className="flex items-center">
+          <Wordmark fontSize={20} />
         </Link>
       </div>
 
