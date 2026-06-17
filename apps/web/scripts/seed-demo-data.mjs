@@ -8,7 +8,8 @@
 //   • A venue-general chat per venue with a realistic conversation + announcement
 //   • Two direct chats (CEO ↔ Aria, CEO ↔ Karim) with seed messages
 //   • Mutual-interest waves into CEO's inbox
-//   • 3 active activities (poll / contest / auction)
+//   • A diverse set of active activities per venue (polls, quiz/event,
+//     contests, tournaments, challenges, quests, auctions)
 //   • 3 bookable venue services with future slots
 //   • Loyalty tiers + token-transaction history + a few unlocked achievements for CEO
 //
@@ -136,6 +137,19 @@ async function upsertVenueByName(ownerId, v) {
   if (error) die(`insert venue ${v.name}`, error);
   log(`created venue ${v.name} (${data.id})`);
   return data.id;
+}
+
+async function ensureVenueSecret(venueId, secret) {
+  if (!secret) return;
+  const { error } = await sb.from('venue_secrets').upsert(
+    {
+      venue_id: venueId,
+      checkin_code: secret.checkin_code ?? null,
+      wifi_password: secret.wifi_password ?? null,
+    },
+    { onConflict: 'venue_id' },
+  );
+  if (error) die('upsert venue secret', error);
 }
 
 async function ensureCheckin(userId, venueId, when) {
@@ -396,7 +410,7 @@ const DEMO_USERS = [
   {
     email: 'aria@demo.eyestalk.app',
     nickname: 'Aria',
-    venue: 'Sky Lounge DIFC',
+    venue: 'Sky Lounge DIFC (Test)',
     checkinMinsAgo: 90,
     age_range: '26-30',
     interests: ['music', 'art', 'nightlife', 'photography', 'dancing'],
@@ -416,7 +430,7 @@ const DEMO_USERS = [
   {
     email: 'karim@demo.eyestalk.app',
     nickname: 'Karim',
-    venue: 'Sky Lounge DIFC',
+    venue: 'Sky Lounge DIFC (Test)',
     checkinMinsAgo: 50,
     age_range: '22-25',
     interests: ['sports', 'gaming', 'tech', 'fitness'],
@@ -436,7 +450,7 @@ const DEMO_USERS = [
   {
     email: 'lina@demo.eyestalk.app',
     nickname: 'Lina',
-    venue: 'Sky Lounge DIFC',
+    venue: 'Sky Lounge DIFC (Test)',
     checkinMinsAgo: 12,
     age_range: '26-30',
     interests: ['food', 'travel', 'photography', 'dancing'],
@@ -456,7 +470,7 @@ const DEMO_USERS = [
   {
     email: 'sofia@demo.eyestalk.app',
     nickname: 'Sofia',
-    venue: 'Sky Lounge DIFC',
+    venue: 'Sky Lounge DIFC (Test)',
     checkinMinsAgo: 33,
     age_range: '26-30',
     interests: ['art', 'photography', 'travel', 'nightlife', 'food'],
@@ -476,7 +490,7 @@ const DEMO_USERS = [
   {
     email: 'diego@demo.eyestalk.app',
     nickname: 'Diego',
-    venue: 'Sky Lounge DIFC',
+    venue: 'Sky Lounge DIFC (Test)',
     checkinMinsAgo: 70,
     age_range: '31-35',
     interests: ['sports', 'fitness', 'music', 'travel'],
@@ -498,7 +512,7 @@ const DEMO_USERS = [
   {
     email: 'mei@demo.eyestalk.app',
     nickname: 'Mei',
-    venue: 'Cloud 9 Karaoke',
+    venue: 'Cloud 9 Karaoke (Test)',
     checkinMinsAgo: 20,
     age_range: '22-25',
     interests: ['music', 'dancing', 'nightlife', 'art', 'movies'],
@@ -518,7 +532,7 @@ const DEMO_USERS = [
   {
     email: 'yusuf@demo.eyestalk.app',
     nickname: 'Yusuf',
-    venue: 'Cloud 9 Karaoke',
+    venue: 'Cloud 9 Karaoke (Test)',
     checkinMinsAgo: 44,
     age_range: '26-30',
     interests: ['music', 'tech', 'gaming', 'movies'],
@@ -538,7 +552,7 @@ const DEMO_USERS = [
   {
     email: 'priya@demo.eyestalk.app',
     nickname: 'Priya',
-    venue: 'Cloud 9 Karaoke',
+    venue: 'Cloud 9 Karaoke (Test)',
     checkinMinsAgo: 9,
     age_range: '26-30',
     interests: ['dancing', 'music', 'food', 'travel', 'fitness'],
@@ -558,7 +572,7 @@ const DEMO_USERS = [
   {
     email: 'noah@demo.eyestalk.app',
     nickname: 'Noah',
-    venue: 'Cloud 9 Karaoke',
+    venue: 'Cloud 9 Karaoke (Test)',
     checkinMinsAgo: 58,
     age_range: '31-35',
     interests: ['music', 'reading', 'movies', 'photography'],
@@ -580,7 +594,7 @@ const DEMO_USERS = [
   {
     email: 'omar@demo.eyestalk.app',
     nickname: 'Omar',
-    venue: 'Vault Billiards',
+    venue: 'Vault Billiards (Test)',
     checkinMinsAgo: 15,
     age_range: '26-30',
     interests: ['gaming', 'sports', 'tech', 'music'],
@@ -600,7 +614,7 @@ const DEMO_USERS = [
   {
     email: 'elena@demo.eyestalk.app',
     nickname: 'Elena',
-    venue: 'Vault Billiards',
+    venue: 'Vault Billiards (Test)',
     checkinMinsAgo: 40,
     age_range: '31-35',
     interests: ['art', 'reading', 'travel', 'photography', 'food'],
@@ -620,7 +634,7 @@ const DEMO_USERS = [
   {
     email: 'marco@demo.eyestalk.app',
     nickname: 'Marco',
-    venue: 'Vault Billiards',
+    venue: 'Vault Billiards (Test)',
     checkinMinsAgo: 25,
     age_range: '26-30',
     interests: ['sports', 'fitness', 'food', 'travel'],
@@ -639,9 +653,14 @@ const DEMO_USERS = [
   },
 ];
 
+// Venue names carry a "(Test)" suffix so demo venues are easy to spot in prod.
+const SKY = 'Sky Lounge DIFC (Test)';
+const CLOUD9 = 'Cloud 9 Karaoke (Test)';
+const VAULT = 'Vault Billiards (Test)';
+
 const VENUES = [
   {
-    name: 'Sky Lounge DIFC',
+    name: SKY,
     type: 'sports_bar',
     description:
       "Rooftop sports bar on the 42nd floor of DIFC. Live games, signature mocktails, " +
@@ -654,10 +673,14 @@ const VENUES = [
     cover_url:
       'https://images.unsplash.com/photo-1519214605650-76a613ee3245?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'premium',
+    checkin_methods: ['qr', 'geofence'],
+    wifi_ssid: 'SkyLounge_Guest',
     settings: { hours: '17:00–02:00', dress_code: 'Smart casual' },
+    // Stored in venue_secrets (revealed to checked-in guests).
+    secret: { checkin_code: null, wifi_password: 'skyline2026' },
   },
   {
-    name: 'Cloud 9 Karaoke',
+    name: CLOUD9,
     type: 'karaoke',
     description:
       "Private karaoke pods, 80,000-track library (EN/AR/RU/HI), themed cocktail menu, " +
@@ -670,10 +693,13 @@ const VENUES = [
     cover_url:
       'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'premium',
+    checkin_methods: ['qr', 'geofence', 'code'],
+    wifi_ssid: 'Cloud9_Guest',
     settings: { hours: '18:00–03:00' },
+    secret: { checkin_code: 'CLOUD9', wifi_password: 'sing4ever' },
   },
   {
-    name: 'Vault Billiards',
+    name: VAULT,
     type: 'billiards',
     description:
       "Speakeasy-style pool hall in Dubai Marina. Eight Diamond tables, tournament nights, " +
@@ -686,7 +712,10 @@ const VENUES = [
     cover_url:
       'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
     subscription_tier: 'basic',
+    checkin_methods: ['geofence', 'code'],
+    wifi_ssid: 'Vault_Guest',
     settings: { hours: '16:00–02:00' },
+    secret: { checkin_code: 'RACKEM', wifi_password: 'eightball' },
   },
 ];
 
@@ -742,12 +771,14 @@ async function main() {
     demos[u.nickname] = usr.id;
   }
 
-  // 3) Venues
+  // 3) Venues (+ owner-only secrets: check-in code / WiFi password)
   const venueIds = {};
-  for (const v of VENUES) {
-    venueIds[v.name] = await upsertVenueByName(ceo.id, v);
+  for (const { secret, ...v } of VENUES) {
+    const venueId = await upsertVenueByName(ceo.id, v);
+    venueIds[v.name] = venueId;
+    await ensureVenueSecret(venueId, secret);
   }
-  const sky = venueIds['Sky Lounge DIFC'];
+  const sky = venueIds[SKY];
 
   // 4) Check-ins — CEO + each demo user into their own venue (staggered, active)
   const now = Date.now();
@@ -789,7 +820,7 @@ async function main() {
   log('venue chat seeded (Sky Lounge)');
 
   // 5b) Venue chats for the other two venues so they feel alive too
-  const cloud9 = venueIds['Cloud 9 Karaoke'];
+  const cloud9 = venueIds[CLOUD9];
   const cloudChatId = await ensureVenueGeneralChat(cloud9);
   for (const id of [demos.Mei, demos.Yusuf, demos.Priya, demos.Noah]) {
     await ensureParticipant(cloudChatId, id);
@@ -801,7 +832,7 @@ async function main() {
   await insertMessage(cloudChatId, demos.Noah,  "Putting 'Africa' by Toto in the queue, no regrets", 'text', 6);
   await insertMessage(cloudChatId, demos.Mei,   "Yes 🙌 see you in pod 3 in five", 'text', 2);
 
-  const vault = venueIds['Vault Billiards'];
+  const vault = venueIds[VAULT];
   const vaultChatId = await ensureVenueGeneralChat(vault);
   for (const id of [demos.Omar, demos.Elena, demos.Marco]) {
     await ensureParticipant(vaultChatId, id);
@@ -837,55 +868,161 @@ async function main() {
     "Pickup billiards later?", false);
   log('waves seeded');
 
-  // 8) Activities
+  // 8) Activities — a diverse, lively mix per venue covering the main
+  //    crowd-pulling formats: polls, trivia/quiz, contests, tournaments,
+  //    challenges, quests, auctions and live events.
   const startsAt = new Date(now + 30 * 60 * 1000).toISOString();
   const endsAt   = new Date(now + 4 * 60 * 60 * 1000).toISOString();
 
-  await ensureActivity(sky, ceo.id, {
-    type: 'poll',
-    title: 'Friday-night anthem',
-    description: 'Vote for the closing track of the night.',
-    config: {
-      options: [
-        { key: 'house',   label: '🌅 Sunset House (Lane 8)',       votes: 14 },
-        { key: 'disco',   label: '🪩 Disco Revival (Daft Punk)',    votes: 22 },
-        { key: 'r_b',     label: '🎷 Smooth R&B (SZA)',             votes: 11 },
-        { key: 'arabic',  label: '🌙 Modern Arabic House',           votes: 18 },
-      ],
-    },
-    max_participants: null,
-    token_cost: 0,
-    starts_at: startsAt,
-    ends_at: endsAt,
+  // Helper: stagger start/end so cards have varied countdowns.
+  const window = (startMins, durationMins) => ({
+    starts_at: new Date(now + startMins * 60 * 1000).toISOString(),
+    ends_at: new Date(now + (startMins + durationMins) * 60 * 1000).toISOString(),
   });
 
-  await ensureActivity(sky, ceo.id, {
-    type: 'contest',
-    title: 'Best skyline photo',
-    description: 'Snap the city, post in #sky-lounge — winner gets a free table on Friday.',
-    config: { reward_tokens: 100, judge: 'venue', hashtag: '#sky-lounge' },
-    max_participants: 50,
-    token_cost: 5,
-    starts_at: startsAt,
-    ends_at: endsAt,
-  });
-
-  await ensureActivity(sky, ceo.id, {
-    type: 'auction',
-    title: 'VIP table — Friday 10PM',
-    description: 'Premium 6-seat table with bottle service. Auction closes at 21:30.',
-    config: {
-      starting_bid: 50,
-      current_bid: 220,
-      currency: 'tokens',
-      reward: '6-seat VIP table',
+  // ── Sky Lounge DIFC ──────────────────────────────────────────────────────
+  const SKY_ACTIVITIES = [
+    {
+      type: 'poll',
+      title: 'Friday-night anthem',
+      description: 'Vote for the closing track of the night.',
+      config: {
+        options: [
+          { key: 'house',  label: '🌅 Sunset House (Lane 8)',    votes: 14 },
+          { key: 'disco',  label: '🪩 Disco Revival (Daft Punk)', votes: 22 },
+          { key: 'r_b',    label: '🎷 Smooth R&B (SZA)',          votes: 11 },
+          { key: 'arabic', label: '🌙 Modern Arabic House',        votes: 18 },
+        ],
+      },
+      max_participants: null, token_cost: 0, ...window(20, 180),
     },
-    max_participants: null,
-    token_cost: 0,
-    starts_at: startsAt,
-    ends_at: endsAt,
-  });
-  log('activities seeded');
+    {
+      type: 'event',
+      title: 'Sunset rooftop quiz',
+      description: 'Team trivia across music, football and movies. Winning table drinks free.',
+      config: { rounds: 5, team_size: 4, prize: 'Free round for the table' },
+      max_participants: 60, token_cost: 5, ...window(45, 90),
+    },
+    {
+      type: 'contest',
+      title: 'Best skyline photo',
+      description: 'Snap the city, post in #sky-lounge — winner gets a free table on Friday.',
+      config: { reward_tokens: 100, judge: 'venue', hashtag: '#sky-lounge' },
+      max_participants: 50, token_cost: 5, ...window(0, 240),
+    },
+    {
+      type: 'challenge',
+      title: 'Wave to 3 new people',
+      description: 'Break the ice — wave at three strangers tonight and earn bonus tokens.',
+      config: { goal: 3, reward_tokens: 30 },
+      max_participants: null, token_cost: 0, ...window(0, 200),
+    },
+    {
+      type: 'auction',
+      title: 'VIP table — Friday 10PM',
+      description: 'Premium 6-seat table with bottle service. Auction closes at 21:30.',
+      config: { item_name: 'VIP table — Friday 10PM', starting_price: 50, min_increment: 10, current_bid: 220, currency: 'tokens' },
+      max_participants: null, token_cost: 0, ...window(0, 120),
+    },
+  ];
+
+  // ── Cloud 9 Karaoke ──────────────────────────────────────────────────────
+  const CLOUD9_ACTIVITIES = [
+    {
+      type: 'tournament',
+      title: 'Karaoke battle — knockout',
+      description: 'Sing-off bracket, crowd decides the winner. Champion gets a free pod next week.',
+      config: { format: 'knockout', slots: 16, prize: 'Free pod (2h)' },
+      max_participants: 16, token_cost: 10, ...window(30, 150),
+    },
+    {
+      type: 'poll',
+      title: 'Next song for the room',
+      description: 'Crowd-vote the next anthem to blast in the main lounge.',
+      config: {
+        options: [
+          { key: 'toto',    label: '🎹 Africa — Toto',          votes: 19 },
+          { key: 'queen',   label: '👑 Bohemian Rhapsody',       votes: 27 },
+          { key: 'beyonce', label: '🐝 Halo — Beyoncé',          votes: 15 },
+          { key: 'bolly',   label: '💃 Bollywood medley',        votes: 12 },
+        ],
+      },
+      max_participants: null, token_cost: 0, ...window(10, 120),
+    },
+    {
+      type: 'challenge',
+      title: 'Duet with a stranger',
+      description: 'Pair up with someone you just met for a duet — both of you earn tokens.',
+      config: { goal: 1, reward_tokens: 25 },
+      max_participants: null, token_cost: 0, ...window(0, 180),
+    },
+    {
+      type: 'event',
+      title: 'Open mic hour',
+      description: 'The stage is yours — original songs and covers welcome. Sign up at the bar.',
+      config: { slot_minutes: 5, host: 'Mei' },
+      max_participants: 20, token_cost: 0, ...window(60, 90),
+    },
+    {
+      type: 'contest',
+      title: 'Highest note of the night',
+      description: 'Hit the highest note and the room will judge. Bragging rights + 80 tokens.',
+      config: { reward_tokens: 80, judge: 'crowd' },
+      max_participants: 30, token_cost: 5, ...window(20, 200),
+    },
+  ];
+
+  // ── Vault Billiards ──────────────────────────────────────────────────────
+  const VAULT_ACTIVITIES = [
+    {
+      type: 'tournament',
+      title: '8-ball knockout',
+      description: 'Single-elimination on the Diamond tables. Winner takes the pot.',
+      config: { format: 'knockout', slots: 8, prize: '500 tokens' },
+      max_participants: 8, token_cost: 20, ...window(30, 180),
+    },
+    {
+      type: 'challenge',
+      title: 'Trick-shot of the night',
+      description: 'Pull off your best trick shot, film it, tag the venue. Crowd picks a winner.',
+      config: { reward_tokens: 60, hashtag: '#vault-trickshot' },
+      max_participants: null, token_cost: 0, ...window(0, 200),
+    },
+    {
+      type: 'quest',
+      title: 'Pot the rack challenge',
+      description: 'Clear a full rack in under 5 minutes to unlock a free whiskey flight.',
+      config: { steps: ['Clear all stripes', 'Clear all solids', 'Sink the 8-ball'], reward: 'Whiskey flight' },
+      max_participants: null, token_cost: 0, ...window(0, 220),
+    },
+    {
+      type: 'poll',
+      title: 'House rules tonight',
+      description: 'Vote on the format for the late-night table.',
+      config: {
+        options: [
+          { key: 'eight',  label: '🎱 8-ball',        votes: 13 },
+          { key: 'nine',   label: '9️⃣ 9-ball',        votes: 9 },
+          { key: 'snooker',label: '🔴 Snooker',        votes: 6 },
+        ],
+      },
+      max_participants: null, token_cost: 0, ...window(10, 120),
+    },
+    {
+      type: 'auction',
+      title: 'Private table — 2 hours',
+      description: 'Reserve the curtained corner table for two hours. Highest bid wins.',
+      config: { item_name: 'Private corner table (2h)', starting_price: 40, min_increment: 5, current_bid: 95, currency: 'tokens' },
+      max_participants: null, token_cost: 0, ...window(0, 150),
+    },
+  ];
+
+  for (const a of SKY_ACTIVITIES) await ensureActivity(sky, ceo.id, a);
+  for (const a of CLOUD9_ACTIVITIES) await ensureActivity(venueIds[CLOUD9], ceo.id, a);
+  for (const a of VAULT_ACTIVITIES) await ensureActivity(venueIds[VAULT], ceo.id, a);
+  log(
+    `activities seeded (${SKY_ACTIVITIES.length + CLOUD9_ACTIVITIES.length + VAULT_ACTIVITIES.length} across 3 venues)`,
+  );
 
   // 9) Bookable services
   const svc1 = await ensureService(sky, {

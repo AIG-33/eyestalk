@@ -7,9 +7,12 @@ import { CHECKIN_REWARD_TOKENS, CHECKIN_DURATION_HOURS, CHECKIN_REWARD_COOLDOWN_
 const checkinSchema = z.object({
   venue_id: z.string().uuid(),
   qr_code: z.string().optional(),
+  code: z.string().max(50).optional(),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
+
+const DEFAULT_METHODS = ['qr', 'geofence'];
 
 export async function POST(request: NextRequest) {
   const supabase = await createApiRouteSupabase(request);
@@ -30,7 +33,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { venue_id, qr_code, lat, lng } = parsed.data;
+  const { venue_id, qr_code, code, lat, lng } = parsed.data;
 
   const { data: existingCheckin } = await supabase
     .from('checkins')
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const { data: venue } = await supabase
     .from('venues')
-    .select('id, name, latitude, longitude, geofence_radius')
+    .select('id, name, latitude, longitude, geofence_radius, checkin_methods')
     .eq('id', venue_id)
     .single();
 
@@ -56,7 +59,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
   }
 
+  const enabledMethods: string[] =
+    Array.isArray(venue.checkin_methods) && venue.checkin_methods.length > 0
+      ? venue.checkin_methods
+      : DEFAULT_METHODS;
+
+  // Pick the method from the request and validate it against what the venue allows.
+  let method: 'qr' | 'geofence' | 'code';
+
   if (qr_code) {
+    if (!enabledMethods.includes('qr')) {
+      return NextResponse.json({ error: 'QR check-in is not enabled here' }, { status: 400 });
+    }
     const { data: qr } = await supabase
       .from('qr_codes')
       .select('id')
@@ -68,11 +82,31 @@ export async function POST(request: NextRequest) {
     if (!qr) {
       return NextResponse.json({ error: 'Invalid QR code' }, { status: 400 });
     }
+    method = 'qr';
+  } else if (code) {
+    if (!enabledMethods.includes('code')) {
+      return NextResponse.json({ error: 'Code check-in is not enabled here' }, { status: 400 });
+    }
+    const { data: secret } = await admin
+      .from('venue_secrets')
+      .select('checkin_code')
+      .eq('venue_id', venue_id)
+      .maybeSingle();
+
+    const expected = secret?.checkin_code?.trim().toLowerCase();
+    if (!expected || expected !== code.trim().toLowerCase()) {
+      return NextResponse.json({ error: 'Invalid check-in code' }, { status: 400 });
+    }
+    method = 'code';
   } else {
+    if (!enabledMethods.includes('geofence')) {
+      return NextResponse.json({ error: 'Location check-in is not enabled here' }, { status: 400 });
+    }
     const distance = getDistanceMeters(lat, lng, Number(venue.latitude), Number(venue.longitude));
     if (distance > (venue.geofence_radius || 100)) {
       return NextResponse.json({ error: 'Too far from venue' }, { status: 400 });
     }
+    method = 'geofence';
   }
 
   const expiresAt = new Date();
@@ -97,7 +131,7 @@ export async function POST(request: NextRequest) {
     .insert({
       user_id: user.id,
       venue_id,
-      method: qr_code ? 'qr' : 'geofence',
+      method,
       status: 'active',
       tokens_earned: tokensEarned,
       expires_at: expiresAt.toISOString(),

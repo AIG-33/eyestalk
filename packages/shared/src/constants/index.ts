@@ -64,6 +64,11 @@ export type StatusTag = (typeof STATUS_TAGS)[number];
 export const CHECKIN_METHODS = ['qr', 'geofence', 'code'] as const;
 export type CheckinMethod = (typeof CHECKIN_METHODS)[number];
 
+// Methods a venue can let users check in with. QR + geofence are on by default;
+// `code` lets the venue hand out a short code that users type to check in.
+export const DEFAULT_CHECKIN_METHODS: CheckinMethod[] = ['qr', 'geofence'];
+export const MAX_CHECKIN_CODE_LENGTH = 50;
+
 export const CHECKIN_STATUSES = ['active', 'expired', 'manual_checkout', 'geofence_checkout'] as const;
 export type CheckinStatus = (typeof CHECKIN_STATUSES)[number];
 

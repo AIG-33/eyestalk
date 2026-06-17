@@ -5,10 +5,16 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { VENUE_TYPES } from '@eyestalk/shared/constants';
+import { VENUE_TYPES, CHECKIN_METHODS, DEFAULT_CHECKIN_METHODS, type CheckinMethod } from '@eyestalk/shared/constants';
 import { useVenue } from '@/components/dashboard/venue-context';
 import { useTheme } from '@/components/dashboard/theme-context';
 import { useToast } from '@/components/dashboard/toast';
+
+const CHECKIN_METHOD_META: Record<CheckinMethod, { emoji: string; label: string; hint: string }> = {
+  qr: { emoji: '📷', label: 'QR code', hint: 'Guests scan your venue QR' },
+  geofence: { emoji: '📍', label: 'Location', hint: 'Check in when nearby' },
+  code: { emoji: '🔑', label: 'Code', hint: 'Guests type a code you set' },
+};
 
 export default function SettingsPage() {
   const t = useTranslations('dashboard');
@@ -32,6 +38,10 @@ export default function SettingsPage() {
     description: '',
     address: '',
     geofence_radius: 50,
+    checkin_methods: DEFAULT_CHECKIN_METHODS as CheckinMethod[],
+    checkin_code: '',
+    wifi_ssid: '',
+    wifi_password: '',
   });
 
   const loadVenue = useCallback(async () => {
@@ -43,11 +53,14 @@ export default function SettingsPage() {
     }
 
     const supabase = createClient();
-    const { data } = await supabase
-      .from('venues')
-      .select('*')
-      .eq('id', venueId)
-      .maybeSingle();
+    const [{ data }, { data: secret }] = await Promise.all([
+      supabase.from('venues').select('*').eq('id', venueId).maybeSingle(),
+      supabase
+        .from('venue_secrets')
+        .select('checkin_code, wifi_password')
+        .eq('venue_id', venueId)
+        .maybeSingle(),
+    ]);
 
     if (data) {
       setVenue(data);
@@ -58,12 +71,31 @@ export default function SettingsPage() {
         description: data.description || '',
         address: data.address,
         geofence_radius: data.geofence_radius,
+        checkin_methods:
+          Array.isArray(data.checkin_methods) && data.checkin_methods.length > 0
+            ? (data.checkin_methods as CheckinMethod[])
+            : DEFAULT_CHECKIN_METHODS,
+        checkin_code: secret?.checkin_code || '',
+        wifi_ssid: data.wifi_ssid || '',
+        wifi_password: secret?.wifi_password || '',
       });
     } else {
       setVenue(null);
     }
     setLoading(false);
   }, [current?.id]);
+
+  const toggleMethod = (method: CheckinMethod) => {
+    setForm((prev) => {
+      const has = prev.checkin_methods.includes(method);
+      // Keep at least one method enabled.
+      if (has && prev.checkin_methods.length === 1) return prev;
+      const next = has
+        ? prev.checkin_methods.filter((m) => m !== method)
+        : [...prev.checkin_methods, method];
+      return { ...prev, checkin_methods: next };
+    });
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -72,6 +104,12 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (!venue) return;
+
+    if (form.checkin_methods.includes('code') && !form.checkin_code.trim()) {
+      toast('Set a check-in code or disable the code method', 'error');
+      return;
+    }
+
     setSaving(true);
 
     const supabase = createClient();
@@ -82,11 +120,29 @@ export default function SettingsPage() {
         description: form.description || null,
         address: form.address,
         geofence_radius: form.geofence_radius,
+        checkin_methods: form.checkin_methods,
+        wifi_ssid: form.wifi_ssid.trim() || null,
       })
       .eq('id', venue.id);
 
     if (error) {
       toast(error.message, 'error');
+      setSaving(false);
+      return;
+    }
+
+    // Secrets (check-in code + WiFi password) live in a separate, owner-only table.
+    const { error: secretError } = await supabase.from('venue_secrets').upsert(
+      {
+        venue_id: venue.id,
+        checkin_code: form.checkin_code.trim() || null,
+        wifi_password: form.wifi_password.trim() || null,
+      },
+      { onConflict: 'venue_id' },
+    );
+
+    if (secretError) {
+      toast(secretError.message, 'error');
     } else {
       updateVenue(venue.id, { name: form.name, logo_url: logoUrl });
       toast('Settings saved', 'success');
@@ -383,6 +439,88 @@ export default function SettingsPage() {
             max={500}
             className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
           />
+        </div>
+
+        {/* Check-in methods */}
+        <div className="pt-2">
+          <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            Check-in methods
+          </label>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+            Choose how guests can check in. At least one method must stay enabled.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {CHECKIN_METHODS.map((method) => {
+              const active = form.checkin_methods.includes(method);
+              const meta = CHECKIN_METHOD_META[method];
+              return (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => toggleMethod(method)}
+                  className="text-left px-4 py-3 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: active ? 'rgba(124,111,247,0.15)' : 'var(--bg-tertiary)',
+                    border: `2px solid ${active ? 'var(--accent-primary)' : 'transparent'}`,
+                  }}
+                >
+                  <span className="text-lg">{meta.emoji}</span>
+                  <p className="text-sm font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>
+                    {meta.label}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    {meta.hint}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Check-in code (only when the code method is enabled) */}
+        {form.checkin_methods.includes('code') && (
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">Check-in code</label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
+              Guests type this code to check in. Display it at the entrance or on tables.
+            </p>
+            <input
+              type="text"
+              value={form.checkin_code}
+              maxLength={50}
+              onChange={(e) => setForm({ ...form, checkin_code: e.target.value })}
+              placeholder="e.g. CLOUD9"
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white uppercase tracking-wider focus:outline-none focus:border-violet-500"
+            />
+          </div>
+        )}
+
+        {/* WiFi */}
+        <div className="pt-2">
+          <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            WiFi
+          </label>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>
+            The password is only revealed to guests after they check in.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={form.wifi_ssid}
+              maxLength={100}
+              onChange={(e) => setForm({ ...form, wifi_ssid: e.target.value })}
+              placeholder="Network name (SSID)"
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+            />
+            <input
+              type="text"
+              value={form.wifi_password}
+              maxLength={200}
+              onChange={(e) => setForm({ ...form, wifi_password: e.target.value })}
+              placeholder="WiFi password"
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+            />
+          </div>
         </div>
 
         <button

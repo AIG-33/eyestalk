@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
+import { useActiveCheckin } from '@/hooks/use-checkin';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useTheme, typography, spacing, radius, shadows } from '@/theme';
@@ -44,6 +45,8 @@ export default function ActivitiesScreen() {
   const queryClient = useQueryClient();
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
+  const { data: activeCheckin } = useActiveCheckin();
+  const isCheckedInHere = activeCheckin?.venue_id === venueId;
 
   const { data: activities = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['venue', venueId, 'activities'],
@@ -100,6 +103,16 @@ export default function ActivitiesScreen() {
   const handleJoinAndNavigate = async (item: Activity) => {
     const alreadyJoined = joinedSet.has(item.id);
 
+    // Non-checked-in users can browse activities but must check in to take part.
+    if (!isCheckedInHere) {
+      if (item.type === 'poll') {
+        router.push(`/(app)/venue/${venueId}/poll/${item.id}` as any);
+        return;
+      }
+      Alert.alert(t('venue.checkinRequired'), t('venue.checkinRequiredActivities'));
+      return;
+    }
+
     if (item.type === 'poll') {
       if (!alreadyJoined) {
         try {
@@ -131,8 +144,12 @@ export default function ActivitiesScreen() {
     const participants = item._count?.participants ?? 0;
 
     const getButtonLabel = () => {
-      if (isAuction) return isActive ? '💰 Bid' : '👀 View';
-      if (isPoll) return alreadyJoined ? '📊 Vote' : '📊 Join & Vote';
+      if (isAuction) return isActive && isCheckedInHere ? '💰 Bid' : '👀 View';
+      if (isPoll) {
+        if (!isCheckedInHere) return '📊 View';
+        return alreadyJoined ? '📊 Vote' : '📊 Join & Vote';
+      }
+      if (!isCheckedInHere) return `🔒 ${t('venue.checkin')}`;
       if (alreadyJoined) return '✓ Joined';
       return t('activities.join', { defaultValue: 'Join' });
     };
@@ -259,8 +276,14 @@ export default function ActivitiesScreen() {
       <ScreenHeader title={t('activities.title')} />
 
       <View style={s.hintBanner}>
-        <Ionicons name="flash-outline" size={16} color={c.accent.warning} />
-        <Text style={s.hintText}>{t('activities.joinHint')}</Text>
+        <Ionicons
+          name={isCheckedInHere ? 'flash-outline' : 'eye-outline'}
+          size={16}
+          color={c.accent.warning}
+        />
+        <Text style={s.hintText}>
+          {isCheckedInHere ? t('activities.joinHint') : t('activities.previewHint')}
+        </Text>
       </View>
 
       {isLoading ? (

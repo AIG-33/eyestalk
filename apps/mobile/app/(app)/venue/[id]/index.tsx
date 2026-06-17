@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, RefreshControl, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +35,8 @@ export default function VenueDetailScreen() {
   const { checkinMutation, checkoutMutation } = useCheckin();
   const { location } = useLocation();
   const [showStatusSheet, setShowStatusSheet] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
 
   const { data: liveCount = 0 } = useQuery({
@@ -55,26 +57,67 @@ export default function VenueDetailScreen() {
   const isCheckedInHere = activeCheckin?.venue_id === id;
   const isCheckedInElsewhere = activeCheckin && activeCheckin.venue_id !== id;
 
-  const handleCheckin = async () => {
-    if (!location) {
-      Alert.alert('Error', 'Location not available yet. Wait a moment.');
-      return;
-    }
+  const methods: string[] = useMemo(() => {
+    const m = (venue as any)?.checkin_methods;
+    return Array.isArray(m) && m.length > 0 ? m : ['qr', 'geofence'];
+  }, [venue]);
+  const canQr = methods.includes('qr');
+  const canGeofence = methods.includes('geofence');
+  const canCode = methods.includes('code');
+  // The primary CTA uses the most frictionless method; the rest become chips.
+  const primaryMethod: 'geofence' | 'qr' | 'code' = canGeofence ? 'geofence' : canQr ? 'qr' : 'code';
 
-    haptic.medium();
-    checkinMutation.mutate(
-      { venue_id: id, lat: location.latitude, lng: location.longitude },
-      {
-        onSuccess: (result) => {
-          haptic.success();
-          Alert.alert('Checked in!', `You earned ${result.tokens_earned} tokens`);
+  const owner = (venue as any)?.owner ?? null;
+  const wifiSsid = (venue as any)?.wifi_ssid as string | null | undefined;
+
+  // WiFi password is only readable after check-in (enforced server-side by the RPC).
+  const { data: wifiPassword } = useQuery({
+    queryKey: ['venue-wifi', id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('venue_wifi_password', { p_venue_id: id });
+      if (error) throw error;
+      return (data as string | null) ?? null;
+    },
+    enabled: !!id && isCheckedInHere,
+  });
+
+  const runCheckin = useCallback(
+    (params: { qr_code?: string; code?: string }) => {
+      if (!location) {
+        Alert.alert('Error', 'Location not available yet. Wait a moment.');
+        return;
+      }
+      haptic.medium();
+      checkinMutation.mutate(
+        { venue_id: id, lat: location.latitude, lng: location.longitude, ...params },
+        {
+          onSuccess: (result) => {
+            haptic.success();
+            setShowCodeModal(false);
+            setCodeInput('');
+            Alert.alert('Checked in!', `You earned ${result.tokens_earned} tokens`);
+          },
+          onError: (err: any) => {
+            haptic.error();
+            Alert.alert('Check-in failed', err.message || JSON.stringify(err));
+          },
         },
-        onError: (err: any) => {
-          haptic.error();
-          Alert.alert('Check-in failed', err.message || JSON.stringify(err));
-        },
-      },
-    );
+      );
+    },
+    [id, location, checkinMutation],
+  );
+
+  const handleCheckin = () => {
+    // Primary CTA picks the most frictionless enabled method.
+    if (canGeofence) {
+      runCheckin({});
+    } else if (canQr) {
+      router.push('/(app)/venue/check-in' as any);
+    } else if (canCode) {
+      setShowCodeModal(true);
+    } else {
+      runCheckin({});
+    }
   };
 
   const handleCheckout = () => {
@@ -245,24 +288,13 @@ export default function VenueDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={s.bentoCard}
-              onPress={() => {
-                if (!isCheckedInHere) {
-                  Alert.alert(t('venue.checkinRequired'), t('venue.checkinRequiredActivities'));
-                  return;
-                }
-                router.push(`/(app)/venue/${id}/activities` as any);
-              }}
+              onPress={() => router.push(`/(app)/venue/${id}/activities` as any)}
             >
               <View style={s.bentoCardInner}>
-                {!isCheckedInHere && (
-                  <View style={s.lockBadge}>
-                    <Ionicons name="lock-closed" size={10} color={c.text.tertiary} />
-                  </View>
-                )}
-                <Ionicons name="flash" size={28} color={isCheckedInHere ? c.accent.warning : c.text.tertiary} />
+                <Ionicons name="flash" size={28} color={c.accent.warning} />
                 <Text style={s.bentoLabel}>{t('venue.activities')}</Text>
                 <Text style={s.bentoHint}>
-                  {isCheckedInHere ? t('venue.activitiesHint') : t('venue.checkinToJoin')}
+                  {isCheckedInHere ? t('venue.activitiesHint') : t('venue.activitiesPreviewHint')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -277,6 +309,62 @@ export default function VenueDetailScreen() {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* WiFi */}
+          {wifiSsid ? (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('venue.wifi')}</Text>
+              <View style={s.infoCard}>
+                <View style={s.infoIconWrap}>
+                  <Ionicons name="wifi" size={20} color={c.accent.info} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.infoLabel}>{t('venue.wifiNetwork')}</Text>
+                  <Text style={s.infoValue}>{wifiSsid}</Text>
+                  <Text style={[s.infoLabel, { marginTop: spacing.sm }]}>{t('venue.wifiPassword')}</Text>
+                  {isCheckedInHere ? (
+                    <Text style={s.infoValueMono} selectable>
+                      {wifiPassword || '—'}
+                    </Text>
+                  ) : (
+                    <View style={s.lockedRow}>
+                      <Ionicons name="lock-closed" size={13} color={c.text.tertiary} />
+                      <Text style={s.lockedText}>{t('venue.wifiLocked')}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Created by */}
+          {owner && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('venue.createdBy')}</Text>
+              <View style={s.infoCard}>
+                {owner.avatar_url ? (
+                  <Image source={{ uri: owner.avatar_url }} style={s.ownerAvatar} />
+                ) : (
+                  <View style={[s.ownerAvatar, s.ownerAvatarFallback]}>
+                    <Ionicons name="person" size={20} color={c.text.tertiary} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={s.ownerNameRow}>
+                    <Text style={s.infoValue}>{owner.nickname}</Text>
+                    {owner.is_verified && (
+                      <Ionicons name="checkmark-circle" size={15} color={c.accent.info} />
+                    )}
+                  </View>
+                  {owner.bio ? (
+                    <Text style={s.ownerBio} numberOfLines={2}>{owner.bio}</Text>
+                  ) : (
+                    <Text style={s.infoLabel}>{t('venue.venueHost')}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* Zones */}
           {venue.venue_zones && venue.venue_zones.length > 0 && (
@@ -304,19 +392,91 @@ export default function VenueDetailScreen() {
             loading={checkoutMutation.isPending}
           />
         ) : (
-          <Button
-            title={
-              checkinMutation.isPending
-                ? t('common.loading')
-                : isCheckedInElsewhere
-                  ? 'Checked in elsewhere'
-                  : t('venue.checkin')
-            }
-            onPress={handleCheckin}
-            disabled={checkinMutation.isPending || !!isCheckedInElsewhere}
-          />
+          <>
+            {!isCheckedInElsewhere &&
+              ((canQr && primaryMethod !== 'qr') || (canCode && primaryMethod !== 'code')) && (
+                <View style={s.altMethodsRow}>
+                  {canQr && primaryMethod !== 'qr' && (
+                    <TouchableOpacity
+                      style={s.altMethodBtn}
+                      onPress={() => router.push('/(app)/venue/check-in' as any)}
+                    >
+                      <Ionicons name="qr-code-outline" size={16} color={c.text.primary} />
+                      <Text style={s.altMethodText}>{t('venue.scanQR')}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {canCode && primaryMethod !== 'code' && (
+                    <TouchableOpacity
+                      style={s.altMethodBtn}
+                      onPress={() => setShowCodeModal(true)}
+                    >
+                      <Ionicons name="keypad-outline" size={16} color={c.text.primary} />
+                      <Text style={s.altMethodText}>{t('venue.enterCode')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            <Button
+              title={
+                checkinMutation.isPending
+                  ? t('common.loading')
+                  : isCheckedInElsewhere
+                    ? 'Checked in elsewhere'
+                    : primaryMethod === 'geofence'
+                      ? t('venue.checkin')
+                      : primaryMethod === 'qr'
+                        ? t('venue.scanQR')
+                        : t('venue.enterCode')
+              }
+              onPress={handleCheckin}
+              disabled={checkinMutation.isPending || !!isCheckedInElsewhere}
+            />
+          </>
         )}
       </View>
+
+      {/* Code check-in modal */}
+      <Modal
+        visible={showCodeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCodeModal(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>{t('venue.enterCodeTitle')}</Text>
+            <Text style={s.modalHint}>{t('venue.enterCodeHint')}</Text>
+            <TextInput
+              style={s.codeInput}
+              value={codeInput}
+              onChangeText={setCodeInput}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder={t('venue.codePlaceholder')}
+              placeholderTextColor={c.text.tertiary}
+            />
+            <View style={s.modalActions}>
+              <TouchableOpacity
+                style={s.modalCancel}
+                onPress={() => {
+                  setShowCodeModal(false);
+                  setCodeInput('');
+                }}
+              >
+                <Text style={s.modalCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={t('venue.checkin')}
+                  onPress={() => runCheckin({ code: codeInput.trim() })}
+                  disabled={!codeInput.trim() || checkinMutation.isPending}
+                  loading={checkinMutation.isPending}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {showStatusSheet && activeCheckin && (
         <VenueStatusSheet
@@ -506,6 +666,94 @@ function createStyles(c: ThemeColors, isDark: boolean) {
     zoneText: {
       color: c.text.primary, fontSize: typography.size.bodyMd,
       fontWeight: typography.weight.medium,
+    },
+    infoCard: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+      backgroundColor: c.bg.secondary, borderRadius: radius.lg,
+      padding: spacing.lg, borderWidth: 1, borderColor,
+    },
+    infoIconWrap: {
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: `${c.accent.info}18`,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    infoLabel: {
+      color: c.text.tertiary, fontSize: typography.size.bodySm,
+    },
+    infoValue: {
+      color: c.text.primary, fontSize: typography.size.bodyMd,
+      fontWeight: typography.weight.semibold,
+    },
+    infoValueMono: {
+      color: c.text.primary, fontSize: typography.size.bodyMd,
+      fontWeight: typography.weight.bold, letterSpacing: 1,
+      marginTop: 2,
+    },
+    lockedRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4,
+    },
+    lockedText: {
+      color: c.text.tertiary, fontSize: typography.size.bodySm,
+    },
+    ownerAvatar: {
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: c.bg.tertiary,
+    },
+    ownerAvatarFallback: {
+      alignItems: 'center', justifyContent: 'center',
+    },
+    ownerNameRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+    },
+    ownerBio: {
+      color: c.text.secondary, fontSize: typography.size.bodySm,
+      marginTop: 2, lineHeight: typography.size.bodySm * 1.4,
+    },
+    altMethodsRow: {
+      flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm,
+    },
+    altMethodBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, paddingVertical: spacing.md, borderRadius: radius.lg,
+      backgroundColor: c.bg.secondary, borderWidth: 1, borderColor,
+    },
+    altMethodText: {
+      color: c.text.primary, fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.semibold,
+    },
+    modalBackdrop: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+      alignItems: 'center', justifyContent: 'center', padding: spacing.xl,
+    },
+    modalCard: {
+      width: '100%', backgroundColor: c.bg.secondary, borderRadius: radius.xl,
+      padding: spacing.xl, borderWidth: 1, borderColor,
+    },
+    modalTitle: {
+      color: c.text.primary, fontSize: typography.size.headingMd,
+      fontWeight: typography.weight.bold,
+    },
+    modalHint: {
+      color: c.text.secondary, fontSize: typography.size.bodySm,
+      marginTop: spacing.xs, marginBottom: spacing.lg,
+      lineHeight: typography.size.bodySm * 1.5,
+    },
+    codeInput: {
+      backgroundColor: c.bg.tertiary, borderRadius: radius.lg,
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+      color: c.text.primary, fontSize: typography.size.bodyLg,
+      fontWeight: typography.weight.bold, letterSpacing: 2,
+      borderWidth: 1, borderColor, marginBottom: spacing.lg,
+    },
+    modalActions: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    },
+    modalCancel: {
+      paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    },
+    modalCancelText: {
+      color: c.text.secondary, fontSize: typography.size.bodyMd,
+      fontWeight: typography.weight.semibold,
     },
     bottomBar: {
       position: 'absolute', bottom: 0, left: 0, right: 0,

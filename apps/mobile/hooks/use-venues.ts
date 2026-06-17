@@ -108,7 +108,8 @@ export function useVenueDetail(venueId: string) {
         .select(`
           *,
           venue_zones(*),
-          qr_codes(code, type)
+          qr_codes(code, type),
+          owner:profiles!venues_owner_id_fkey(id, nickname, avatar_url, is_verified, bio)
         `)
         .eq('id', venueId)
         .single();

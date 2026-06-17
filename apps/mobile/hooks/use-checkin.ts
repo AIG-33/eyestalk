@@ -41,6 +41,7 @@ export function useCheckin() {
     mutationFn: async (params: {
       venue_id: string;
       qr_code?: string;
+      code?: string;
       lat: number;
       lng: number;
     }) => {
@@ -52,6 +53,7 @@ export function useCheckin() {
       }>('/checkins', {
         venue_id: params.venue_id,
         qr_code: params.qr_code,
+        code: params.code,
         lat: params.lat,
         lng: params.lng,
       });

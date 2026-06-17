@@ -7,6 +7,8 @@ import {
   INTEREST_TYPES,
   REPORT_REASONS,
   ACTIVITY_TYPES,
+  CHECKIN_METHODS,
+  MAX_CHECKIN_CODE_LENGTH,
   MAX_NICKNAME_LENGTH,
   MAX_INTERESTS,
   MAX_LOOKING_FOR_INTERESTS,
@@ -37,11 +39,31 @@ export const venueSchema = z.object({
   longitude: z.number().min(-180).max(180),
   geofence_radius: z.number().min(10).max(500).default(50),
   wifi_ssid: z.string().max(100).optional().nullable(),
+  checkin_methods: z.array(z.enum(CHECKIN_METHODS)).min(1).optional(),
 });
+
+// Owner-editable check-in / access config (settings page).
+export const venueAccessSchema = z
+  .object({
+    checkin_methods: z.array(z.enum(CHECKIN_METHODS)).min(1),
+    checkin_code: z.string().max(MAX_CHECKIN_CODE_LENGTH).optional().nullable(),
+    wifi_ssid: z.string().max(100).optional().nullable(),
+    wifi_password: z.string().max(200).optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.checkin_methods.includes('code') && !data.checkin_code?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['checkin_code'],
+        message: 'A check-in code is required when the code method is enabled',
+      });
+    }
+  });
 
 export const checkinSchema = z.object({
   venue_id: z.string().uuid(),
   qr_code: z.string().optional(),
+  code: z.string().max(MAX_CHECKIN_CODE_LENGTH).optional(),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
@@ -118,6 +140,7 @@ export const createActivitySchema = z.object({
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type VenueInput = z.infer<typeof venueSchema>;
+export type VenueAccessInput = z.infer<typeof venueAccessSchema>;
 export type CheckinInput = z.infer<typeof checkinSchema>;
 export type MessageInput = z.infer<typeof messageSchema>;
 export type SendInterestInput = z.infer<typeof sendInterestSchema>;

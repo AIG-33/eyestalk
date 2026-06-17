@@ -195,7 +195,18 @@
     "servicesHint": "Book tables, lanes, or perks with tokens",
     "checkinRequiredServices": "Check in to this venue to book a service",
     "checkinToBook": "Check in to book",
-    "interestMatch": "match"
+    "interestMatch": "match",
+    "activitiesPreviewHint": "See what's happening here right now",
+    "enterCode": "Enter code",
+    "enterCodeTitle": "Enter check-in code",
+    "enterCodeHint": "Ask the venue staff for the code, then type it below to check in.",
+    "codePlaceholder": "CODE",
+    "wifi": "WiFi",
+    "wifiNetwork": "Network",
+    "wifiPassword": "Password",
+    "wifiLocked": "Check in to see the password",
+    "createdBy": "Created by",
+    "venueHost": "Venue host"
   },
   "venueServices": {
     "title": "Services",
@@ -485,6 +496,7 @@
     "emptyTitle": "No activities yet",
     "emptyHint": "Activities will appear when the venue or other users start them",
     "joinHint": "Join to participate — some activities cost tokens",
+    "previewHint": "Check in to join — here's what's happening right now",
     "participants": "{{count}} participating",
     "timeLeft": "{{time}} left",
     "tokenCost": "{{cost}} tokens to join",
