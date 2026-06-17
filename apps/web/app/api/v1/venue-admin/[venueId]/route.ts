@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { createApiRouteSupabase } from '@/lib/supabase/api-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+
+export const runtime = 'nodejs';
+
+/** Marker-ready logo size. All venue logos are normalized to this square so
+ * they display at a single, predictable size on the map. */
+const LOGO_PX = 256;
 
 type RouteParams = { params: Promise<{ venueId: string }> };
 
@@ -50,15 +57,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Invalid file extension.' }, { status: 400 });
   }
 
-  const filePath = `${venueId}/logo.${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const rawBuffer = Buffer.from(await file.arrayBuffer());
+
+  // Normalize every uploaded logo into a single, map-friendly format: a square
+  // WebP cropped to cover. This guarantees consistent rendering on the map
+  // regardless of the original image's dimensions or aspect ratio.
+  let buffer: Buffer;
+  try {
+    buffer = await sharp(rawBuffer, { animated: false })
+      .rotate() // honor EXIF orientation
+      .resize(LOGO_PX, LOGO_PX, { fit: 'cover', position: 'centre' })
+      .webp({ quality: 90 })
+      .toBuffer();
+  } catch {
+    return NextResponse.json({ error: 'Could not process image. Please use a standard JPG, PNG, or WebP.' }, { status: 400 });
+  }
+
+  // Always store as a single canonical path so old oversized variants are
+  // overwritten and never linger on the map.
+  const filePath = `${venueId}/logo.webp`;
 
   const { error: uploadError } = await admin.storage
     .from('venue-logos')
-    .upload(filePath, buffer, { contentType: file.type, upsert: true });
+    .upload(filePath, buffer, { contentType: 'image/webp', upsert: true });
 
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
+
+  // Remove stale logo files left from earlier (non-webp) uploads.
+  const { data: existing } = await admin.storage.from('venue-logos').list(venueId);
+  const stale = (existing ?? [])
+    .filter((f) => f.name !== 'logo.webp')
+    .map((f) => `${venueId}/${f.name}`);
+  if (stale.length > 0) {
+    await admin.storage.from('venue-logos').remove(stale);
   }
 
   const { data: { publicUrl } } = admin.storage

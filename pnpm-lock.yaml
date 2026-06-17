@@ -200,6 +200,9 @@ importers:
       recharts:
         specifier: ^2.15.0
         version: 2.15.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       zod:
         specifier: ^3.24.0
         version: 3.25.76

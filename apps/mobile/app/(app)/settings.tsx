@@ -16,6 +16,15 @@ export default function SettingsScreen() {
   const toggleStealth = useUIStore((s) => s.toggleStealth);
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
+  const mapMarkerSize = useUIStore((s) => s.mapMarkerSize);
+  const setMapMarkerSize = useUIStore((s) => s.setMapMarkerSize);
+  const isRu = i18n.language === 'ru';
+
+  const markerSizeOptions = [
+    { key: 'small' as const, label: isRu ? 'Маленький' : 'Small' },
+    { key: 'medium' as const, label: isRu ? 'Средний' : 'Medium' },
+    { key: 'large' as const, label: isRu ? 'Большой' : 'Large' },
+  ];
 
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
@@ -170,6 +179,49 @@ export default function SettingsScreen() {
           />
         </SettingsGroup>
 
+        {/* Map */}
+        <SettingsGroup title={isRu ? 'Карта' : 'Map'} c={c} borderColor={borderColor}>
+          <View style={{ padding: spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
+              <Ionicons name="location-outline" size={20} color={c.text.secondary} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: typography.size.bodyLg, color: c.text.primary, fontWeight: typography.weight.medium }}>
+                  {isRu ? 'Размер иконок заведений' : 'Venue icon size'}
+                </Text>
+                <Text style={{ fontSize: typography.size.bodySm, color: c.text.tertiary, marginTop: 2 }}>
+                  {isRu ? 'Размер маркеров заведений на карте' : 'Size of venue markers on the map'}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {markerSizeOptions.map((opt) => {
+                const active = mapMarkerSize === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    onPress={() => setMapMarkerSize(opt.key)}
+                    activeOpacity={0.7}
+                    style={{
+                      flex: 1, alignItems: 'center', justifyContent: 'center',
+                      paddingVertical: 12, borderRadius: radius.md,
+                      backgroundColor: active ? c.accent.primary + '22' : c.bg.tertiary,
+                      borderWidth: 1.5,
+                      borderColor: active ? c.accent.primary : 'transparent',
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: typography.size.bodyMd, fontWeight: typography.weight.semibold,
+                      color: active ? c.accent.primary : c.text.secondary,
+                    }}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </SettingsGroup>
+
         {/* Support */}
         <SettingsGroup title={t('settings.support')} c={c} borderColor={borderColor}>
           <SettingsItem icon="help-circle-outline" label={t('settings.faq')} hint={t('settings.faqHint')} onPress={() => {}} c={c} borderColor={borderColorFaint} />
@@ -199,7 +251,7 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <Text style={{ color: c.text.tertiary, fontSize: typography.size.bodySm, textAlign: 'center', marginTop: spacing.xl }}>
-          EyesTalk v0.1.0
+          EyesTalk v0.1.7
         </Text>
       </ScrollView>
     </View>
