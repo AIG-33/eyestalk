@@ -1,37 +1,66 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
+import type { MarkerSize } from '@/stores/ui.store';
 import { LogoMark } from '@/components/ui/logo-mark';
 
 /**
- * Unified venue marker — ONE rendering path for iOS and Android.
+ * Venue marker — ONE size, controlled by the user's "map marker size" setting.
  *
- * Every venue renders as a fixed-size custom <View> marker, so the on-screen
- * size is identical for all venues regardless of the source logo's real pixel
- * dimensions (the <Image> scales any logo into the marker box). The size is
- * driven by the user's "map marker size" preference.
- *
- * Android note: the Google Maps SDK + New Architecture mis-measures custom
- * <View> markers that use native borderWidth on a rounded view, clipping them.
- * We use the same proven pattern as the cluster marker:
- *   • a transparent padding wrapper (collapsable={false}) gives the SDK a
- *     stable bitmap size so nothing is cut off,
- *   • the logo container has NO borderWidth (overflow:hidden only),
- *   • the ring is a separate inset overlay view,
- *   • tracksViewChanges starts true and flips off once the bitmap is stable.
+ * Platform strategy (deliberate split):
+ *  • Android — the Google Maps SDK + New Architecture mis-renders custom <View>
+ *    markers into a bitmap (clips them / shows only a corner). So Android uses
+ *    NATIVE <Marker image>: a remote logo normalized to an exact pixel size via
+ *    an image proxy, or a pre-rendered fallback PNG. This draws natively and is
+ *    rock-solid + uniformly sized for every venue.
+ *  • iOS — custom <View> markers render perfectly, so we keep the richer look
+ *    (logo + activity ring + count badge), sized in dp.
  */
 
+const IS_ANDROID = Platform.OS === 'android';
 const PURPLE = '#7C6FF7';
 const PUPIL = '#636DF3';
+
+// iOS: logo-container diameter in dp.
+const SIZE_DP: Record<MarkerSize, number> = { small: 34, medium: 44, large: 56 };
+// Android: native marker bitmap size in PIXELS (must match generate-markers.mjs).
+const MARKER_PX: Record<MarkerSize, number> = { small: 110, medium: 140, large: 180 };
+
+// Pre-rendered Android fallback PNGs (no logo), per size + state.
+const FALLBACK: Record<MarkerSize, { default: number; selected: number; active: number }> = {
+  small: {
+    default: require('../../assets/markers/venue-sm.png'),
+    selected: require('../../assets/markers/venue-selected-sm.png'),
+    active: require('../../assets/markers/venue-active-sm.png'),
+  },
+  medium: {
+    default: require('../../assets/markers/venue-md.png'),
+    selected: require('../../assets/markers/venue-selected-md.png'),
+    active: require('../../assets/markers/venue-active-md.png'),
+  },
+  large: {
+    default: require('../../assets/markers/venue-lg.png'),
+    selected: require('../../assets/markers/venue-selected-lg.png'),
+    active: require('../../assets/markers/venue-active-lg.png'),
+  },
+};
+
+/** Normalize any logo URL to an exact square circular PNG via images.weserv.nl. */
+function proxiedLogo(url: string, px: number): string {
+  const src = url.replace(/^https?:\/\//, '');
+  return (
+    `https://images.weserv.nl/?url=ssl:${encodeURIComponent(src)}` +
+    `&w=${px}&h=${px}&fit=cover&mask=circle&output=png`
+  );
+}
 
 interface Props {
   venue: VenueWithStats;
   isSelected: boolean;
   recentlyActive: boolean;
-  /** Logo-container diameter in dp (from the user's marker-size preference). */
-  size: number;
-  /** When true (Matches mode), emphasize venues with matching people. */
+  /** User's marker-size preference. */
+  sizeKey: MarkerSize;
   matchMode?: boolean;
   onPress: (v: VenueWithStats) => void;
 }
@@ -40,7 +69,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
   venue,
   isSelected,
   recentlyActive,
-  size,
+  sizeKey,
   matchMode = false,
   onPress,
 }: Props) {
@@ -48,8 +77,46 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
   const hasActivity = venue.active_checkins > 0;
   const hasMatch = matchMode && venue.interest_matches > 0;
 
+  // ─────────────────────────── Android: native image marker ───────────────
+  if (IS_ANDROID) {
+    const px = MARKER_PX[sizeKey];
+    const coordinate = {
+      latitude: Number(venue.latitude),
+      longitude: Number(venue.longitude),
+    };
+
+    if (hasLogo) {
+      return (
+        <Marker
+          coordinate={coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          onPress={() => onPress(venue)}
+          tracksViewChanges={false}
+          image={{ uri: proxiedLogo(venue.logo_url!, px) }}
+        />
+      );
+    }
+
+    const variant = isSelected
+      ? 'selected'
+      : recentlyActive || hasActivity
+        ? 'active'
+        : 'default';
+    return (
+      <Marker
+        coordinate={coordinate}
+        anchor={{ x: 0.5, y: 0.5 }}
+        onPress={() => onPress(venue)}
+        tracksViewChanges={false}
+        image={FALLBACK[sizeKey][variant]}
+      />
+    );
+  }
+
+  // ─────────────────────────── iOS: custom view marker ────────────────────
+  const size = SIZE_DP[sizeKey];
   const radius = Math.round(size * 0.28);
-  const pad = Math.round(size * 0.34); // room for ring + halo + count badge
+  const pad = Math.round(size * 0.34);
   const outer = size + pad * 2;
 
   const ringColor = isSelected
@@ -63,15 +130,6 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
           : 'rgba(255,255,255,0.5)';
   const ringWidth = isSelected || hasMatch ? Math.max(2, size * 0.06) : hasActivity ? size * 0.05 : size * 0.035;
 
-  // Keep view→bitmap snapshotting on until the marker is visually stable,
-  // then turn it off for performance. Re-arm whenever the look changes.
-  const [tracking, setTracking] = useState(true);
-  useEffect(() => {
-    setTracking(true);
-    const t = setTimeout(() => setTracking(false), hasLogo ? 1500 : 350);
-    return () => clearTimeout(t);
-  }, [hasLogo, venue.logo_url, isSelected, recentlyActive, hasActivity, hasMatch, size]);
-
   return (
     <Marker
       coordinate={{
@@ -80,9 +138,9 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
       }}
       anchor={{ x: 0.5, y: 0.5 }}
       onPress={() => onPress(venue)}
-      tracksViewChanges={tracking}
+      tracksViewChanges={false}
     >
-      <View style={[styles.wrapper, { width: outer, height: outer }]} collapsable={false}>
+      <View style={[styles.wrapper, { width: outer, height: outer }]}>
         {hasActivity && (
           <View
             pointerEvents="none"
@@ -96,7 +154,6 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
           />
         )}
 
-        {/* Logo container — no borderWidth (avoids Android clipping) */}
         <View
           style={{
             width: size,
@@ -106,35 +163,20 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
             backgroundColor: PURPLE,
             alignItems: 'center',
             justifyContent: 'center',
+            borderWidth: ringWidth,
+            borderColor: ringColor,
           }}
-          collapsable={false}
         >
           {hasLogo ? (
             <Image
               source={{ uri: venue.logo_url! }}
               style={{ width: size, height: size }}
               resizeMode="cover"
-              onLoadEnd={() => setTracking(false)}
             />
           ) : (
             <LogoMark size={Math.round(size * 0.62)} color={PURPLE} pupilColor={PUPIL} />
           )}
         </View>
-
-        {/* Ring as an inset overlay (separate view, like the cluster marker) */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: pad,
-            left: pad,
-            width: size,
-            height: size,
-            borderRadius: radius,
-            borderWidth: ringWidth,
-            borderColor: ringColor,
-          }}
-        />
 
         {hasActivity && (
           <View style={[styles.countBadge, { top: pad - size * 0.18, right: pad - size * 0.18 }]}>

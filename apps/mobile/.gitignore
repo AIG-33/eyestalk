@@ -4,3 +4,8 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# App Store Connect API key & other signing secrets
+credentials/
+*.p8
+play-service-account.json

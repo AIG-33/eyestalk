@@ -35,6 +35,11 @@
         "track": "beta",
         "releaseStatus": "draft",
         "changesNotSentForReview": false
+      },
+      "ios": {
+        "ascApiKeyPath": "./credentials/AppStoreConnect_ApiKey.p8",
+        "ascApiKeyId": "TRS8NZAGX5",
+        "ascApiKeyIssuerId": "31303d35-0acc-4d1a-89d4-872e31f2b28f"
       }
     },
     "internal": {

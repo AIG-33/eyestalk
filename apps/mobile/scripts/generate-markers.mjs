@@ -28,8 +28,12 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'assets', 'markers');
 
-const SIZE = 44; // SVG design units (viewBox); rasterized to OUTPUT_PX below
-const OUTPUT_PX = 72; // fixed on-screen marker size (matches proxied logos)
+const SIZE = 44; // SVG design units (viewBox); rasterized per size below
+
+// Output pixel sizes per user "marker size" preference. Android draws
+// <Marker image> at the bitmap's intrinsic PIXEL size, so these must match the
+// px used by the proxied logo markers (see LiveVenueMarker MARKER_PX).
+const OUTPUT_PX_BY_SIZE = { sm: 110, md: 140, lg: 180 };
 const PURPLE = '#7C6FF7';
 const PURPLE_DARK = '#5A4FE0';
 const WHITE = '#FFFFFF';
@@ -105,19 +109,21 @@ const VARIANTS = [
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
-// Remove stale density variants from the previous (multi-scale) scheme.
+// Remove stale variants from previous schemes (density @Nx and single-size).
 for (const f of await fs.readdir(OUT_DIR).catch(() => [])) {
   if (/@\dx\.png$/.test(f)) await fs.rm(path.join(OUT_DIR, f));
 }
 
 for (const { name, opts } of VARIANTS) {
   const svg = venueSvg(opts);
-  const file = `${name}.png`;
-  await sharp(Buffer.from(svg))
-    .resize(OUTPUT_PX, OUTPUT_PX)
-    .png({ compressionLevel: 9 })
-    .toFile(path.join(OUT_DIR, file));
-  console.log(`✓ ${file}  (${OUTPUT_PX}×${OUTPUT_PX})`);
+  for (const [sizeKey, px] of Object.entries(OUTPUT_PX_BY_SIZE)) {
+    const file = `${name}-${sizeKey}.png`;
+    await sharp(Buffer.from(svg))
+      .resize(px, px)
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(OUT_DIR, file));
+    console.log(`✓ ${file}  (${px}×${px})`);
+  }
 }
 
 console.log('\nMarkers generated.');

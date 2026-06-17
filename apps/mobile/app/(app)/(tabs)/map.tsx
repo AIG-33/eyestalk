@@ -24,7 +24,7 @@ import {
   type VenueWithStats,
 } from '@/hooks/use-venues';
 import { useProfile } from '@/hooks/use-profile';
-import { useUIStore, MARKER_SIZE_DP } from '@/stores/ui.store';
+import { useUIStore } from '@/stores/ui.store';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
 import { useRealtimeCheckins } from '@/hooks/use-realtime-checkins';
 import { LiveVenueMarker } from '@/components/map/LiveVenueMarker';
@@ -259,7 +259,6 @@ export default function MapScreen() {
   const { checkinMutation } = useCheckin();
   const recentCheckins = useRealtimeCheckins();
   const mapMarkerSize = useUIStore((s) => s.mapMarkerSize);
-  const markerSizeDp = MARKER_SIZE_DP[mapMarkerSize];
   const { data: profile } = useProfile();
   const { visible: showOnboarding, dismiss: dismissOnboarding } =
     useMapOnboardingVisible();
@@ -550,7 +549,7 @@ export default function MapScreen() {
               isSelected={selectedVenue?.id === venue.id}
               recentlyActive={recentCheckins.has(venue.id)}
               matchMode={matchMode}
-              size={markerSizeDp}
+              sizeKey={mapMarkerSize}
               onPress={handleMarkerPress}
             />
           ))}
