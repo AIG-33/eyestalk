@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-n
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -28,6 +29,13 @@ export default function SettingsScreen() {
 
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const borderColorFaint = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+
+  const appVersion = Constants.expoConfig?.version;
+  const buildNumber =
+    Constants.expoConfig?.ios?.buildNumber ?? Constants.expoConfig?.android?.versionCode;
+  const versionLabel = appVersion
+    ? `${t('settings.version')} ${appVersion}${buildNumber != null ? ` (${buildNumber})` : ''}`
+    : null;
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -250,9 +258,11 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </SettingsGroup>
 
-        <Text style={{ color: c.text.tertiary, fontSize: typography.size.bodySm, textAlign: 'center', marginTop: spacing.xl }}>
-          EyesTalk v0.1.7
-        </Text>
+        {versionLabel && (
+          <Text style={{ color: c.text.tertiary, fontSize: typography.size.bodySm, textAlign: 'center', marginTop: spacing.xl }}>
+            EyesTalk · {versionLabel}
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
