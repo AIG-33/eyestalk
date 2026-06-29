@@ -11,13 +11,13 @@ Package: `com.eyestalkapp.app`  ·  Initial track: **Open testing (beta)**
 ## App name (max 30)
 
 ```
-EyesTalk — Meet at the Venue
+EyesTalk
 ```
 
 ## Short description (max 80)
 
 ```
-From a glance to a conversation. Discover people at the same venue as you.
+Real people, real place, right now.
 ```
 
 ## Full description (max 4000)

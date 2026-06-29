@@ -5,7 +5,7 @@ import { DeleteAccountEN } from './content-en';
 import { DeleteAccountRU } from './content-ru';
 
 export const metadata: Metadata = {
-  title: 'Delete your account — EyesTalk',
+  title: 'Delete your account',
   description: `How to permanently delete your ${COMPANY.brand} account and the associated personal data.`,
   robots: { index: true, follow: true },
 };

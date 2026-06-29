@@ -65,24 +65,26 @@ export default function LoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-12">
-          <Image
-            src="/logo-app-icon.svg"
-            alt="EyesTalk"
-            width={84}
-            height={84}
-            priority
-            className="mb-6"
-            style={{ filter: 'drop-shadow(0 0 24px rgba(124,111,247,0.55))' }}
-          />
-          <h1 className="text-4xl font-extrabold tracking-tight"
-            style={{
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '-1px',
-            }}
-          >
-            Eyes<span className="text-gradient-primary">Talk</span>
-          </h1>
+          <Link href="/" className="flex flex-col items-center transition-opacity hover:opacity-90">
+            <Image
+              src="/logo-app-icon.svg"
+              alt="EyesTalk"
+              width={84}
+              height={84}
+              priority
+              className="mb-6"
+              style={{ filter: 'drop-shadow(0 0 24px rgba(124,111,247,0.55))' }}
+            />
+            <h1 className="text-4xl font-extrabold tracking-tight"
+              style={{
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-display)',
+                letterSpacing: '-1px',
+              }}
+            >
+              Eyes<span className="text-gradient-primary">Talk</span>
+            </h1>
+          </Link>
           <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
             {t('venueOwnerLogin')}
           </p>
@@ -192,6 +194,14 @@ export default function LoginPage() {
             </Link>
           </div>
         </form>
+
+        <p className="mt-8 text-center text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <Link href="/" className="hover:opacity-80">Home</Link>
+          {' · '}
+          <Link href="/services" className="hover:opacity-80">Services</Link>
+          {' · '}
+          <Link href="/contact" className="hover:opacity-80">Contact</Link>
+        </p>
       </div>
     </div>
   );

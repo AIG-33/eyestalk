@@ -334,6 +334,20 @@ export default function LandingPage() {
                 >
                   Open the venue panel
                 </Link>
+                <p
+                  className="mt-4 text-sm"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  Explore{' '}
+                  <Link href="/services" className="underline hover:opacity-80">
+                    venue services
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/promotions" className="underline hover:opacity-80">
+                    promotions
+                  </Link>
+                  .
+                </p>
               </div>
 
               <ul className="space-y-3">

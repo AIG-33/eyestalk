@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { COMPANY } from './company-info';
+import { FOOTER_NAV } from './site-nav';
 import { Wordmark } from '@/components/site/wordmark';
 
 export function SiteFooter() {
@@ -15,7 +16,6 @@ export function SiteFooter() {
     >
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          {/* Brand block */}
           <div>
             <Link href="/" className="flex items-center">
               <Wordmark fontSize={22} />
@@ -29,7 +29,6 @@ export function SiteFooter() {
             </p>
           </div>
 
-          {/* Product */}
           <div>
             <h4
               className="eyebrow mb-3"
@@ -38,46 +37,51 @@ export function SiteFooter() {
               Product
             </h4>
             <ul className="space-y-2 text-sm">
+              {FOOTER_NAV.product.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-opacity hover:opacity-80"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4
+              className="eyebrow mb-3"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Company
+            </h4>
+            <ul className="space-y-2 text-sm">
+              {FOOTER_NAV.company.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-opacity hover:opacity-80"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <Link
-                  href="/#how"
+                <a
+                  href={`mailto:${COMPANY.email}`}
                   className="transition-opacity hover:opacity-80"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  How it works
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/#features"
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/#venues"
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  For venues
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/login"
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Venue panel
-                </Link>
+                  {COMPANY.email}
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
             <h4
               className="eyebrow mb-3"
@@ -86,24 +90,17 @@ export function SiteFooter() {
               Legal
             </h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/privacy"
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  Terms of Service
-                </Link>
-              </li>
+              {FOOTER_NAV.legal.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-opacity hover:opacity-80"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <a
                   href={`mailto:${COMPANY.legalEmail}`}
@@ -115,36 +112,8 @@ export function SiteFooter() {
               </li>
             </ul>
           </div>
-
-          {/* Contact */}
-          <div>
-            <h4
-              className="eyebrow mb-3"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              Contact
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a
-                  href={`mailto:${COMPANY.email}`}
-                  className="transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {COMPANY.email}
-                </a>
-              </li>
-              <li
-                className="text-xs"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                {COMPANY.address}
-              </li>
-            </ul>
-          </div>
         </div>
 
-        {/* Operator + copyright row */}
         <div
           className="mt-12 flex flex-col gap-4 border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between"
           style={{
@@ -160,6 +129,7 @@ export function SiteFooter() {
               {COMPANY.legalNameFull} · License No. {COMPANY.licenseNumber} ·
               TRN {COMPANY.taxNumber}
             </div>
+            <div>{COMPANY.addressShort}</div>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Link
@@ -171,8 +141,16 @@ export function SiteFooter() {
             <Link href="/terms" className="transition-opacity hover:opacity-80">
               Terms
             </Link>
+            <Link
+              href="/delete-account"
+              className="transition-opacity hover:opacity-80"
+            >
+              Delete account
+            </Link>
             <span>·</span>
-            <span>Made in Dubai</span>
+            <Link href="/contact" className="transition-opacity hover:opacity-80">
+              Contact
+            </Link>
           </div>
         </div>
       </div>

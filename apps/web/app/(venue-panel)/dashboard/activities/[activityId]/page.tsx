@@ -62,6 +62,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ActivityDetailPage() {
   const params = useParams();
   const activityId = params.activityId as string;
+  const breadcrumbPath = `/dashboard/activities/${activityId}`;
   const { current } = useVenue();
   const t = useTranslations('dashboard');
 
@@ -182,11 +183,14 @@ export default function ActivityDetailPage() {
   if (loading) {
     return (
       <div className="p-8 max-w-4xl space-y-6">
-        <Breadcrumbs items={[
+        <Breadcrumbs
+          currentPath={breadcrumbPath}
+          items={[
           { label: t('title'), href: '/dashboard' },
           { label: t('activities'), href: '/dashboard/activities' },
           { label: '...' },
-        ]} />
+        ]}
+        />
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-800 rounded w-1/3" />
           <div className="h-4 bg-gray-800 rounded w-2/3" />
@@ -209,11 +213,14 @@ export default function ActivityDetailPage() {
   if (error === 'notFound' || !activity) {
     return (
       <div className="p-8">
-        <Breadcrumbs items={[
+        <Breadcrumbs
+          currentPath={breadcrumbPath}
+          items={[
           { label: t('title'), href: '/dashboard' },
           { label: t('activities'), href: '/dashboard/activities' },
           { label: t('activityNotFound') },
-        ]} />
+        ]}
+        />
         <p className="text-gray-400">{t('activityNotFound')}</p>
       </div>
     );
@@ -222,11 +229,14 @@ export default function ActivityDetailPage() {
   if (error === 'wrongVenue') {
     return (
       <div className="p-8">
-        <Breadcrumbs items={[
+        <Breadcrumbs
+          currentPath={breadcrumbPath}
+          items={[
           { label: t('title'), href: '/dashboard' },
           { label: t('activities'), href: '/dashboard/activities' },
           { label: t('activityWrongVenue') },
-        ]} />
+        ]}
+        />
         <p className="text-gray-400">{t('activityWrongVenue')}</p>
       </div>
     );
@@ -234,11 +244,14 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <Breadcrumbs items={[
+      <Breadcrumbs
+        currentPath={breadcrumbPath}
+        items={[
         { label: t('title'), href: '/dashboard' },
         { label: t('activities'), href: '/dashboard/activities' },
         { label: activity.title },
-      ]} />
+      ]}
+      />
 
       <div className="flex flex-wrap items-start gap-4 mb-8">
         <span className="text-4xl">{EMOJI[activity.type] || '🎯'}</span>

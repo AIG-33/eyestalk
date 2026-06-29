@@ -134,14 +134,19 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center space-y-3">
           <Link
             href="/login"
-            className="text-sm font-medium"
+            className="text-sm font-medium block"
             style={{ color: 'var(--accent-primary-light)' }}
           >
             {t('backToSignIn')}
           </Link>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            <Link href="/" className="hover:opacity-80">Home</Link>
+            {' · '}
+            <Link href="/contact" className="hover:opacity-80">Contact</Link>
+          </p>
         </div>
       </div>
     </div>

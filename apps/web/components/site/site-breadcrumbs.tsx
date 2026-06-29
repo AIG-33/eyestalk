@@ -1,20 +1,18 @@
-'use client';
-
 import Link from 'next/link';
 import { COMPANY } from '@/components/site/company-info';
 
-interface Crumb {
+export type BreadcrumbItem = {
   label: string;
   href?: string;
-}
+};
 
-function buildBreadcrumbJsonLd(items: Crumb[], currentPath: string) {
+function buildBreadcrumbJsonLd(items: BreadcrumbItem[], currentPath: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: items.map((item, index) => {
       const isLast = index === items.length - 1;
-      const path = isLast && !item.href ? currentPath : item.href ?? '/dashboard';
+      const path = isLast && !item.href ? currentPath : item.href ?? '/';
       return {
         '@type': 'ListItem',
         position: index + 1,
@@ -25,11 +23,11 @@ function buildBreadcrumbJsonLd(items: Crumb[], currentPath: string) {
   };
 }
 
-export function Breadcrumbs({
+export function SiteBreadcrumbs({
   items,
   currentPath,
 }: {
-  items: Crumb[];
+  items: BreadcrumbItem[];
   currentPath: string;
 }) {
   const jsonLd = buildBreadcrumbJsonLd(items, currentPath);
@@ -41,33 +39,21 @@ export function Breadcrumbs({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <nav
-        className="mb-6 flex flex-wrap items-center gap-1.5 text-sm"
+        className="mb-8 flex flex-wrap items-center gap-1.5 text-sm"
         aria-label="Breadcrumb"
       >
         <ol className="flex flex-wrap items-center gap-1.5">
           {items.map((item, i) => (
             <li key={i} className="flex items-center gap-1.5">
               {i > 0 && (
-                <svg
-                  className="h-3.5 w-3.5"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                <span aria-hidden="true" style={{ color: 'var(--text-tertiary)' }}>
+                  /
+                </span>
               )}
               {item.href && i < items.length - 1 ? (
                 <Link
                   href={item.href}
-                  className="font-medium transition-colors hover:opacity-80"
+                  className="font-medium transition-opacity hover:opacity-80"
                   style={{ color: 'var(--accent-light)' }}
                 >
                   {item.label}

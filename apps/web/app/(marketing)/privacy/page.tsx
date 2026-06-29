@@ -5,7 +5,7 @@ import { PrivacyEN } from './content-en';
 import { PrivacyRU } from './content-ru';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — EyesTalk',
+  title: 'Privacy Policy',
   description: `How ${COMPANY.brand} collects, uses and protects your personal data.`,
 };
 

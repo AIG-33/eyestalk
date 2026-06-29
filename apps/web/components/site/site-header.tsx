@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { HEADER_NAV } from '@/components/site/site-nav';
 import { Wordmark } from '@/components/site/wordmark';
 
 export async function SiteHeader() {
@@ -16,33 +17,47 @@ export async function SiteHeader() {
         borderColor: 'rgba(255,255,255,0.06)',
       }}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="flex items-center">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+        <Link href="/" className="flex shrink-0 items-center">
           <Wordmark fontSize={20} liveDot />
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-5">
-          <Link
-            href="/#how"
-            className="hidden text-sm font-medium transition-opacity hover:opacity-80 sm:inline-block"
-            style={{ color: 'var(--text-secondary)' }}
+        <nav
+          className="hidden items-center gap-1 lg:flex xl:gap-2"
+          aria-label="Main navigation"
+        >
+          {HEADER_NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80 xl:px-3"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <nav
+            className="flex items-center gap-2 lg:hidden"
+            aria-label="Quick navigation"
           >
-            How it works
-          </Link>
-          <Link
-            href="/#features"
-            className="hidden text-sm font-medium transition-opacity hover:opacity-80 sm:inline-block"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Features
-          </Link>
-          <Link
-            href="/#venues"
-            className="hidden text-sm font-medium transition-opacity hover:opacity-80 sm:inline-block"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            For venues
-          </Link>
+            <Link
+              href="/services"
+              className="hidden text-sm font-medium transition-opacity hover:opacity-80 sm:inline-block"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Services
+            </Link>
+            <Link
+              href="/contact"
+              className="text-sm font-medium transition-opacity hover:opacity-80"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Contact
+            </Link>
+          </nav>
 
           {user ? (
             <Link
@@ -65,7 +80,7 @@ export async function SiteHeader() {
               Sign in
             </Link>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );

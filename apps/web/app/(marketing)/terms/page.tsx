@@ -5,7 +5,7 @@ import { TermsEN } from './content-en';
 import { TermsRU } from './content-ru';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — EyesTalk',
+  title: 'Terms of Service',
   description: `The legal agreement between you and ${COMPANY.brand} for using the Service.`,
 };
 
