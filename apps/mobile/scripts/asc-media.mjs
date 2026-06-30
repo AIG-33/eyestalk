@@ -152,8 +152,104 @@ async function uploadScreens(dir) {
   }
 }
 
+async function getAnyVersion() {
+  const v = await api(`/v1/apps/${APP_ID}/appStoreVersions?limit=10&fields[appStoreVersions]=versionString,appStoreState`);
+  // prefer an editable one, else the most recent
+  return (v.json.data || []).find((x) => EDITABLE.has(x.attributes?.appStoreState)) || (v.json.data || [])[0];
+}
+
+const DEMO = {
+  name: process.env.DEMO_ACCOUNT_NAME || "aria@demo.eyestalk.app",
+  password: process.env.DEMO_ACCOUNT_PASSWORD || "EyesTalkDemo!2026",
+};
+const REVIEW_NOTES = `EyesTalk is a venue-based social-discovery app: you check in to a bar/lounge/karaoke venue and see who else is there right now, send a wave, and chat — presence in the room, not an endless feed.
+
+ACCESSING THE APP (login is required)
+- On the first screen, sign in with email + password:
+  Email: ${DEMO.name}
+  Password: ${DEMO.password}
+- (The "Use another method" link also offers Apple/Google sign-in; email/password above is the simplest.)
+
+WHY THE DEMO ACCOUNT ALREADY SHOWS CONTENT
+- The app normally requires you to be physically inside a venue (location/geofence is used only to verify presence at a venue — never background tracking).
+- This demo account is pre-checked-in to a Dubai venue ("Sky Lounge DIFC (Test)") so you can see the full experience without being on-site: nearby venues on the map, people in the room, venue chat, live activities (polls/contests/auctions), waves, and 1-on-1 chats.
+
+CORE FLOWS TO TRY
+- Map of nearby venues -> open the venue you're checked into -> "People in the room" -> tap a person -> send a wave.
+- Venue chat (group) and Chats inbox (1-on-1). Direct chats auto-expire 24h after checkout.
+- Activities tab: vote in a poll / view a contest or auction.
+
+MODERATION (UGC)
+- Users can report and block other users; chat has automated profanity/abuse detection plus venue-owner moderation.
+
+OTHER
+- No paid content, subscriptions, or in-app purchases. Token economy is non-monetary.
+- No third-party trackers/ads SDKs; ITSAppUsesNonExemptEncryption is false.
+- Currently launching in the United Arab Emirates; functionality is consistent across regions.
+
+Contact: admin@eyestalk.app`;
+
+async function setReview() {
+  const ver = await getAnyVersion();
+  if (!ver) return console.log("no version found");
+  // find existing review detail
+  const cur = await api(`/v1/appStoreVersions/${ver.id}/appStoreReviewDetail`);
+  const attributes = {
+    contactFirstName: process.env.CONTACT_FIRST || "EyesTalk",
+    contactLastName: process.env.CONTACT_LAST || "Team",
+    contactPhone: process.env.CONTACT_PHONE || "+971500000000",
+    contactEmail: process.env.CONTACT_EMAIL || "admin@eyestalk.app",
+    demoAccountName: DEMO.name,
+    demoAccountPassword: DEMO.password,
+    demoAccountRequired: true,
+    notes: REVIEW_NOTES,
+  };
+  let res;
+  if (cur.status === 200 && cur.json.data?.id) {
+    res = await api(`/v1/appStoreReviewDetails/${cur.json.data.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ data: { type: "appStoreReviewDetails", id: cur.json.data.id, attributes } }),
+    });
+  } else {
+    res = await api(`/v1/appStoreReviewDetails`, {
+      method: "POST",
+      body: JSON.stringify({
+        data: {
+          type: "appStoreReviewDetails",
+          attributes,
+          relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: ver.id } } },
+        },
+      }),
+    });
+  }
+  console.log(JSON.stringify({ version: ver.attributes.versionString, state: ver.attributes.appStoreState, action: cur.status === 200 ? "patch" : "create", status: res.status, demoAccountRequired: true, error: res.status >= 300 ? res.json : undefined }, null, 2));
+}
+
+async function setAge18(value) {
+  // find appInfo + its ageRatingDeclaration
+  const infos = await api(`/v1/apps/${APP_ID}/appInfos`);
+  const info = (infos.json.data || []).find((i) => EDITABLE.has(i.attributes?.appStoreState)) || (infos.json.data || [])[0];
+  if (!info) return console.log("no appInfo");
+  const decl = await api(`/v1/appInfos/${info.id}/ageRatingDeclaration`);
+  const id = decl.json.data?.id;
+  if (!id) return console.log("no ageRatingDeclaration", JSON.stringify(decl.json));
+  console.log("current override fields:", JSON.stringify({
+    ageRatingOverride: decl.json.data.attributes?.ageRatingOverride,
+    ageRatingOverrideV2: decl.json.data.attributes?.ageRatingOverrideV2,
+  }));
+  const attributes = {};
+  attributes[process.env.AGE_FIELD || "ageRatingOverrideV2"] = value;
+  const res = await api(`/v1/ageRatingDeclarations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "ageRatingDeclarations", id, attributes } }),
+  });
+  console.log(JSON.stringify({ field: Object.keys(attributes)[0], value, status: res.status, after: res.json.data?.attributes?.[Object.keys(attributes)[0]], error: res.status >= 300 ? res.json : undefined }, null, 2));
+}
+
 const cmd = process.argv[2];
-if (cmd === "build-status") await buildStatus();
+if (cmd === "set-age18") await setAge18(process.argv[3] || "EIGHTEEN_PLUS");
+else if (cmd === "set-review") await setReview();
+else if (cmd === "build-status") await buildStatus();
 else if (cmd === "attach-build") await attachBuild(process.argv[3]);
 else if (cmd === "upload-screens") await uploadScreens(process.argv[3] || path.join(__dirname, "..", "store-listing", "screenshots", "ios"));
 else console.log("usage: build-status | attach-build <num> | upload-screens [dir]");

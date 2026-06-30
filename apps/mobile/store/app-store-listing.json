@@ -1,12 +1,12 @@
 {
   "appInfo": {
     "en-US": {
-      "subtitle": "Real people, real place, now",
+      "subtitle": "Real people, real place, now.",
       "privacyPolicyUrl": "https://eyestalk.app/privacy"
     },
     "ru": {
       "name": "EyesTalk",
-      "subtitle": "Реальные люди, здесь и сейчас",
+      "subtitle": "Real people, real place, now.",
       "privacyPolicyUrl": "https://eyestalk.app/privacy"
     }
   },
@@ -14,7 +14,7 @@
     "en-US": {
       "description": "EyesTalk turns the bar, club, lounge or karaoke room you're already in into a real conversation. Check in with a QR code or geofence, see who else is around right now, send a wave, match on shared interests — and chat without ever swapping phone numbers.\n\nWHAT YOU CAN DO\n• Discover venues nearby on a live map — see what's open and how lively it is right now.\n• Check in with one tap via QR code or geofence. No friend lists, no follows, no feed.\n• See the people at the same venue as you — nickname, age range, bio, interests. Turn on Stealth Mode if you'd rather watch quietly.\n• Send a wave or react with an emoji. Wave back and you can start a chat.\n• Micro-chats are timed and light; full chats open once you match — and everything auto-expires 24 hours after you leave the venue.\n• Join the venue-wide room: announcements, polls, contests, tournaments and auctions hosted by the venue.\n• Earn tokens by checking in and being active, then spend them on activities, song requests and perks.\n• Build loyalty with the venues you visit most.\n\nBUILT FOR THE ROOM YOU'RE IN\nEyesTalk only works when you're actually somewhere. That's the whole point — honest, in-the-moment presence instead of an endless feed.\n\nYOUR PRIVACY\n• Your precise location is only used to verify you're inside a venue. We don't track you in the background or build a location history.\n• No third-party trackers, no advertising SDKs, no IDFA.\n• Delete your account anytime from Profile → Settings → Delete account. Your data is anonymised immediately and purged within 30 days.\n\nWHO IT'S FOR\n• Locals who want to break the ice at their favourite spots.\n• Travellers in a new city looking for who's around.\n• Venues that want to turn walk-ins into a community.\n\nEyesTalk is currently in beta in the United Arab Emirates. We'd love your feedback — reach us in the app or at admin@eyestalk.app.",
       "keywords": "venue,nightlife,meet,hangout,bar,club,nearby,chat,checkin,people,lounge,karaoke,wave,local,events",
-      "promotionalText": "Real people, real place, right now. Check in, see who's around, send a wave, and start a chat — in the room, not on a feed. Now in beta in the UAE.",
+      "promotionalText": "Real people, real place, now. Check in, see who's around, send a wave, and start a chat — in the room, not on a feed. Now in beta in the UAE.",
       "supportUrl": "https://eyestalk.app",
       "marketingUrl": "https://eyestalk.app"
     },

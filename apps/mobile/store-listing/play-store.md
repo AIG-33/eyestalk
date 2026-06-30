@@ -17,7 +17,7 @@ EyesTalk
 ## Short description (max 80)
 
 ```
-Real people, real place, right now.
+Real people, real place, now.
 ```
 
 ## Full description (max 4000)
@@ -160,7 +160,15 @@ Everything else: **Not collected**.
 ## App content — additional answers
 
 * Privacy policy: https://eyestalk.app/privacy
-* App access: All functionality is available without restrictions (no payment to test).
+* App access: **Restricted — login required.** Provide reviewer credentials
+  (Play Console → App content → App access → "All or some functionality is
+  restricted"):
+  - Username/email: `aria@demo.eyestalk.app`
+  - Password: `EyesTalkDemo!2026`
+  - Instructions: this account is pre-checked-in to a Dubai venue ("Sky Lounge
+    DIFC (Test)"), so the full experience (map, people in the room, venue chat,
+    live activities, 1-on-1 chats) is visible without being physically on-site.
+    Sign in with email/password on the first screen.
 * Ads: contains no ads.
 * Content rating questionnaire — IARC: see `content-rating.md` (UAE / GCC).
 * Target audience: 18+ (mature audience). The app is not for children.

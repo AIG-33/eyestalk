@@ -82,7 +82,7 @@ export default function CheckInScreen() {
         </View>
         <Text style={styles.permTitle}>{t('qrScan.title')}</Text>
         <Text style={styles.permDesc}>{t('qrScan.hint')}</Text>
-        <Button title="Grant Camera Access" onPress={requestPermission} />
+        <Button title={t('common.continue')} onPress={requestPermission} />
       </View>
     );
   }

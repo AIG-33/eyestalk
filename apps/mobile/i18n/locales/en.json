@@ -425,6 +425,12 @@
     "retryHint": "Make sure you're at the venue and try scanning again",
     "manualCode": "Enter venue code manually"
   },
+  "checkin": {
+    "visibilityConsentTitle": "Appear to people here?",
+    "visibilityConsentBody": "If you choose to appear, other people checked in at this venue can see you in its people list and send you a wave. You can hide anytime in your venue status.",
+    "visibilityConsentShow": "Appear here",
+    "visibilityConsentHide": "Stay hidden"
+  },
   "people": {
     "title": "People Here",
     "filterAll": "All",

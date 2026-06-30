@@ -127,6 +127,46 @@ async function main() {
     return;
   }
 
+  if (cmd === "release-draft") {
+    // Create/replace a DRAFT release on a track (does NOT submit for review).
+    // Usage: node play-testing.mjs release-draft <track> <versionCode> <name>
+    const trackName = process.argv[3] || "production";
+    const versionCode = process.argv[4];
+    const releaseName = process.argv[5] || "1.0";
+    if (!versionCode) {
+      console.log("usage: release-draft <track> <versionCode> <name>");
+      await api(token, "DELETE", `/applications/${PACKAGE}/edits/${editId}`);
+      return;
+    }
+    const patch = await api(
+      token,
+      "PUT",
+      `/applications/${PACKAGE}/edits/${editId}/tracks/${trackName}`,
+      {
+        track: trackName,
+        releases: [
+          {
+            name: releaseName,
+            versionCodes: [String(versionCode)],
+            status: "draft",
+          },
+        ],
+      }
+    );
+    if (patch.status !== 200) {
+      console.log(JSON.stringify({ step: "patch-track", ...patch }, null, 2));
+      await api(token, "DELETE", `/applications/${PACKAGE}/edits/${editId}`);
+      return;
+    }
+    const commit = await api(
+      token,
+      "POST",
+      `/applications/${PACKAGE}/edits/${editId}:commit`
+    );
+    console.log(JSON.stringify({ patched: patch.json, commit }, null, 2));
+    return;
+  }
+
   if (cmd === "promote") {
     // Promote a draft release on a track to "completed" so it becomes
     // available to testers. Usage: node play-testing.mjs promote <track> <versionCode>
