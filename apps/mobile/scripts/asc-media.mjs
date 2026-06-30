@@ -246,10 +246,107 @@ async function setAge18(value) {
   console.log(JSON.stringify({ field: Object.keys(attributes)[0], value, status: res.status, after: res.json.data?.attributes?.[Object.keys(attributes)[0]], error: res.status >= 300 ? res.json : undefined }, null, 2));
 }
 
+const CLOSED_STATES = new Set(["COMPLETE", "CANCELING", "CANCELED"]);
+// States that can still accept items + be submitted directly.
+const REUSABLE_STATES = new Set(["READY_FOR_REVIEW"]);
+
+async function cancelSubmission(id) {
+  const res = await api(`/v1/reviewSubmissions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "reviewSubmissions", id, attributes: { canceled: true } } }),
+  });
+  console.log("cancel", id, "->", res.status, res.json.data?.attributes?.state || JSON.stringify(res.json.errors?.[0]?.code));
+  // wait until fully CANCELED (CANCELING still holds the version item)
+  for (let i = 0; i < 24; i++) {
+    const g = await api(`/v1/reviewSubmissions/${id}`);
+    const st = g.json.data?.attributes?.state;
+    if (st === "CANCELED" || st === "COMPLETE") { console.log("  cancelled state:", st); return; }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  console.log("  warning: still not CANCELED after wait");
+}
+
+async function submitReview() {
+  const ver = await getEditableVersion();
+  if (!ver) return console.log("no editable version to submit");
+  console.log("version:", ver.attributes.versionString, ver.attributes.appStoreState, "id=" + ver.id);
+
+  // 1) deal with existing submissions: reuse only a clean READY_FOR_REVIEW,
+  //    otherwise cancel the stale/rejected one and create a fresh submission.
+  const existing = await api(`/v1/reviewSubmissions?filter[app]=${APP_ID}&filter[platform]=IOS&limit=20`);
+  const open = (existing.json.data || []).filter((s) => !CLOSED_STATES.has(s.attributes?.state));
+  let sub = open.find((s) => REUSABLE_STATES.has(s.attributes?.state));
+  if (sub) {
+    console.log("reusing reviewSubmission", sub.id, sub.attributes?.state);
+  } else {
+    for (const stale of open) {
+      console.log("cancelling stale submission", stale.id, stale.attributes?.state);
+      await cancelSubmission(stale.id);
+    }
+    const create = await api(`/v1/reviewSubmissions`, {
+      method: "POST",
+      body: JSON.stringify({ data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: APP_ID } } } } }),
+    });
+    if (create.status >= 300) return console.log("create reviewSubmission failed", JSON.stringify(create.json, null, 2));
+    sub = create.json.data;
+    console.log("created reviewSubmission", sub.id);
+  }
+
+  // 2) make sure the version is an item of the submission
+  const items = await api(`/v1/reviewSubmissions/${sub.id}/items?include=appStoreVersion&limit=50`);
+  let hasItem = (items.json.data || []).some((it) => it.relationships?.appStoreVersion?.data?.id === ver.id);
+  if (!hasItem) {
+    const itemRes = await api(`/v1/reviewSubmissionItems`, {
+      method: "POST",
+      body: JSON.stringify({ data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: sub.id } }, appStoreVersion: { data: { type: "appStoreVersions", id: ver.id } } } } }),
+    });
+    if (itemRes.status < 300) {
+      hasItem = true;
+      console.log("added version item", itemRes.json.data?.id);
+    } else {
+      console.log("add item returned", itemRes.status, JSON.stringify(itemRes.json));
+      const recheck = await api(`/v1/reviewSubmissions/${sub.id}/items?include=appStoreVersion&limit=50`);
+      hasItem = (recheck.json.data || []).some((it) => it.relationships?.appStoreVersion?.data?.id === ver.id);
+    }
+  } else {
+    console.log("version item already present");
+  }
+  if (!hasItem) return console.log("aborting: version is not part of the submission");
+
+  // 3) submit
+  const submit = await api(`/v1/reviewSubmissions/${sub.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "reviewSubmissions", id: sub.id, attributes: { submitted: true } } }),
+  });
+  console.log(JSON.stringify({ reviewSubmission: sub.id, patchStatus: submit.status, state: submit.json.data?.attributes?.state, submittedDate: submit.json.data?.attributes?.submittedDate, error: submit.status >= 300 ? submit.json : undefined }, null, 2));
+}
+
+async function diag() {
+  const ver = await getEditableVersion();
+  if (!ver) return console.log("no editable version");
+  console.log("VERSION", ver.attributes.versionString, ver.attributes.appStoreState, ver.id);
+  const b = await api(`/v1/appStoreVersions/${ver.id}/build?fields[builds]=version,processingState`);
+  console.log("ATTACHED BUILD", JSON.stringify(b.json.data?.attributes), b.json.data?.id);
+  const subm = await api(`/v1/appStoreVersions/${ver.id}/appStoreVersionSubmission`);
+  console.log("VERSION SUBMISSION", subm.status, JSON.stringify(subm.json.data?.attributes || subm.json.errors?.[0]?.code));
+  const locs = await api(`/v1/appStoreVersions/${ver.id}/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale&limit=50`);
+  console.log("LOCALES", (locs.json.data || []).map((l) => l.attributes.locale).join(","));
+  const subs = await api(`/v1/reviewSubmissions?filter[app]=${APP_ID}&filter[platform]=IOS&limit=20`);
+  for (const s of subs.json.data || []) {
+    console.log("REVIEW SUBMISSION", s.id, s.attributes?.state);
+    const items = await api(`/v1/reviewSubmissions/${s.id}/items?include=appStoreVersion&limit=50`);
+    for (const it of items.json.data || []) {
+      console.log("  ITEM", it.id, "state=", it.attributes?.state, "verId=", it.relationships?.appStoreVersion?.data?.id, "removed=", it.attributes?.removed);
+    }
+  }
+}
+
 const cmd = process.argv[2];
-if (cmd === "set-age18") await setAge18(process.argv[3] || "EIGHTEEN_PLUS");
+if (cmd === "diag") await diag();
+else if (cmd === "submit-review") await submitReview();
+else if (cmd === "set-age18") await setAge18(process.argv[3] || "EIGHTEEN_PLUS");
 else if (cmd === "set-review") await setReview();
 else if (cmd === "build-status") await buildStatus();
 else if (cmd === "attach-build") await attachBuild(process.argv[3]);
 else if (cmd === "upload-screens") await uploadScreens(process.argv[3] || path.join(__dirname, "..", "store-listing", "screenshots", "ios"));
-else console.log("usage: build-status | attach-build <num> | upload-screens [dir]");
+else console.log("usage: build-status | attach-build <num> | upload-screens [dir] | set-age18 [val] | set-review | submit-review");
