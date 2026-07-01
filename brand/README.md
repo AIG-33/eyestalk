@@ -1,6 +1,6 @@
 # EyesTalk — Brand Media Kit
 
-> **From a glance to a conversation.** Logo, wordmark, app icon, favicons, background and full brand spec — everything needed to replace the identity across the website and the app.
+> **Spot. Talk. Vibe.** Logo, wordmark, app icon, favicons, background and full brand spec — everything needed to replace the identity across the website and the app.
 
 This kit is a handoff package. Hand it to the implementing agent together with `brand-tokens.json` (machine-readable) and this README.
 

@@ -7,8 +7,8 @@ function SignIn({ onIn }) {
       <div style={{ marginTop:30, position:'relative' }}>
         <img src="../../assets/logo-redesigned-mark.svg" style={{ height:84 }}/>
         <h1 style={{ fontFamily:C.fontDisplay, fontWeight:800, fontSize:36, letterSpacing:-0.7, marginTop:18, marginBottom:8, color:C.fg1 }}>
-          From a glance<br/>
-          <span style={{ background:C.gradPrimary, WebkitBackgroundClip:'text', backgroundClip:'text', color:'transparent' }}>to a conversation.</span>
+          Spot. Talk.<br/>
+          <span style={{ background:C.gradPrimary, WebkitBackgroundClip:'text', backgroundClip:'text', color:'transparent' }}>Vibe.</span>
         </h1>
         <p style={{ fontSize:15, lineHeight:1.5, color:C.fg2, margin:0, maxWidth:320 }}>
           Sign in to see who's around you tonight.

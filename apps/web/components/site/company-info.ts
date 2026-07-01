@@ -10,7 +10,7 @@ export const COMPANY = {
   brand: 'EyesTalk',
   domain: 'eyestalk.app',
   url: 'https://eyestalk.app',
-  tagline: 'From a glance to a conversation',
+  tagline: 'Spot. Talk. Vibe.',
 
   // Operating entity (UAE Free Zone Company)
   legalName: 'SAMPLIFY FZCO',

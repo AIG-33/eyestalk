@@ -4,11 +4,11 @@ import type { Metadata } from 'next';
 import { COMPANY } from '@/components/site/company-info';
 
 export const metadata: Metadata = {
-  title: 'EyesTalk — From a glance to a conversation',
+  title: 'EyesTalk — Spot. Talk. Vibe.',
   description:
     'Meet the people around you in real time. Check in to a venue, see who is here right now, send a wave, and start a chat. EyesTalk is the location-based social app for bars, clubs, lounges, karaoke and more.',
   openGraph: {
-    title: 'EyesTalk — From a glance to a conversation',
+    title: 'EyesTalk — Spot. Talk. Vibe.',
     description:
       'Real-time, location-based social app for venues. See who is here, wave, chat.',
     url: COMPANY.url,
@@ -112,8 +112,8 @@ export default function LandingPage() {
               letterSpacing: '-0.02em',
             }}
           >
-            From a glance to a{' '}
-            <span className="text-gradient-primary">conversation</span>
+            Spot. Talk.{' '}
+            <span className="text-gradient-primary">Vibe.</span>
           </h1>
 
           <p

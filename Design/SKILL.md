@@ -29,7 +29,7 @@ ui_kits/mobile/       ← React/JSX recreation of the mobile app screens
 2. **One hero color: violet.** `#7C6FF7` paired with `#A29BFE` in a 135° gradient on every primary action.
 3. **Glow halos, not heavy shadows.** Primary CTAs, status dots, focused inputs all carry a `0 0 15px rgba(124,111,247,0.4), 0 0 30px rgba(124,111,247,0.15)` halo. The double-stop is the look.
 4. **Glass cards on dark.** Surfaces over the map use `rgba(255,255,255,0.08)` + `1px rgba(255,255,255,0.08)` border. Never glass on white.
-5. **Voice is "you", present tense, sentence case.** Tagline: *From a glance to a conversation.* Errors are short and human. No "we" / "our team".
+5. **Voice is "you", present tense, sentence case.** Tagline: *Spot. Talk. Vibe.* Errors are short and human. No "we" / "our team".
 6. **Venue-type icons are emoji**, not custom SVGs. 🪩 nightclub · 🎤 karaoke · ⚽ sports · 🎳 bowling · 🎱 billiards · 💨 hookah · 🎲 board · 🕹️ arcade · 🎵 live music. Token = 🪙.
 7. **App-shell icons are Ionicons** (outline default, filled active).
 8. **Hit targets ≥ 44.** Primary buttons are 56h, secondary 48h. Press = activeOpacity 0.7–0.85 (no scale).

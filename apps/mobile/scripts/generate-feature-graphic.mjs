@@ -2,7 +2,7 @@
  * Generate the Google Play "Feature graphic" (1024×500, 24-bit PNG, no alpha)
  * in the new EyesTalk glass identity: a frosted glass plaque with dual ambient
  * glows, the glasses speech-bubble mark, the Eyes/Talk wordmark + mint dot, and
- * the tagline "From a glance to a conversation".
+ * the tagline "Spot. Talk. Vibe.".
  *
  * Brand-correct text requires the Clash Display font to be visible to librsvg.
  * Run from `apps/mobile` with a fontconfig that points at assets/fonts:
@@ -101,7 +101,7 @@ function sloganSvg() {
   const ch = 110;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${cw}" height="${ch}" viewBox="0 0 ${cw} ${ch}">
     <text x="10" y="70" font-family="${FONT}" font-weight="500" font-size="${fs}"
-          letter-spacing="0.3" fill="${SLOGAN_COLOR}">From a glance to a conversation</text>
+          letter-spacing="0.3" fill="${SLOGAN_COLOR}">Spot. Talk. Vibe.</text>
   </svg>`;
 }
 

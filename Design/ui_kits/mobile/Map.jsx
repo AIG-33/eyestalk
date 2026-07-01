@@ -73,7 +73,7 @@ function MapScreen({ onOpenVenue, onTabChange }) {
           <TopBar
             left={<img src="../../assets/logo-redesigned-mark.svg" style={{ width:36, height:36 }}/>}
             title="EyesTalk"
-            subtitle="From a glance to a conversation"
+            subtitle="Spot. Talk. Vibe."
             right={
               <button style={{ width:48, height:48, borderRadius:9999, border:0,
                 background:C.gradPrimary, color:'#fff', cursor:'pointer', boxShadow:C.glowPrimary, fontSize:18 }}>

@@ -1,6 +1,6 @@
 # EyesTalk
 
-**From a glance to a conversation** — a location-based social app that connects people at venues in real-time.
+**Spot. Talk. Vibe.** — a location-based social app that connects people at venues in real-time.
 
 ## Architecture
 

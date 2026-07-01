@@ -24,8 +24,8 @@ export function SiteFooter() {
               className="mt-3 max-w-xs text-sm"
               style={{ color: 'var(--text-secondary)' }}
             >
-              From a glance to a conversation — meet the people around you,
-              right where you are.
+              Spot. Talk. Vibe. — meet the people around you, right where you
+              are.
             </p>
           </div>
 

@@ -7,7 +7,7 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://eyestalk.app'),
   title: {
-    default: 'EyesTalk — From a glance to a conversation',
+    default: 'EyesTalk — Spot. Talk. Vibe.',
     template: '%s · EyesTalk',
   },
   description:
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   openGraph: {
-    title: 'EyesTalk — From a glance to a conversation',
+    title: 'EyesTalk — Spot. Talk. Vibe.',
     description:
       'Real-time, location-based social app for venues. See who is here, wave, chat.',
     url: 'https://eyestalk.app',

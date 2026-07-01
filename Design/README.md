@@ -1,6 +1,6 @@
 # EyesTalk Design System
 
-> **From a glance to a conversation** — a location-based social app that connects people at venues in real-time.
+> **Spot. Talk. Vibe.** — a location-based social app that connects people at venues in real-time.
 
 EyesTalk is a mobile-first social app that lives at bars, clubs, karaoke rooms, lounges, bowling alleys, hookah spots, arcades and live-music venues. Users **check in** to a venue (via QR + geofence), see **who's around right now**, send **waves**, and start **micro-chats** that auto-expire when they leave.
 
@@ -72,7 +72,7 @@ EyesTalk's voice is **warm, casual, present-tense, and a little flirty** — it 
 - **Hint copy is reassuring, not corporate.** _"This is how others will see you. You can change it anytime."_ — explanations always include the "you can undo it" out.
 
 **Specific patterns from the i18n bundle**
-- Tagline: **"From a glance to a conversation"** — the entire brand promise, used on sign-in, sign-up, map header, splash.
+- Tagline: **"Spot. Talk. Vibe."** — the entire brand promise, used on sign-in, sign-up, map header, splash.
 - Status confirmation: **"You're checked in!"** / **"You're here"** — exclamation marks on positive moments, never on errors.
 - Empty states are 3 lines: title (what's missing) → hint (why) → numbered steps (how to fix). e.g. _"No chats yet"_ → _"Check in to a venue and start meeting people around you"_ → `1. Find a venue → 2. Scan QR → 3. Wave`.
 - Onboarding is **emoji-led**: 📍 Find venues → 👀 Check in → 💬 Connect → 🎯 Have fun. Emoji here are real product emoji (🪩 club, 🎤 karaoke, 🎱 billiards) and act as iconography for venue type.

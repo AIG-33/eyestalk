@@ -71,9 +71,9 @@ export default function SignInScreen() {
           <View style={styles.hero}>
             <LogoMark size={84} glass />
 
-            <Text style={styles.heroLine}>From a glance</Text>
+            <Text style={styles.heroLine}>Spot. Talk.</Text>
             <Text style={[styles.heroLine, styles.heroLineAccent]}>
-              to a conversation.
+              Vibe.
             </Text>
 
             <Text style={styles.tagline}>{t('auth.signInHint')}</Text>

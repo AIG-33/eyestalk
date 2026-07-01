@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LogoMark } from '@/components/ui/logo-mark';
+import { Wordmark } from '@/components/ui/wordmark';
 import { colors, typography, spacing } from '@/theme';
 
 const { height: SH } = Dimensions.get('window');
@@ -122,15 +123,12 @@ export function LoadingScreen() {
         </View>
 
         <Animated.View style={{ opacity: nameOpacity, transform: [{ translateY: nameTranslateY }] }}>
-          <Text style={s.appName}>
-            <Text style={s.nameStrong}>Eyes</Text>
-            <Text style={s.nameLight}>Talk</Text>
-          </Text>
+          <Wordmark fontSize={40} showMark={false} liveDot={false} />
         </Animated.View>
 
         <Animated.View style={{ opacity: sloganOpacity }}>
           <View style={s.sloganLine} />
-          <Text style={s.slogan}>Look up · Speak up · Link up</Text>
+          <Text style={s.slogan}>Spot. Talk. Vibe.</Text>
         </Animated.View>
       </View>
 
@@ -209,22 +207,6 @@ const s = StyleSheet.create({
     elevation: 24,
   },
 
-  appName: {
-    fontSize: typography.size.displayXl,
-    letterSpacing: typography.letterSpacing.display,
-    textAlign: 'center',
-  },
-  nameStrong: {
-    fontFamily: typography.family.displayFallback,
-    fontWeight: typography.weight.extrabold,
-    color: colors.text.primary,
-  },
-  nameLight: {
-    fontFamily: typography.family.displayFallback,
-    fontWeight: typography.weight.regular,
-    color: colors.accent.primaryLight,
-  },
-
   sloganLine: {
     width: 36,
     height: 2,
@@ -236,11 +218,10 @@ const s = StyleSheet.create({
     opacity: 0.7,
   },
   slogan: {
-    fontSize: typography.size.bodySm,
+    fontSize: typography.size.bodyMd,
     fontWeight: typography.weight.semibold,
     color: colors.text.secondary,
     letterSpacing: typography.letterSpacing.caps,
-    textTransform: 'uppercase',
     textAlign: 'center',
   },
 

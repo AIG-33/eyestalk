@@ -17,7 +17,7 @@ EyesTalk
 ## Short description (max 80)
 
 ```
-Real people, real place, now.
+Spot. Talk. Vibe.
 ```
 
 ## Full description (max 4000)
