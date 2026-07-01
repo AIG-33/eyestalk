@@ -341,8 +341,20 @@ async function diag() {
   }
 }
 
+async function status() {
+  const v = await api(`/v1/apps/${APP_ID}/appStoreVersions?limit=10&fields[appStoreVersions]=versionString,appStoreState,createdDate`);
+  for (const x of v.json.data || []) {
+    console.log("VERSION", x.attributes?.versionString, x.attributes?.appStoreState);
+  }
+  const subs = await api(`/v1/reviewSubmissions?filter[app]=${APP_ID}&filter[platform]=IOS&limit=10`);
+  for (const s of subs.json.data || []) {
+    console.log("REVIEW SUBMISSION", s.id, s.attributes?.state, "submitted=" + s.attributes?.submittedDate);
+  }
+}
+
 const cmd = process.argv[2];
-if (cmd === "diag") await diag();
+if (cmd === "status") await status();
+else if (cmd === "diag") await diag();
 else if (cmd === "submit-review") await submitReview();
 else if (cmd === "set-age18") await setAge18(process.argv[3] || "EIGHTEEN_PLUS");
 else if (cmd === "set-review") await setReview();
