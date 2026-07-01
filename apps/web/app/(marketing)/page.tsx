@@ -101,7 +101,7 @@ export default function LandingPage() {
               className="inline-block h-1.5 w-1.5 rounded-full glow-success"
               style={{ background: 'var(--accent-success)' }}
             />
-            Now in private beta
+            Live now
           </div>
 
           <h1
@@ -153,7 +153,7 @@ export default function LandingPage() {
             className="mt-5 text-xs"
             style={{ color: 'var(--text-tertiary)', letterSpacing: '0.4px' }}
           >
-            iOS &amp; Android apps coming soon · No location tracking outside venues
+            On iOS &amp; Android · No location tracking outside venues
           </p>
 
           {/* Glassy preview slab */}

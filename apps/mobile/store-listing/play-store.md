@@ -4,7 +4,7 @@ Copy-paste source for the Play Console main store listing. Treat this file
 as the canonical text; whenever the listing changes, update the file and
 re-paste so the repo and the Play Console don't drift.
 
-Package: `com.eyestalkapp.app`  ·  Initial track: **Open testing (beta)**
+Package: `com.eyestalkapp.app`  ·  Track: **Production**
 
 ---
 
@@ -58,7 +58,7 @@ WHO IT'S FOR
 • Travellers in a new city looking for who's around.
 • Venues that want to turn anonymous walk-ins into a real community.
 
-EyesTalk is currently in open beta in the United Arab Emirates. Feedback
+EyesTalk is available in the United Arab Emirates. Feedback
 goes a long way — write to us in the app or at admin@eyestalk.app.
 ```
 

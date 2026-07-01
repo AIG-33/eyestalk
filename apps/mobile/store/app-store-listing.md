@@ -39,7 +39,7 @@ See who's here right now
 ### Promotional text (≤ 170) — used 136
 
 ```
-Check in to a venue, see who's around right now, send a wave, and start a chat — in the room, not on a feed. Now in beta across the UAE.
+Check in to a venue, see who's around right now, send a wave, and start a chat — in the room, not on a feed. Now available across the UAE.
 ```
 
 ### Keywords (≤ 100) — used 97
@@ -79,7 +79,7 @@ WHO IT'S FOR
 • Travellers in a new city looking for who's around.
 • Venues that want to turn walk-ins into a community.
 
-EyesTalk is currently in beta in the United Arab Emirates. We'd love your feedback — reach us in the app or at admin@eyestalk.app.
+EyesTalk is available in the United Arab Emirates. We'd love your feedback — reach us in the app or at admin@eyestalk.app.
 ```
 
 ### What's New (≤ 4000) — *not applicable for the first version*
