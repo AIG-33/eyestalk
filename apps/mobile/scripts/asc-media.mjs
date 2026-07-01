@@ -352,8 +352,29 @@ async function status() {
   }
 }
 
+async function createVersion(versionString) {
+  // reuse an existing editable version if present
+  const v = await api(`/v1/apps/${APP_ID}/appStoreVersions?limit=10&fields[appStoreVersions]=versionString,appStoreState`);
+  const editable = (v.json.data || []).find((x) => EDITABLE.has(x.attributes?.appStoreState));
+  if (editable) {
+    return console.log(JSON.stringify({ reused: true, version: editable.attributes.versionString, state: editable.attributes.appStoreState, id: editable.id }, null, 2));
+  }
+  const res = await api(`/v1/appStoreVersions`, {
+    method: "POST",
+    body: JSON.stringify({
+      data: {
+        type: "appStoreVersions",
+        attributes: { platform: "IOS", versionString },
+        relationships: { app: { data: { type: "apps", id: APP_ID } } },
+      },
+    }),
+  });
+  console.log(JSON.stringify({ created: res.status < 300, version: versionString, status: res.status, id: res.json.data?.id, error: res.status >= 300 ? res.json : undefined }, null, 2));
+}
+
 const cmd = process.argv[2];
-if (cmd === "status") await status();
+if (cmd === "create-version") await createVersion(process.argv[3] || "1.0.1");
+else if (cmd === "status") await status();
 else if (cmd === "diag") await diag();
 else if (cmd === "submit-review") await submitReview();
 else if (cmd === "set-age18") await setAge18(process.argv[3] || "EIGHTEEN_PLUS");
