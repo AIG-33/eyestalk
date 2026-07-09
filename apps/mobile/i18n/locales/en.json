@@ -367,7 +367,10 @@
       "venue_bonus": "Venue bonus",
       "purchase": "Purchase",
       "achievement_reward": "Achievement reward",
-      "service_booking": "Service booking"
+      "service_booking": "Service booking",
+      "poll_participation_reward": "Poll participation",
+      "match_reward": "Match reward",
+      "venue_added_reward": "Venue added"
     }
   },
   "microChat": {

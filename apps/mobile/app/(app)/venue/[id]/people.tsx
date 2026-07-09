@@ -191,7 +191,7 @@ export default function PeopleScreen() {
           <Ionicons
             name={alreadyWaved ? 'checkmark' : 'hand-right-outline'}
             size={18}
-            color={alreadyWaved ? c.status.success : c.accent.primary}
+            color={alreadyWaved ? c.accent.success : c.accent.primary}
           />
         </TouchableOpacity>
       </View>
@@ -339,8 +339,8 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       alignItems: 'center', justifyContent: 'center',
     },
     waveBtnSent: {
-      borderColor: `${c.status.success}40`,
-      backgroundColor: `${c.status.success}10`,
+      borderColor: `${c.accent.success}40`,
+      backgroundColor: `${c.accent.success}10`,
     },
 
     loadingWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },

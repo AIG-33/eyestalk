@@ -367,7 +367,10 @@
       "venue_bonus": "Бонус заведения",
       "purchase": "Покупка",
       "achievement_reward": "Награда за достижение",
-      "service_booking": "Бронь услуги"
+      "service_booking": "Бронь услуги",
+      "poll_participation_reward": "Участие в опросе",
+      "match_reward": "Награда за матч",
+      "venue_added_reward": "Добавление места"
     }
   },
   "microChat": {
