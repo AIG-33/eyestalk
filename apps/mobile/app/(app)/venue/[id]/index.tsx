@@ -216,6 +216,13 @@ export default function VenueDetailScreen() {
                 </Text>
               </View>
             )}
+            {(venue as any).venue_kind === 'unclaimed' && (
+              <View style={[s.typeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+                <Text style={[s.typeText, { color: c.text.secondary }]}>
+                  {t('venue.unclaimedBadge')}
+                </Text>
+              </View>
+            )}
             {liveCount > 0 && (
               <View style={s.liveBadge}>
                 <View style={s.liveDot} />
@@ -402,6 +409,24 @@ export default function VenueDetailScreen() {
                 </View>
               </View>
             </View>
+          )}
+
+          {/* Ownership claim entry point for imported venues */}
+          {(venue as any).venue_kind === 'unclaimed' && (
+            <TouchableOpacity
+              style={s.claimCard}
+              onPress={() => router.push(`/(app)/venue/${id}/claim` as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.infoIconWrap}>
+                <Ionicons name="business" size={20} color={c.accent.info} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.infoValue}>{t('venue.claimTitle')}</Text>
+                <Text style={s.infoLabel}>{t('venue.claimHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.text.tertiary} />
+            </TouchableOpacity>
           )}
 
           {/* Zones */}
@@ -710,6 +735,12 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
       backgroundColor: c.bg.secondary, borderRadius: radius.lg,
       padding: spacing.lg, borderWidth: 1, borderColor,
+    },
+    claimCard: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      backgroundColor: c.bg.secondary, borderRadius: radius.lg,
+      padding: spacing.lg, borderWidth: 1, borderColor,
+      marginBottom: spacing.xl,
     },
     infoIconWrap: {
       width: 36, height: 36, borderRadius: 18,

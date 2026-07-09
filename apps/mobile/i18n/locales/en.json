@@ -218,7 +218,31 @@
     "chatPreviewLocked": "You're previewing — check in to join the conversation",
     "shareMessage": "Check out {{name}} on EyesTalk — see who's there right now:",
     "popupBadge": "Pop-up",
-    "communityBadge": "Community"
+    "communityBadge": "Community",
+    "unclaimedBadge": "Unclaimed",
+    "claimTitle": "Is this your business?",
+    "claimHint": "Verify ownership to manage this venue"
+  },
+  "claimVenue": {
+    "title": "Claim venue",
+    "intro": "Confirm you own or manage this venue. Once approved, you'll get access to the venue dashboard: activities, announcements, QR codes, analytics and more.",
+    "signInRequired": "Sign in to claim a venue.",
+    "locating": "Getting your location…",
+    "atVenue": "You're at the venue — location confirmed",
+    "tooFar": "You must be at the venue to claim it. You're {{distance}} away.",
+    "phone": "Contact phone",
+    "email": "Contact email",
+    "message": "Message (optional)",
+    "messagePlaceholder": "Your role, best time to contact you…",
+    "proof": "Proof of ownership",
+    "proofHint": "Photo of a business license, utility bill, or anything that proves you run this place.",
+    "addProof": "Add a photo",
+    "submit": "Submit claim",
+    "footnote": "We'll review your claim and may contact you at the number or email you provided. Usually takes 1–2 days.",
+    "submittedTitle": "Claim submitted",
+    "submittedBody": "We'll review it and get back to you within 1–2 days.",
+    "pendingTitle": "Claim under review",
+    "pendingBody": "Your ownership claim for this venue is being reviewed. We'll notify you once it's decided."
   },
   "venueServices": {
     "title": "Services",

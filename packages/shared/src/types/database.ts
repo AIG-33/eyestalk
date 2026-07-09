@@ -79,7 +79,7 @@ export interface Database {
       venues: {
         Row: {
           id: string;
-          owner_id: string;
+          owner_id: string | null;
           name: string;
           type: string;
           description: string | null;
@@ -95,11 +95,13 @@ export interface Database {
           settings: Json;
           venue_kind: string;
           expires_at: string | null;
+          external_source: string | null;
+          external_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          owner_id: string;
+          owner_id?: string | null;
           name: string;
           type: string;
           description?: string | null;
@@ -115,10 +117,12 @@ export interface Database {
           settings?: Json;
           venue_kind?: string;
           expires_at?: string | null;
+          external_source?: string | null;
+          external_id?: string | null;
           created_at?: string;
         };
         Update: {
-          owner_id?: string;
+          owner_id?: string | null;
           name?: string;
           type?: string;
           description?: string | null;
@@ -134,6 +138,48 @@ export interface Database {
           settings?: Json;
           venue_kind?: string;
           expires_at?: string | null;
+          external_source?: string | null;
+          external_id?: string | null;
+        };
+      };
+      venue_claims: {
+        Row: {
+          id: string;
+          venue_id: string;
+          user_id: string;
+          status: string;
+          contact_phone: string | null;
+          contact_email: string | null;
+          message: string | null;
+          proof_path: string | null;
+          distance_m: number | null;
+          created_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          venue_id: string;
+          user_id: string;
+          status?: string;
+          contact_phone?: string | null;
+          contact_email?: string | null;
+          message?: string | null;
+          proof_path?: string | null;
+          distance_m?: number | null;
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          status?: string;
+          contact_phone?: string | null;
+          contact_email?: string | null;
+          message?: string | null;
+          proof_path?: string | null;
+          distance_m?: number | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
         };
       };
       venue_zones: {
