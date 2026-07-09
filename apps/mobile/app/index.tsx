@@ -7,7 +7,8 @@ import { useActiveCheckin } from '@/hooks/use-checkin';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const ONBOARDING_KEY = 'eyestalk_onboarding_seen';
-const MIN_SPLASH_MS = 5000;
+// Keep the splash short — every cold start pays this in full.
+const MIN_SPLASH_MS = 1500;
 const FADE_OUT_MS = 600;
 
 export default function Index() {

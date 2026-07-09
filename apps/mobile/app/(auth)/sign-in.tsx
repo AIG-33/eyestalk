@@ -127,6 +127,15 @@ export default function SignInScreen() {
                 >
                   <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.guestFooter}
+                  onPress={() => router.replace('/(app)/map' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="map-outline" size={16} color={colors.text.tertiary} />
+                  <Text style={styles.guestText}>{t('onboarding.exploreFirst')}</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <>
@@ -288,6 +297,18 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: colors.accent.primaryLight,
+    fontSize: typography.size.bodyMd,
+    fontWeight: typography.weight.medium,
+  },
+  guestFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  guestText: {
+    color: colors.text.tertiary,
     fontSize: typography.size.bodyMd,
     fontWeight: typography.weight.medium,
   },

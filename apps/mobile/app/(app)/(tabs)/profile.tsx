@@ -43,6 +43,41 @@ export default function ProfileScreen() {
     router.replace('/(auth)/sign-in');
   };
 
+  // Guest browsing the map lands here without an account — show a gate.
+  if (!session) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg.primary, alignItems: 'center', justifyContent: 'center', padding: spacing['3xl'], gap: spacing.lg }}>
+        <Ionicons name="person-circle-outline" size={72} color={c.text.tertiary} />
+        <Text style={{ color: c.text.primary, fontSize: typography.size.headingMd, fontWeight: typography.weight.bold, textAlign: 'center' }}>
+          {t('auth.guestProfileTitle')}
+        </Text>
+        <Text style={{ color: c.text.secondary, fontSize: typography.size.bodyMd, textAlign: 'center', lineHeight: typography.size.bodyMd * 1.5 }}>
+          {t('auth.guestProfileBody')}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={{ borderRadius: radius.lg, overflow: 'hidden', alignSelf: 'stretch', marginTop: spacing.md }}
+          onPress={() => router.push('/(auth)/sign-up' as any)}
+        >
+          <LinearGradient
+            colors={isDark ? ['#7C6FF7', '#A29BFE'] : ['#6C5CE7', '#7C6FF7']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={{ paddingVertical: spacing.lg, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#FFF', fontSize: typography.size.headingSm, fontWeight: typography.weight.bold }}>
+              {t('auth.createAccount')}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/(auth)/sign-in' as any)} activeOpacity={0.7}>
+          <Text style={{ color: c.accent.primaryLight, fontSize: typography.size.bodyMd, fontWeight: typography.weight.medium }}>
+            {t('auth.hasAccount')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const handleAvatarPress = () => {
     uploadAvatar.mutate(undefined, {
       onError: (err) => {
@@ -246,8 +281,16 @@ export default function ProfileScreen() {
         <MenuItem icon="settings-outline" label={isRu ? 'Ещё' : 'More settings'} onPress={() => router.push('/(app)/settings' as any)} c={c} borderColor={borderColorFaint} />
       </MenuSection>
 
-      {/* Business */}
-      <MenuSection label={isRu ? 'Бизнес' : 'Business'} c={c} borderColor={borderColor}>
+      {/* Venues */}
+      <MenuSection label={isRu ? 'Заведения' : 'Venues'} c={c} borderColor={borderColor}>
+        <MenuItem
+          icon="add-circle-outline"
+          label={t('createVenue.menuLabel')}
+          hint={t('createVenue.menuHint')}
+          onPress={() => router.push('/(app)/create-venue' as any)}
+          c={c}
+          borderColor={borderColorFaint}
+        />
         <MenuItem icon="business-outline" label={t('profile.createVenue')} hint={t('profile.createVenueHint')} onPress={() => {
           const baseUrl = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/api\/v1\/?$/, '');
           Linking.openURL(`${baseUrl}/dashboard/create-venue`);

@@ -93,6 +93,8 @@ export interface Database {
           subscription_tier: string;
           is_active: boolean;
           settings: Json;
+          venue_kind: string;
+          expires_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -111,6 +113,8 @@ export interface Database {
           subscription_tier?: string;
           is_active?: boolean;
           settings?: Json;
+          venue_kind?: string;
+          expires_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -128,6 +132,8 @@ export interface Database {
           subscription_tier?: string;
           is_active?: boolean;
           settings?: Json;
+          venue_kind?: string;
+          expires_at?: string | null;
         };
       };
       venue_zones: {

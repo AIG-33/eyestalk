@@ -26,6 +26,17 @@ export const VENUE_TYPES = [
 
 export type VenueType = (typeof VENUE_TYPES)[number];
 
+// Who created the venue and how long it lives:
+// - official: business owner via the web panel
+// - community: user-added place from the mobile app (unverified)
+// - popup: temporary event venue that expires (party, game night, meetup)
+export const VENUE_KINDS = ['official', 'community', 'popup'] as const;
+export type VenueKind = (typeof VENUE_KINDS)[number];
+
+export const POPUP_DURATION_HOURS_OPTIONS = [6, 12, 24, 48] as const;
+export const DEFAULT_POPUP_DURATION_HOURS = 24;
+export const VENUE_ADDED_REWARD_TOKENS = 50;
+
 export const AGE_RANGES = ['18-21', '22-25', '26-30', '31-35', '36+'] as const;
 
 export type AgeRange = (typeof AGE_RANGES)[number];
@@ -103,6 +114,7 @@ export const TOKEN_TRANSACTION_TYPES = [
   'service_booking',
   'poll_participation_reward',
   'match_reward',
+  'venue_added_reward',
 ] as const;
 export type TokenTransactionType = (typeof TOKEN_TRANSACTION_TYPES)[number];
 

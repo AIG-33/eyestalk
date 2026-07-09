@@ -25,10 +25,22 @@ export function useAllVenues() {
   return useQuery({
     queryKey: ['venues', 'all'],
     queryFn: async (): Promise<VenueWithStats[]> => {
-      const { data: venues, error } = await supabase
+      // Pop-up venues disappear after their expiry time.
+      let { data: venues, error } = await supabase
         .from('venues')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+
+      // Resilient to a DB that doesn't have expires_at yet (migration order).
+      if (error) {
+        const fallback = await supabase
+          .from('venues')
+          .select('*')
+          .eq('is_active', true);
+        venues = fallback.data;
+        error = fallback.error;
+      }
 
       console.log('[useAllVenues] result:', { count: venues?.length, error: error?.message });
 

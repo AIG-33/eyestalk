@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, RefreshControl, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, RefreshControl, Modal, TextInput, Share } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useVenueDetail } from '@/hooks/use-venues';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
+import { useAuthStore } from '@/stores/auth.store';
 import { useLocation } from '@/hooks/use-location';
 import { supabase } from '@/lib/supabase';
 import { VenueStatusSheet } from '@/components/venue/venue-status-sheet';
@@ -23,6 +24,7 @@ const VENUE_EMOJI: Record<string, string> = {
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
+  const session = useAuthStore((s) => s.session);
   const { c, isDark } = useTheme();
   const { data: venue, isLoading, refetch: refetchVenue, isRefetching: isRefetchingVenue } = useVenueDetail(id);
   const { data: activeCheckin, refetch: refetchCheckin, isRefetching: isRefetchingCheckin } = useActiveCheckin();
@@ -108,6 +110,18 @@ export default function VenueDetailScreen() {
   );
 
   const handleCheckin = () => {
+    // Guests can browse everything; checking in requires an account.
+    if (!session) {
+      Alert.alert(
+        t('auth.guestCheckinTitle'),
+        t('auth.guestCheckinBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('auth.signUp'), onPress: () => router.push('/(auth)/sign-up' as any) },
+        ],
+      );
+      return;
+    }
     // Primary CTA picks the most frictionless enabled method.
     if (canGeofence) {
       runCheckin({});
@@ -161,6 +175,22 @@ export default function VenueDetailScreen() {
           <TouchableOpacity style={s.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/map')}>
             <Ionicons name="chevron-back" size={24} color={c.text.primary} />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.backBtn, s.shareBtn]}
+            onPress={async () => {
+              haptic.light();
+              try {
+                await Share.share({
+                  message: t('venue.shareMessage', { name: (venue as any).name }) +
+                    `\nhttps://eyestalk.app/venue/${id}`,
+                });
+              } catch {
+                /* user dismissed the share sheet */
+              }
+            }}
+          >
+            <Ionicons name="share-outline" size={22} color={c.text.primary} />
+          </TouchableOpacity>
         </View>
 
         <View style={s.content}>
@@ -172,6 +202,20 @@ export default function VenueDetailScreen() {
                 {venue.type.replace('_', ' ')}
               </Text>
             </View>
+            {(venue as any).venue_kind === 'popup' && (
+              <View style={[s.typeBadge, { backgroundColor: 'rgba(255,217,61,0.14)' }]}>
+                <Text style={[s.typeText, { color: '#D9A400' }]}>
+                  🎉 {t('venue.popupBadge')}
+                </Text>
+              </View>
+            )}
+            {(venue as any).venue_kind === 'community' && (
+              <View style={[s.typeBadge, { backgroundColor: 'rgba(0,212,255,0.12)' }]}>
+                <Text style={[s.typeText, { color: c.accent.info }]}>
+                  {t('venue.communityBadge')}
+                </Text>
+              </View>
+            )}
             {liveCount > 0 && (
               <View style={s.liveBadge}>
                 <View style={s.liveDot} />
@@ -265,24 +309,18 @@ export default function VenueDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={s.bentoCard}
-              onPress={() => {
-                if (!isCheckedInHere) {
-                  Alert.alert(t('venue.checkinRequired'), t('venue.checkinRequiredChat'));
-                  return;
-                }
-                router.push(`/(app)/venue/${id}/chat` as any);
-              }}
+              onPress={() => router.push(`/(app)/venue/${id}/chat` as any)}
             >
               <View style={s.bentoCardInner}>
                 {!isCheckedInHere && (
                   <View style={s.lockBadge}>
-                    <Ionicons name="lock-closed" size={10} color={c.text.tertiary} />
+                    <Ionicons name="eye-outline" size={10} color={c.text.tertiary} />
                   </View>
                 )}
                 <Ionicons name="chatbubbles" size={28} color={isCheckedInHere ? c.accent.info : c.text.tertiary} />
                 <Text style={s.bentoLabel}>{t('venue.chat')}</Text>
                 <Text style={s.bentoHint}>
-                  {isCheckedInHere ? t('venue.chatHint') : t('venue.checkinToChat')}
+                  {isCheckedInHere ? t('venue.chatHint') : t('venue.chatPreviewHint')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -519,6 +557,7 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       alignItems: 'center', justifyContent: 'center',
       borderWidth: 1, borderColor,
     },
+    shareBtn: { left: undefined, right: spacing.lg },
     content: { padding: spacing.xl, marginTop: -20 },
     venueName: {
       fontSize: typography.size.displayLg, fontWeight: typography.weight.extrabold,

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth.store';
+import { useActiveCheckin } from '@/hooks/use-checkin';
 import { subscribeToChatMessages, unsubscribe } from '@/lib/realtime';
 import { markChatAsRead } from '@/hooks/use-chat-read';
 import { ReportModal, useBlockUser } from '@/components/ui/report-modal';
@@ -43,6 +44,9 @@ export default function VenueChatScreen() {
   const queryClient = useQueryClient();
   const { c, isDark } = useTheme();
   const s = useMemo(() => createStyles(c, isDark), [c, isDark]);
+  const { data: activeCheckin } = useActiveCheckin();
+  // Not checked in here → read-only preview: see the vibe, can't post.
+  const isCheckedInHere = (activeCheckin as any)?.venue_id === venueId;
 
   const { data: venueInfo } = useQuery({
     queryKey: ['venue', venueId, 'owner-info'],
@@ -57,7 +61,7 @@ export default function VenueChatScreen() {
   });
 
   const { data: chatId } = useQuery({
-    queryKey: ['venue', venueId, 'chat-id'],
+    queryKey: ['venue', venueId, 'chat-id', isCheckedInHere],
     queryFn: async () => {
       let { data } = await supabase
         .from('chats')
@@ -67,7 +71,8 @@ export default function VenueChatScreen() {
         .eq('is_active', true)
         .maybeSingle();
 
-      if (!data) {
+      // Guests can't create chats (RLS) — they only preview existing ones.
+      if (!data && session?.user.id) {
         const { data: newChat, error } = await supabase
           .from('chats')
           .insert({ venue_id: venueId, type: 'venue_general', name: 'General' })
@@ -80,7 +85,8 @@ export default function VenueChatScreen() {
         data = newChat;
       }
 
-      if (data?.id && session?.user.id) {
+      // Only checked-in users become participants; previewers just read.
+      if (data?.id && session?.user.id && isCheckedInHere) {
         await supabase
           .from('chat_participants')
           .upsert(
@@ -320,29 +326,42 @@ export default function VenueChatScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Input bar */}
-      <View style={[s.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <TextInput
-          style={s.input}
-          placeholder={t('chats.sendMessage')}
-          placeholderTextColor={c.text.tertiary}
-          value={text}
-          onChangeText={setText}
-          multiline
-          maxLength={2000}
-        />
-        <TouchableOpacity
-          style={[s.sendButton, !text.trim() && s.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || sendMessage.isPending}
-        >
-          <Ionicons
-            name="arrow-up"
-            size={20}
-            color={text.trim() ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
+      {/* Input bar — or a check-in CTA when just previewing */}
+      {isCheckedInHere ? (
+        <View style={[s.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <TextInput
+            style={s.input}
+            placeholder={t('chats.sendMessage')}
+            placeholderTextColor={c.text.tertiary}
+            value={text}
+            onChangeText={setText}
+            multiline
+            maxLength={2000}
           />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[s.sendButton, !text.trim() && s.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!text.trim() || sendMessage.isPending}
+          >
+            <Ionicons
+              name="arrow-up"
+              size={20}
+              color={text.trim() ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
+            />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={[s.previewBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <Ionicons name="eye-outline" size={16} color={c.text.tertiary} />
+          <Text style={s.previewText}>{t('venue.chatPreviewLocked')}</Text>
+          <TouchableOpacity
+            style={s.previewCta}
+            onPress={() => router.replace(`/(app)/venue/${venueId}` as any)}
+          >
+            <Text style={s.previewCtaText}>{t('venue.checkin')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {reportTarget && (
         <ReportModal
@@ -490,6 +509,23 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       paddingHorizontal: spacing.lg, paddingTop: spacing.sm,
       borderTopWidth: 1, borderTopColor: borderColorFaint,
       backgroundColor: c.bg.primary,
+    },
+    previewBar: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      paddingHorizontal: spacing.lg, paddingTop: spacing.md,
+      borderTopWidth: 1, borderTopColor: borderColorFaint,
+      backgroundColor: c.bg.primary,
+    },
+    previewText: {
+      flex: 1, color: c.text.tertiary, fontSize: typography.size.bodySm,
+    },
+    previewCta: {
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+      borderRadius: radius.full, backgroundColor: c.accent.primary,
+    },
+    previewCtaText: {
+      color: '#FFFFFF', fontSize: typography.size.bodySm,
+      fontWeight: typography.weight.bold,
     },
     input: {
       flex: 1, backgroundColor: c.bg.secondary,

@@ -24,6 +24,7 @@ import {
   type VenueWithStats,
 } from '@/hooks/use-venues';
 import { useProfile } from '@/hooks/use-profile';
+import { useAuthStore } from '@/stores/auth.store';
 import { useUIStore } from '@/stores/ui.store';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
 import { useRealtimeCheckins } from '@/hooks/use-realtime-checkins';
@@ -41,6 +42,10 @@ import {
   getDistanceMeters,
   type MapRegionBounds,
 } from '@/lib/geo';
+import {
+  PRIMARY_LAUNCH_CITY,
+  nearestLaunchCityWithVenues,
+} from '@/lib/launch-cities';
 import { colors, typography, spacing, shadows, radius, useTheme } from '@/theme';
 import { Wordmark } from '@/components/ui/wordmark';
 
@@ -61,14 +66,15 @@ const DARK_MAP_STYLE = [
 
 const LIGHT_MAP_STYLE: any[] = [];
 
-// Immediate map paint (Android waits for GPS otherwise). New users land on Dubai
-// — our launch region with the demo venues — and only recenter on their own
-// location if they're actually near a venue (see centerOnUser below).
+// Immediate map paint (Android waits for GPS otherwise). New users land on the
+// primary launch city and recenter on their own location only if they're near
+// a venue; otherwise we send them to the nearest live launch city (see
+// centerOnUser below).
 const MAP_BOOT_REGION = {
-  latitude: 25.145,
-  longitude: 55.21,
-  latitudeDelta: 0.38,
-  longitudeDelta: 0.38,
+  latitude: PRIMARY_LAUNCH_CITY.latitude,
+  longitude: PRIMARY_LAUNCH_CITY.longitude,
+  latitudeDelta: PRIMARY_LAUNCH_CITY.latitudeDelta,
+  longitudeDelta: PRIMARY_LAUNCH_CITY.longitudeDelta,
 } as const;
 
 /** Only auto-jump to the user's location if there's a venue within this range. */
@@ -274,9 +280,9 @@ export default function MapScreen() {
     return lf.length ? lf : (profile?.interests ?? []);
   }, [profile]);
 
-  const { data: matchMap } = useVenueMatchCounts(
-    matchMode ? effectiveInterests : [],
-  );
+  // Always know where the user's people are — powers both match mode and the
+  // proactive "your crowd is at X" banner.
+  const { data: matchMap } = useVenueMatchCounts(effectiveInterests);
   const [markersReady, setMarkersReady] = useState(false);
   const [mapRegion, setMapRegion] = useState<MapRegionBounds>(() => ({
     latitude: MAP_BOOT_REGION.latitude,
@@ -314,8 +320,8 @@ export default function MapScreen() {
 
   const centerOnUser = useCallback(() => {
     if (!location || !mapRef.current || centeredOnUserRef.current) return;
-    // Keep new users on the Dubai demo region unless they're actually near a venue.
-    const nearVenue = (venues ?? []).some(
+    if (!venues) return; // wait for venue data before deciding where to land
+    const nearVenue = venues.some(
       (v) =>
         getDistanceMeters(
           location.latitude,
@@ -324,17 +330,35 @@ export default function MapScreen() {
           Number(v.longitude),
         ) <= NEAR_VENUE_METERS,
     );
-    if (!nearVenue) return;
     centeredOnUserRef.current = true;
-    mapRef.current.animateToRegion?.(
-      {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      },
-      Platform.OS === 'android' ? 500 : 400,
-    );
+
+    if (nearVenue) {
+      mapRef.current.animateToRegion?.(
+        {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        },
+        Platform.OS === 'android' ? 500 : 400,
+      );
+      return;
+    }
+
+    // Far from any venue: show the nearest live launch city so the first
+    // impression is a populated map, not an empty neighborhood.
+    const city = nearestLaunchCityWithVenues(venues, location);
+    if (city && (city.latitude !== MAP_BOOT_REGION.latitude || city.longitude !== MAP_BOOT_REGION.longitude)) {
+      mapRef.current.animateToRegion?.(
+        {
+          latitude: city.latitude,
+          longitude: city.longitude,
+          latitudeDelta: city.latitudeDelta,
+          longitudeDelta: city.longitudeDelta,
+        },
+        Platform.OS === 'android' ? 500 : 400,
+      );
+    }
   }, [location, venues]);
 
   useEffect(() => {
@@ -368,8 +392,21 @@ export default function MapScreen() {
     [],
   );
 
+  const session = useAuthStore((s) => s.session);
+
   const handleCheckin = useCallback(() => {
     if (!selectedVenue || !location) return;
+    if (!session) {
+      Alert.alert(
+        t('auth.guestCheckinTitle'),
+        t('auth.guestCheckinBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('auth.signUp'), onPress: () => router.push('/(auth)/sign-up' as any) },
+        ],
+      );
+      return;
+    }
     checkinMutation.mutate(
       {
         venue_id: selectedVenue.id,
@@ -389,11 +426,25 @@ export default function MapScreen() {
         },
       },
     );
-  }, [selectedVenue, location, checkinMutation]);
+  }, [selectedVenue, location, checkinMutation, session, t]);
 
   const tagline = activeCheckin
     ? t('map.taglineCheckedIn')
     : t('map.tagline');
+
+  // Best venue for the user's interests right now (FOMO hook shown as a
+  // banner when they're not checked in anywhere).
+  const topMatchVenue = useMemo(() => {
+    if (!venues || !matchMap || activeCheckin) return null;
+    let best: { venue: VenueWithStats; count: number } | null = null;
+    for (const v of venues) {
+      const count = matchMap[v.id] ?? 0;
+      if (count > 0 && (!best || count > best.count)) {
+        best = { venue: v, count };
+      }
+    }
+    return best;
+  }, [venues, matchMap, activeCheckin]);
 
   return (
     <View style={[styles.container, { backgroundColor: c.bg.primary }]}>
@@ -444,6 +495,35 @@ export default function MapScreen() {
             isDark={isDark}
             c={c}
           />
+        )}
+
+        {/* ─── "Your crowd is here" banner ──────────── */}
+        {topMatchVenue && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => handleCardSelect(topMatchVenue.venue)}
+            style={[
+              styles.matchBanner,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255,107,157,0.12)'
+                  : 'rgba(255,107,157,0.08)',
+                borderColor: 'rgba(255,107,157,0.4)',
+              },
+            ]}
+          >
+            <Text style={styles.matchBannerEmoji}>✨</Text>
+            <Text
+              style={[styles.matchBannerText, { color: c.text.primary }]}
+              numberOfLines={2}
+            >
+              {t('map.topMatchBanner', {
+                count: topMatchVenue.count,
+                venue: topMatchVenue.venue.name,
+              })}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={c.accent.pink} />
+          </TouchableOpacity>
         )}
 
         {/* ─── Venue type filters ───────────────────── */}
@@ -562,8 +642,23 @@ export default function MapScreen() {
             {t('map.noVenues')}
           </Text>
           <Text style={[styles.emptyHint, { color: c.text.secondary }]}>
-            {t('map.noVenuesHint')}
+            {t('map.noVenuesCreateHint')}
           </Text>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.emptyCta}
+            onPress={() => router.push('/(app)/create-venue' as any)}
+          >
+            <LinearGradient
+              colors={isDark ? ['#7C6FF7', '#A29BFE'] : ['#6C5CE7', '#7C6FF7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.emptyCtaGradient}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#FFF" />
+              <Text style={styles.emptyCtaText}>{t('map.createSpotCta')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -799,6 +894,41 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: typography.size.bodyMd * 1.5,
+  },
+  matchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginHorizontal: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  matchBannerEmoji: { fontSize: 16 },
+  matchBannerText: {
+    flex: 1,
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
+  },
+
+  emptyCta: {
+    marginTop: spacing.xl,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
+  emptyCtaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 12,
+  },
+  emptyCtaText: {
+    color: '#FFFFFF',
+    fontSize: typography.size.bodyMd,
+    fontWeight: typography.weight.bold,
   },
 
   myLocationBtn: {

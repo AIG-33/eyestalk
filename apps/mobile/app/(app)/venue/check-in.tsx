@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useCheckin } from '@/hooks/use-checkin';
 import { useLocation } from '@/hooks/use-location';
+import { useAuthStore } from '@/stores/auth.store';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { colors, typography, spacing, radius, shadows } from '@/theme';
@@ -18,10 +19,23 @@ export default function CheckInScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const { checkinMutation } = useCheckin();
   const { location } = useLocation();
+  const session = useAuthStore((s) => s.session);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
+
+    if (!session) {
+      Alert.alert(
+        t('auth.guestCheckinTitle'),
+        t('auth.guestCheckinBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => setScanned(false) },
+          { text: t('auth.signUp'), onPress: () => router.replace('/(auth)/sign-up' as any) },
+        ],
+      );
+      return;
+    }
 
     if (!location) {
       Alert.alert(t('common.error'), t('qrScan.error'));

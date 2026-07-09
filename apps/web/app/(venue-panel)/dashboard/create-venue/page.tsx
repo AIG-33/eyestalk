@@ -101,7 +101,9 @@ export default function CreateVenuePage() {
         type: data.type,
         logo_url: data.logo_url,
       });
-      router.push('/dashboard');
+      // A permanent QR code is auto-generated on creation (DB trigger) —
+      // land the owner on the QR page so they can print it right away.
+      router.push('/dashboard/qr-codes');
       router.refresh();
     } catch (err: any) {
       console.error('Unexpected error:', err);

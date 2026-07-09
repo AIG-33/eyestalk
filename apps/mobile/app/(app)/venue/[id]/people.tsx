@@ -55,17 +55,19 @@ export default function PeopleScreen() {
   const { data: people = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['venue-people', venueId, userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('checkins')
         .select('*, profiles(*)')
         .eq('venue_id', venueId!)
         .eq('status', 'active')
-        .eq('is_visible', true)
-        .neq('user_id', userId!);
+        .eq('is_visible', true);
+      // Guests browse the full list; signed-in users don't see themselves.
+      if (userId) query = query.neq('user_id', userId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!venueId && !!userId,
+    enabled: !!venueId,
   });
 
   const { data: sentWaves = [] } = useQuery({
@@ -85,6 +87,17 @@ export default function PeopleScreen() {
 
   const handleSendWave = useCallback((targetId: string) => {
     if (!venueId) return;
+    if (!session) {
+      Alert.alert(
+        t('auth.guestCheckinTitle'),
+        t('auth.guestCheckinBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('auth.signUp'), onPress: () => router.push('/(auth)/sign-up' as any) },
+        ],
+      );
+      return;
+    }
     haptic.light();
     sendWave.mutate(
       { targetUserId: targetId, venueId },
@@ -100,7 +113,7 @@ export default function PeopleScreen() {
         },
       },
     );
-  }, [sendWave, venueId, t]);
+  }, [sendWave, venueId, t, session]);
 
   const filteredPeople = useMemo(() => {
     const withProfile = (people as any[]).filter((p) => p?.profiles);
