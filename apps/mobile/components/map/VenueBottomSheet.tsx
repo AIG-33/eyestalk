@@ -242,6 +242,36 @@ export function VenueBottomSheet({
           </View>
         )}
 
+        {/* Claim entry point for imported (ownerless) venues */}
+        {venue.venue_kind === 'unclaimed' && (
+          <TouchableOpacity
+            style={[
+              styles.claimRow,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(0,212,255,0.07)'
+                  : 'rgba(0,150,200,0.06)',
+                borderColor: isDark
+                  ? 'rgba(0,212,255,0.2)'
+                  : 'rgba(0,150,200,0.18)',
+              },
+            ]}
+            onPress={() => {
+              onClose();
+              router.push(`/(app)/venue/${venue.id}/claim` as any);
+            }}
+          >
+            <Ionicons name="business-outline" size={16} color={c.accent.info} />
+            <Text
+              style={[styles.claimRowText, { color: c.accent.info }]}
+              numberOfLines={1}
+            >
+              {t('venue.claimTitle')}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={c.accent.info} />
+          </TouchableOpacity>
+        )}
+
         {/* Address */}
         {venue.address && (
           <View style={styles.row}>
@@ -527,6 +557,22 @@ const styles = StyleSheet.create({
   activityBadgeText: {
     fontSize: typography.size.micro,
     fontWeight: typography.weight.bold,
+  },
+
+  claimRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+  },
+  claimRowText: {
+    flex: 1,
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
   },
 
   row: {

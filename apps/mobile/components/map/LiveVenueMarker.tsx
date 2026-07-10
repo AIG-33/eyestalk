@@ -3,48 +3,36 @@ import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import type { MarkerSize } from '@/stores/ui.store';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { VENUE_EMOJI } from '@/lib/venue-constants';
+import { venueAmbient } from '@/theme';
 
 /**
  * Venue marker — ONE size, controlled by the user's "map marker size" setting.
  *
  * Platform strategy (deliberate split):
- *  • Android — the Google Maps SDK + New Architecture mis-renders custom <View>
- *    markers into a bitmap (clips them / shows only a corner). So Android uses
- *    NATIVE <Marker image>: a remote logo normalized to an exact pixel size via
- *    an image proxy, or a pre-rendered fallback PNG. This draws natively and is
- *    rock-solid + uniformly sized for every venue.
+ *  • Android + logo — the Google Maps SDK + New Architecture mis-renders some
+ *    custom <View> markers, so venues WITH a logo use NATIVE <Marker image>:
+ *    a remote logo normalized to an exact pixel size via an image proxy.
+ *    Remote bitmaps draw at their intrinsic pixel size — uniform everywhere.
+ *  • Android + no logo — bundled PNG fallbacks are NOT an option: local
+ *    resources go through BitmapFactory.decodeResource which applies the
+ *    device density (mdpi bucket → ×2–3.5 on real phones), making them
+ *    gigantic next to remote-logo markers. Instead we render a small custom
+ *    <View> emoji chip using the same Android-safe pattern as the cluster
+ *    marker (transparent fixed-size wrapper, no borderWidth on the snapshot
+ *    root, tracksViewChanges flips off after one frame). Sized in dp, so it
+ *    matches iOS and stays frozen after the first snapshot (~10k venues).
  *  • iOS — custom <View> markers render perfectly, so we keep the richer look
- *    (logo + activity ring + count badge), sized in dp.
+ *    (logo/emoji + activity ring + count badge), sized in dp.
  */
 
 const IS_ANDROID = Platform.OS === 'android';
 const PURPLE = '#7C6FF7';
-const PUPIL = '#636DF3';
 
-// iOS: logo-container diameter in dp.
+// Logo/emoji chip diameter in dp (custom view markers).
 const SIZE_DP: Record<MarkerSize, number> = { small: 34, medium: 44, large: 56 };
-// Android: native marker bitmap size in PIXELS (must match generate-markers.mjs).
+// Android remote-logo marker bitmap size in PIXELS (intrinsic draw size).
 const MARKER_PX: Record<MarkerSize, number> = { small: 110, medium: 140, large: 180 };
-
-// Pre-rendered Android fallback PNGs (no logo), per size + state.
-const FALLBACK: Record<MarkerSize, { default: number; selected: number; active: number }> = {
-  small: {
-    default: require('../../assets/markers/venue-sm.png'),
-    selected: require('../../assets/markers/venue-selected-sm.png'),
-    active: require('../../assets/markers/venue-active-sm.png'),
-  },
-  medium: {
-    default: require('../../assets/markers/venue-md.png'),
-    selected: require('../../assets/markers/venue-selected-md.png'),
-    active: require('../../assets/markers/venue-active-md.png'),
-  },
-  large: {
-    default: require('../../assets/markers/venue-lg.png'),
-    selected: require('../../assets/markers/venue-selected-lg.png'),
-    active: require('../../assets/markers/venue-active-lg.png'),
-  },
-};
 
 /** Normalize any logo URL to an exact square circular PNG via images.weserv.nl. */
 function proxiedLogo(url: string, px: number): string {
@@ -77,47 +65,41 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
   const hasActivity = venue.active_checkins > 0;
   const hasMatch = matchMode && venue.interest_matches > 0;
 
-  // ─────────────────────────── Android: native image marker ───────────────
-  if (IS_ANDROID) {
-    const px = MARKER_PX[sizeKey];
-    const coordinate = {
-      latitude: Number(venue.latitude),
-      longitude: Number(venue.longitude),
-    };
+  // Android snapshots custom-view markers to a bitmap once. Keep
+  // tracksViewChanges on briefly so the emoji glyph is captured, then freeze
+  // so ~10k markers don't re-render every frame. Re-warm when the visual
+  // state changes (selection / activity / size).
+  const needsWarmup = IS_ANDROID && !hasLogo;
+  const [tracking, setTracking] = useState(needsWarmup);
+  useEffect(() => {
+    if (!needsWarmup) return;
+    setTracking(true);
+    const t = setTimeout(() => setTracking(false), 300);
+    return () => clearTimeout(t);
+  }, [needsWarmup, isSelected, recentlyActive, hasActivity, sizeKey]);
 
-    if (hasLogo) {
-      return (
-        <Marker
-          coordinate={coordinate}
-          anchor={{ x: 0.5, y: 0.5 }}
-          onPress={() => onPress(venue)}
-          tracksViewChanges={false}
-          image={{ uri: proxiedLogo(venue.logo_url!, px) }}
-        />
-      );
-    }
+  const coordinate = {
+    latitude: Number(venue.latitude),
+    longitude: Number(venue.longitude),
+  };
 
-    const variant = isSelected
-      ? 'selected'
-      : recentlyActive || hasActivity
-        ? 'active'
-        : 'default';
+  // ─────────────────────── Android + logo: native image marker ────────────
+  if (IS_ANDROID && hasLogo) {
     return (
       <Marker
         coordinate={coordinate}
         anchor={{ x: 0.5, y: 0.5 }}
         onPress={() => onPress(venue)}
         tracksViewChanges={false}
-        image={FALLBACK[sizeKey][variant]}
+        image={{ uri: proxiedLogo(venue.logo_url!, MARKER_PX[sizeKey]) }}
       />
     );
   }
 
-  // ─────────────────────────── iOS: custom view marker ────────────────────
   const size = SIZE_DP[sizeKey];
   const radius = Math.round(size * 0.28);
-  const pad = Math.round(size * 0.34);
-  const outer = size + pad * 2;
+  const emoji = VENUE_EMOJI[venue.type] || '📍';
+  const ambient = venueAmbient[venue.type]?.[0] ?? venueAmbient.other[0];
 
   const ringColor = isSelected
     ? '#FFFFFF'
@@ -130,12 +112,61 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
           : 'rgba(255,255,255,0.5)';
   const ringWidth = isSelected || hasMatch ? Math.max(2, size * 0.06) : hasActivity ? size * 0.05 : size * 0.035;
 
+  // ─────────────────────── Android + no logo: emoji chip marker ───────────
+  if (IS_ANDROID) {
+    // Transparent padding gives the SDK stable bitmap bounds (see cluster
+    // marker in map.tsx); the ring is an inset overlay because borderWidth on
+    // the chip itself gets clipped by the view→bitmap snapshot.
+    const outer = size + Math.round(size * 0.6);
+    return (
+      <Marker
+        coordinate={coordinate}
+        anchor={{ x: 0.5, y: 0.5 }}
+        onPress={() => onPress(venue)}
+        tracksViewChanges={tracking}
+      >
+        <View
+          collapsable={false}
+          style={[styles.wrapper, { width: outer, height: outer }]}
+        >
+          <View
+            collapsable={false}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: radius,
+              backgroundColor: ambient,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 1,
+                left: 1,
+                right: 1,
+                bottom: 1,
+                borderRadius: radius - 1,
+                borderWidth: ringWidth,
+                borderColor: ringColor,
+              }}
+            />
+            <Text style={{ fontSize: Math.round(size * 0.48) }}>{emoji}</Text>
+          </View>
+        </View>
+      </Marker>
+    );
+  }
+
+  // ─────────────────────────── iOS: custom view marker ────────────────────
+  const pad = Math.round(size * 0.34);
+  const outer = size + pad * 2;
+
   return (
     <Marker
-      coordinate={{
-        latitude: Number(venue.latitude),
-        longitude: Number(venue.longitude),
-      }}
+      coordinate={coordinate}
       anchor={{ x: 0.5, y: 0.5 }}
       onPress={() => onPress(venue)}
       tracksViewChanges={false}
@@ -160,7 +191,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
             height: size,
             borderRadius: radius,
             overflow: 'hidden',
-            backgroundColor: PURPLE,
+            backgroundColor: hasLogo ? PURPLE : ambient,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: ringWidth,
@@ -174,7 +205,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
               resizeMode="cover"
             />
           ) : (
-            <LogoMark size={Math.round(size * 0.62)} color={PURPLE} pupilColor={PUPIL} />
+            <Text style={{ fontSize: Math.round(size * 0.48) }}>{emoji}</Text>
           )}
         </View>
 

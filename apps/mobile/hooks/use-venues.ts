@@ -12,6 +12,8 @@ interface Venue {
   logo_url: string | null;
   cover_url: string | null;
   is_active: boolean;
+  /** 'standard' | 'popup' | 'community' | 'unclaimed' (imported venues awaiting an owner). */
+  venue_kind?: string | null;
 }
 
 export interface VenueWithStats extends Venue {
