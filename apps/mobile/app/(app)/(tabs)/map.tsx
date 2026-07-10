@@ -376,6 +376,24 @@ export default function MapScreen() {
     setSelectedVenue(venue);
   }, []);
 
+  // iOS: a marker tap ALSO triggers MapView.onPress — twice, in fact: the
+  // marker-press event bubbles up to the map, and the map's own tap gesture
+  // recognizer (cancelsTouchesInView=NO) fires for touches on annotation
+  // views with a plain event that has NO `action` field. React batches the
+  // marker's setSelectedVenue(venue) with this handler's setSelectedVenue(null)
+  // into one render, so the venue sheet never opened on iPhone. Guard both
+  // paths: skip explicit marker-press events, and defer the deselect so a
+  // marker press in the same tap (either order) can veto it.
+  const handleMapPress = useCallback((e?: any) => {
+    if (e?.nativeEvent?.action === 'marker-press') return;
+    const pressAt = Date.now();
+    setTimeout(() => {
+      const last = lastMarkerPressRef.current;
+      if (last && Math.abs(last.at - pressAt) < 400) return;
+      setSelectedVenue(null);
+    }, 200);
+  }, []);
+
   const handleCardSelect = useCallback(
     (venue: VenueWithStats) => {
       setSelectedVenue(venue);
@@ -601,7 +619,7 @@ export default function MapScreen() {
         showsUserLocation={!!location}
         showsMyLocationButton={false}
         showsCompass={false}
-        onPress={() => setSelectedVenue(null)}
+        onPress={handleMapPress}
         onRegionChangeComplete={(region) => {
           setMapRegion({
             latitude: region.latitude,
@@ -626,6 +644,10 @@ export default function MapScreen() {
             <LiveVenueMarker
               key={venue.id}
               venue={venue}
+              coordinate={{
+                latitude: Number(venue.latitude),
+                longitude: Number(venue.longitude),
+              }}
               isSelected={selectedVenue?.id === venue.id}
               recentlyActive={recentCheckins.has(venue.id)}
               matchMode={matchMode}

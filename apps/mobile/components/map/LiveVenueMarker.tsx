@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, Platform, PixelRatio } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import type { MarkerSize } from '@/stores/ui.store';
@@ -29,10 +29,9 @@ import { venueAmbient } from '@/theme';
 const IS_ANDROID = Platform.OS === 'android';
 const PURPLE = '#7C6FF7';
 
-// Logo/emoji chip diameter in dp (custom view markers).
+// Marker diameter in dp — shared by every variant so logo markers, emoji
+// chips, iOS and Android all end up the exact same on-screen size.
 const SIZE_DP: Record<MarkerSize, number> = { small: 34, medium: 44, large: 56 };
-// Android remote-logo marker bitmap size in PIXELS (intrinsic draw size).
-const MARKER_PX: Record<MarkerSize, number> = { small: 110, medium: 140, large: 180 };
 
 /** Normalize any logo URL to an exact square circular PNG via images.weserv.nl. */
 function proxiedLogo(url: string, px: number): string {
@@ -45,6 +44,12 @@ function proxiedLogo(url: string, px: number): string {
 
 interface Props {
   venue: VenueWithStats;
+  /**
+   * Must be passed as a prop (not derived internally): react-native-map-
+   * clustering only treats children with a `coordinate` prop as clusterable
+   * markers, and the spiderfier overrides it via cloneElement at high zoom.
+   */
+  coordinate: { latitude: number; longitude: number };
   isSelected: boolean;
   recentlyActive: boolean;
   /** User's marker-size preference. */
@@ -53,8 +58,9 @@ interface Props {
   onPress: (v: VenueWithStats) => void;
 }
 
-export const LiveVenueMarker = React.memo(function LiveVenueMarker({
+function LiveVenueMarkerInner({
   venue,
+  coordinate,
   isSelected,
   recentlyActive,
   sizeKey,
@@ -78,20 +84,19 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
     return () => clearTimeout(t);
   }, [needsWarmup, isSelected, recentlyActive, hasActivity, sizeKey]);
 
-  const coordinate = {
-    latitude: Number(venue.latitude),
-    longitude: Number(venue.longitude),
-  };
-
   // ─────────────────────── Android + logo: native image marker ────────────
   if (IS_ANDROID && hasLogo) {
+    // Remote bitmaps draw at intrinsic pixel size, so request the dp size
+    // multiplied by the device density — same on-screen size as emoji chips.
+    const px = PixelRatio.getPixelSizeForLayoutSize(SIZE_DP[sizeKey]);
     return (
       <Marker
         coordinate={coordinate}
         anchor={{ x: 0.5, y: 0.5 }}
         onPress={() => onPress(venue)}
+        stopPropagation
         tracksViewChanges={false}
-        image={{ uri: proxiedLogo(venue.logo_url!, MARKER_PX[sizeKey]) }}
+        image={{ uri: proxiedLogo(venue.logo_url!, px) }}
       />
     );
   }
@@ -123,6 +128,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
         coordinate={coordinate}
         anchor={{ x: 0.5, y: 0.5 }}
         onPress={() => onPress(venue)}
+        stopPropagation
         tracksViewChanges={tracking}
       >
         <View
@@ -169,6 +175,7 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
       coordinate={coordinate}
       anchor={{ x: 0.5, y: 0.5 }}
       onPress={() => onPress(venue)}
+      stopPropagation
       tracksViewChanges={false}
     >
       <View style={[styles.wrapper, { width: outer, height: outer }]}>
@@ -219,7 +226,9 @@ export const LiveVenueMarker = React.memo(function LiveVenueMarker({
       </View>
     </Marker>
   );
-});
+}
+
+export const LiveVenueMarker = React.memo(LiveVenueMarkerInner);
 
 const styles = StyleSheet.create({
   wrapper: {
