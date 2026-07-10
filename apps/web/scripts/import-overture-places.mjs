@@ -15,6 +15,7 @@
 //   node apps/web/scripts/import-overture-places.mjs dubai-places.geojson
 //   node apps/web/scripts/import-overture-places.mjs dubai-places.geojson --dry-run
 //   node apps/web/scripts/import-overture-places.mjs dubai-places.geojson --min-confidence=0.6
+//   node apps/web/scripts/import-overture-places.mjs dubai-places.geojson --limit=100 --city=Dubai
 //
 // Idempotent: rows are keyed by (external_source, external_id); already
 // imported places are skipped, so claimed/edited venues are never clobbered.
@@ -22,7 +23,7 @@
 // Requires NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in apps/web/.env.local.
 
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -33,6 +34,7 @@ const envPath = resolve(here, '..', '.env.local');
 
 function loadEnv(p) {
   const out = {};
+  if (!existsSync(p)) return out;
   for (const raw of readFileSync(p, 'utf8').split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
@@ -49,17 +51,19 @@ function loadEnv(p) {
   return out;
 }
 
-const env = loadEnv(envPath);
-const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_ROLE = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPABASE_URL || !SERVICE_ROLE) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
-}
+function getSupabase() {
+  const env = loadEnv(envPath);
+  const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
+  const SERVICE_ROLE = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SERVICE_ROLE) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in apps/web/.env.local');
+    process.exit(1);
+  }
 
-const sb = createClient(SUPABASE_URL, SERVICE_ROLE, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+  return createClient(SUPABASE_URL, SERVICE_ROLE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 // ─── CLI args ────────────────────────────────────────────────────────────────
 
@@ -69,9 +73,13 @@ const dryRun = args.includes('--dry-run');
 const minConfidence = Number(
   (args.find((a) => a.startsWith('--min-confidence=')) || '').split('=')[1] || 0.5,
 );
+const limit = Number(
+  (args.find((a) => a.startsWith('--limit=')) || '').split('=')[1] || 0,
+);
+const city = (args.find((a) => a.startsWith('--city=')) || '').split('=').slice(1).join('=') || null;
 
 if (!filePath) {
-  console.error('Usage: node import-overture-places.mjs <places.geojson> [--dry-run] [--min-confidence=0.5]');
+  console.error('Usage: node import-overture-places.mjs <places.geojson> [--dry-run] [--min-confidence=0.5] [--limit=100] [--city=Dubai]');
   process.exit(1);
 }
 
@@ -132,10 +140,36 @@ const SUFFIX_RULES = [
   ['_bar', 'bar'],
   ['_pub', 'bar'],
   ['_cafe', 'cafe'],
-  ['_club', 'nightclub'],
+  // NOTE: no generic '_club' rule — it wrongly maps martial_arts_club,
+  // fishing_club, etc. to nightclub. Club-like nightlife categories
+  // (night_club, dance_club, comedy_club) are in EXACT above.
   ['_lounge', 'lounge'],
   ['_hotel', 'hotel'],
 ];
+
+const TYPE_PRIORITY = {
+  nightclub: 100,
+  karaoke: 95,
+  bar: 90,
+  sports_bar: 88,
+  live_music: 86,
+  lounge: 84,
+  hookah: 82,
+  restaurant: 78,
+  cafe: 72,
+  food_court: 68,
+  bowling: 66,
+  billiards: 64,
+  arcade: 62,
+  board_games: 60,
+  standup: 58,
+  event_space: 56,
+  hotel: 45,
+  coworking: 35,
+  gym: 30,
+  beauty_salon: 25,
+  other: 10,
+};
 
 function mapCategory(primary) {
   if (!primary) return null;
@@ -189,31 +223,80 @@ function featureToVenue(feature) {
     external_source: 'overture',
     external_id: p.id || feature.id,
     // Phone/website power future owner verification (call/SMS to the listed number).
-    settings: { imported: true, phone, website, confidence },
+    settings: { imported: true, phone, website, confidence, city },
   };
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
+function venueScore(v) {
+  // Overture has no public footfall rank; this only orders seed candidates.
+  const confidence = Number(v.settings?.confidence ?? 0.5);
+  const hasWebsite = v.settings?.website ? 8 : 0;
+  const hasPhone = v.settings?.phone ? 5 : 0;
+  const typePriority = TYPE_PRIORITY[v.type] ?? 10;
+  return typePriority + confidence * 20 + hasWebsite + hasPhone;
+}
 
-async function main() {
-  console.log(`Reading ${filePath}...`);
-  const geojson = JSON.parse(readFileSync(resolve(filePath), 'utf8'));
-  const features = geojson.features || [];
-  console.log(`${features.length} features in file`);
+async function* readNewlineDelimitedFeatures(path) {
+  let carry = '';
+  for await (const chunk of createReadStream(resolve(path), { encoding: 'utf8' })) {
+    carry += chunk;
+    const lines = carry.split('\n');
+    carry = lines.pop() || '';
+    for (const line of lines) yield line;
+  }
+  if (carry) yield carry;
+}
 
+async function readCandidateVenues(path) {
   const seen = new Set();
   const venues = [];
   const typeCounts = {};
+  let featureCount = 0;
 
-  for (const f of features) {
-    const v = featureToVenue(f);
+  let lineNumber = 0;
+  for await (const rawLine of readNewlineDelimitedFeatures(path)) {
+    lineNumber += 1;
+    let line = rawLine.replace(/[\u0000-\u001F]/g, ' ').trim();
+    if (!line || line.startsWith('{"type": "FeatureCollection"')) continue;
+    if (line === ']}') continue;
+    if (line.endsWith(']}')) line = line.slice(0, -2);
+    if (line.endsWith(',')) line = line.slice(0, -1);
+    if (!line) continue;
+
+    let feature;
+    try {
+      feature = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`Failed to parse GeoJSON feature at line ${lineNumber}: ${err.message}`);
+    }
+
+    featureCount += 1;
+    const v = featureToVenue(feature);
     if (!v || !v.external_id || seen.has(v.external_id)) continue;
     seen.add(v.external_id);
     venues.push(v);
     typeCounts[v.type] = (typeCounts[v.type] || 0) + 1;
   }
 
-  console.log(`${venues.length} venues matched social categories (min confidence ${minConfidence}):`);
+  return { featureCount, venues, typeCounts };
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+
+async function main() {
+  console.log(`Reading ${filePath}...`);
+  const candidates = await readCandidateVenues(filePath);
+  let venues = candidates.venues;
+  const typeCounts = candidates.typeCounts;
+  console.log(`${candidates.featureCount} features in file`);
+
+  venues = venues.sort((a, b) => venueScore(b) - venueScore(a));
+  const totalMatched = venues.length;
+  if (limit > 0) {
+    venues = venues.slice(0, limit);
+  }
+
+  console.log(`${totalMatched} venues matched social categories (min confidence ${minConfidence})${limit > 0 ? `; selected ${venues.length} seed venues` : ''}:`);
   for (const [type, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
     console.log(`  ${type.padEnd(14)} ${count}`);
   }
@@ -230,6 +313,8 @@ async function main() {
     }
     return;
   }
+
+  const sb = getSupabase();
 
   // Skip already-imported places so re-imports never clobber claimed venues.
   const existing = new Set();
