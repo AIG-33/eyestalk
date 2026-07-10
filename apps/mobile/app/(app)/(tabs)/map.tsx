@@ -37,6 +37,7 @@ import {
   useMapOnboardingVisible,
 } from '@/components/map/MapOnboarding';
 import { VENUE_EMOJI } from '@/lib/venue-constants';
+import { CLUSTER_ICONS, clusterCountLabel } from '@/lib/venue-marker-icons';
 import {
   isLatLngInMapRegion,
   getDistanceMeters,
@@ -207,37 +208,55 @@ function PulsingVenueBadge({
 // ─── Cluster renderer ────────────────────────────────────
 
 /**
- * Cluster marker. The Android Google Maps SDK clips custom <View> markers
- * with borderWidth + borderRadius (see LiveVenueMarker.tsx). Number labels
- * are dynamic so we cannot pre-render PNGs. Workaround: render a plain
- * filled rounded-square *without* borderWidth (border replaced by a thin
- * inset overlay), plus a transparent padding wrapper that gives the SDK
- * a stable bitmap size. tracksViewChanges flips off after one frame.
+ * Cluster marker. The Android Google Maps SDK + New Architecture snapshots
+ * custom <View> markers to a bitmap with broken bounds (only the top-left
+ * corner survives — verified on emulator), so Android draws a pre-rendered
+ * PNG badge natively via <Marker image> (counts are bucketed: 2–9, 10+, 20+,
+ * 50+, 99+). iOS renders the live custom view with the exact count.
  */
 function ClusterMarker({ cluster }: { cluster: any }) {
   const { id, geometry, onPress, properties } = cluster;
   const count = properties.point_count;
-  const [tracking, setTracking] = useState(true);
 
+  // iOS custom view only: re-snapshot briefly when the count changes.
+  const [tracking, setTracking] = useState(Platform.OS !== 'android');
   useEffect(() => {
+    if (Platform.OS === 'android') return;
+    setTracking(true);
     const t = setTimeout(() => setTracking(false), 250);
     return () => clearTimeout(t);
   }, [count]);
 
+  const coordinate = {
+    latitude: geometry.coordinates[1],
+    longitude: geometry.coordinates[0],
+  };
+
+  if (Platform.OS === 'android') {
+    return (
+      <Marker
+        key={`cluster-${id}`}
+        coordinate={coordinate}
+        anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={false}
+        stopPropagation
+        onPress={onPress}
+        image={CLUSTER_ICONS[clusterCountLabel(count)]}
+      />
+    );
+  }
+
   return (
     <Marker
       key={`cluster-${id}`}
-      coordinate={{
-        latitude: geometry.coordinates[1],
-        longitude: geometry.coordinates[0],
-      }}
+      coordinate={coordinate}
       anchor={{ x: 0.5, y: 0.5 }}
       tracksViewChanges={tracking}
+      stopPropagation
       onPress={onPress}
     >
       <View style={styles.clusterAndroidWrapper} collapsable={false}>
         <View style={styles.cluster} collapsable={false}>
-          {/* inset border via inner overlay — avoids native borderWidth bug */}
           <View pointerEvents="none" style={styles.clusterInset} />
           <Text style={styles.clusterText}>{count}</Text>
         </View>

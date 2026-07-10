@@ -1,27 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Image, StyleSheet, Platform, PixelRatio } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import type { MarkerSize } from '@/stores/ui.store';
 import { VENUE_EMOJI } from '@/lib/venue-constants';
+import { VENUE_MARKER_ICONS, type MarkerIconState } from '@/lib/venue-marker-icons';
 import { venueAmbient } from '@/theme';
 
 /**
  * Venue marker — ONE size, controlled by the user's "map marker size" setting.
  *
  * Platform strategy (deliberate split):
- *  • Android + logo — the Google Maps SDK + New Architecture mis-renders some
- *    custom <View> markers, so venues WITH a logo use NATIVE <Marker image>:
- *    a remote logo normalized to an exact pixel size via an image proxy.
- *    Remote bitmaps draw at their intrinsic pixel size — uniform everywhere.
- *  • Android + no logo — bundled PNG fallbacks are NOT an option: local
- *    resources go through BitmapFactory.decodeResource which applies the
- *    device density (mdpi bucket → ×2–3.5 on real phones), making them
- *    gigantic next to remote-logo markers. Instead we render a small custom
- *    <View> emoji chip using the same Android-safe pattern as the cluster
- *    marker (transparent fixed-size wrapper, no borderWidth on the snapshot
- *    root, tracksViewChanges flips off after one frame). Sized in dp, so it
- *    matches iOS and stays frozen after the first snapshot (~10k venues).
+ *  • Android — the Google Maps SDK + New Architecture snapshots custom <View>
+ *    markers to a bitmap with broken bounds (verified on emulator: only the
+ *    top-left corner survives). So Android NEVER uses view children — every
+ *    marker is a native <Marker image>:
+ *      – with logo: remote logo normalized to density-exact pixels via proxy
+ *        (remote bitmaps draw at intrinsic pixel size);
+ *      – without logo: pre-generated per-venue-type emoji chip PNG shipped in
+ *        @1x/@2x/@3x density buckets (see scripts/generate-markers.mjs), so
+ *        decodeResource picks the right bucket and the chip is exactly dp-sized.
+ *        A single suffix-less PNG would land in mdpi and get blown up ×2–3.5.
  *  • iOS — custom <View> markers render perfectly, so we keep the richer look
  *    (logo/emoji + activity ring + count badge), sized in dp.
  */
@@ -71,24 +70,30 @@ function LiveVenueMarkerInner({
   const hasActivity = venue.active_checkins > 0;
   const hasMatch = matchMode && venue.interest_matches > 0;
 
-  // Android snapshots custom-view markers to a bitmap once. Keep
-  // tracksViewChanges on briefly so the emoji glyph is captured, then freeze
-  // so ~10k markers don't re-render every frame. Re-warm when the visual
-  // state changes (selection / activity / size).
-  const needsWarmup = IS_ANDROID && !hasLogo;
-  const [tracking, setTracking] = useState(needsWarmup);
-  useEffect(() => {
-    if (!needsWarmup) return;
-    setTracking(true);
-    const t = setTimeout(() => setTracking(false), 300);
-    return () => clearTimeout(t);
-  }, [needsWarmup, isSelected, recentlyActive, hasActivity, sizeKey]);
+  // ─────────────────────── Android: native image markers only ─────────────
+  if (IS_ANDROID) {
+    if (hasLogo) {
+      // Remote bitmaps draw at intrinsic pixel size, so request the dp size
+      // multiplied by the device density — same on-screen size as the chips.
+      const px = PixelRatio.getPixelSizeForLayoutSize(SIZE_DP[sizeKey]);
+      return (
+        <Marker
+          coordinate={coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          onPress={() => onPress(venue)}
+          stopPropagation
+          tracksViewChanges={false}
+          image={{ uri: proxiedLogo(venue.logo_url!, px) }}
+        />
+      );
+    }
 
-  // ─────────────────────── Android + logo: native image marker ────────────
-  if (IS_ANDROID && hasLogo) {
-    // Remote bitmaps draw at intrinsic pixel size, so request the dp size
-    // multiplied by the device density — same on-screen size as emoji chips.
-    const px = PixelRatio.getPixelSizeForLayoutSize(SIZE_DP[sizeKey]);
+    const state: MarkerIconState = isSelected
+      ? 'selected'
+      : recentlyActive || hasActivity
+        ? 'active'
+        : 'default';
+    const icons = VENUE_MARKER_ICONS[venue.type] ?? VENUE_MARKER_ICONS.other;
     return (
       <Marker
         coordinate={coordinate}
@@ -96,15 +101,18 @@ function LiveVenueMarkerInner({
         onPress={() => onPress(venue)}
         stopPropagation
         tracksViewChanges={false}
-        image={{ uri: proxiedLogo(venue.logo_url!, px) }}
+        image={icons[sizeKey][state]}
       />
     );
   }
 
+  // ─────────────────────────── iOS: custom view marker ────────────────────
   const size = SIZE_DP[sizeKey];
   const radius = Math.round(size * 0.28);
   const emoji = VENUE_EMOJI[venue.type] || '📍';
   const ambient = venueAmbient[venue.type]?.[0] ?? venueAmbient.other[0];
+  const pad = Math.round(size * 0.34);
+  const outer = size + pad * 2;
 
   const ringColor = isSelected
     ? '#FFFFFF'
@@ -116,59 +124,6 @@ function LiveVenueMarkerInner({
           ? 'rgba(0,229,160,0.8)'
           : 'rgba(255,255,255,0.5)';
   const ringWidth = isSelected || hasMatch ? Math.max(2, size * 0.06) : hasActivity ? size * 0.05 : size * 0.035;
-
-  // ─────────────────────── Android + no logo: emoji chip marker ───────────
-  if (IS_ANDROID) {
-    // Transparent padding gives the SDK stable bitmap bounds (see cluster
-    // marker in map.tsx); the ring is an inset overlay because borderWidth on
-    // the chip itself gets clipped by the view→bitmap snapshot.
-    const outer = size + Math.round(size * 0.6);
-    return (
-      <Marker
-        coordinate={coordinate}
-        anchor={{ x: 0.5, y: 0.5 }}
-        onPress={() => onPress(venue)}
-        stopPropagation
-        tracksViewChanges={tracking}
-      >
-        <View
-          collapsable={false}
-          style={[styles.wrapper, { width: outer, height: outer }]}
-        >
-          <View
-            collapsable={false}
-            style={{
-              width: size,
-              height: size,
-              borderRadius: radius,
-              backgroundColor: ambient,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: 1,
-                left: 1,
-                right: 1,
-                bottom: 1,
-                borderRadius: radius - 1,
-                borderWidth: ringWidth,
-                borderColor: ringColor,
-              }}
-            />
-            <Text style={{ fontSize: Math.round(size * 0.48) }}>{emoji}</Text>
-          </View>
-        </View>
-      </Marker>
-    );
-  }
-
-  // ─────────────────────────── iOS: custom view marker ────────────────────
-  const pad = Math.round(size * 0.34);
-  const outer = size + pad * 2;
 
   return (
     <Marker

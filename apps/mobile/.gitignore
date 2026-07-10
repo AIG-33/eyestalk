@@ -10,3 +10,6 @@ credentials/
 *.p8
 play-service-account.json
 .vercel
+
+# generate-markers.mjs download cache
+scripts/.twemoji-cache/

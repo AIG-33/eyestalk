@@ -1,23 +1,26 @@
 /**
- * Generate venue map-marker PNGs from inline SVG.
+ * Generate per-venue-type map-marker PNGs (emoji chip on an ambient-color
+ * background) in proper density buckets, plus a static require() manifest.
  *
  * Run from `apps/mobile`:
  *   node scripts/generate-markers.mjs
  *
  * Why PNGs (not custom <View>): Android Google Maps SDK + Expo New
  * Architecture (SDK 54+, RN 0.81+) snapshots custom View markers to a
- * bitmap whose bounds are computed incorrectly, clipping the marker.
- * `<Marker image={require(...)} />` skips view→bitmap entirely and
- * draws the PNG natively.
+ * bitmap whose bounds are computed incorrectly — verified on emulator:
+ * only the top-left corner of the view is visible. `<Marker image>` with
+ * a bundled asset skips view→bitmap entirely and draws natively.
  *
- * Produces (under assets/markers/) a single fixed-size PNG per variant:
- *   venue.png            default purple rounded square + EyesTalk eyes
- *   venue-selected.png   default + white outer ring
- *   venue-active.png     default + green ring (for active checkins)
+ * Why @1x/@2x/@3x buckets: a single suffix-less PNG lands in the mdpi
+ * drawable bucket, so BitmapFactory.decodeResource scales it by device
+ * density (×2–3.5) and the marker becomes gigantic. With density variants
+ * the OS picks the right bucket and the marker is exactly SIZE dp.
  *
- * Android draws <Marker image> at the bitmap's intrinsic PIXEL size (it ignores
- * density buckets), so we emit ONE PNG at OUTPUT_PX. This keeps every fallback
- * marker exactly the same on-screen size as the (proxied) logo markers.
+ * Emoji artwork comes from Twemoji SVGs (fetched once, cached in
+ * .twemoji-cache/), rasterized by sharp at exact pixel sizes.
+ *
+ * Produces assets/markers/venue-{type}-{sm,md,lg}[-selected|-active][@Nx].png
+ * and lib/venue-marker-icons.ts (typed require manifest).
  */
 
 import sharp from 'sharp';
@@ -27,103 +30,196 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'assets', 'markers');
+const CACHE_DIR = path.resolve(__dirname, '.twemoji-cache');
+const MANIFEST = path.resolve(__dirname, '..', 'lib', 'venue-marker-icons.ts');
 
-const SIZE = 44; // SVG design units (viewBox); rasterized per size below
+const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg';
 
-// Output pixel sizes per user "marker size" preference. Android draws
-// <Marker image> at the bitmap's intrinsic PIXEL size, so these must match the
-// px used by the proxied logo markers (see LiveVenueMarker MARKER_PX).
-const OUTPUT_PX_BY_SIZE = { sm: 110, md: 140, lg: 180 };
-const PURPLE = '#7C6FF7';
-const PURPLE_DARK = '#5A4FE0';
-const WHITE = '#FFFFFF';
-const GREEN = '#00E5A0';
-const NAVY = '#1B1464';
+// Must mirror VENUE_EMOJI (lib/venue-constants.ts) + venueAmbient (theme/tokens.ts).
+const TYPES = {
+  karaoke: { emoji: '🎤', colors: ['#FF6B9D', '#FFD93D'] },
+  nightclub: { emoji: '🪩', colors: ['#7C6FF7', '#FF6B9D'] },
+  sports_bar: { emoji: '⚽', colors: ['#00E5A0', '#00D4FF'] },
+  bowling: { emoji: '🎳', colors: ['#00D4FF', '#7C6FF7'] },
+  billiards: { emoji: '🎱', colors: ['#00E5A0', '#7C6FF7'] },
+  hookah: { emoji: '💨', colors: ['#1E1E3F', '#2A2A5A'] },
+  board_games: { emoji: '🎲', colors: ['#FFD93D', '#7C6FF7'] },
+  arcade: { emoji: '🕹️', colors: ['#FF6B9D', '#00D4FF'] },
+  standup: { emoji: '🎭', colors: ['#FFD93D', '#FF6B9D'] },
+  live_music: { emoji: '🎵', colors: ['#7C6FF7', '#FF6B9D'] },
+  other: { emoji: '📍', colors: ['#2A2A5A', '#161630'] },
+};
 
-/**
- * Build the EyesTalk eyes mark, sized to fit the marker centre.
- * Original mark viewBox: 220×170; we extract just the eyes (no bubble).
- *
- * Eye centres (from logo-mark.svg): left (74,74), right (146,74), r=29
- * We crop to 44 ≤ x ≤ 176 (132 wide), 45 ≤ y ≤ 103 (58 tall).
- */
-function eyesMark({ size, color = WHITE }) {
-  // Source eye box: 132 wide × 58 tall, anchored at (110, 74).
-  // We scale it to ~46% of marker size; centred horizontally and vertically.
-  const w = size * 0.55;
-  const h = w * (58 / 132);
-  const tx = (size - w) / 2 - 44 * (w / 132);
-  const ty = (size - h) / 2 - 45 * (h / 58);
-  const sx = w / 132;
-  const sy = h / 58;
-  return `
-    <g transform="translate(${tx},${ty}) scale(${sx},${sy})">
-      <circle cx="74" cy="74" r="29" fill="${color}"/>
-      <circle cx="146" cy="74" r="29" fill="${color}"/>
-      <path d="M96 74 C 100 66 120 66 124 74 C 120 82 100 82 96 74 Z" fill="${color}"/>
-      <circle cx="74" cy="74" r="14.5" fill="${NAVY}"/>
-      <circle cx="146" cy="74" r="14.5" fill="${NAVY}"/>
-    </g>
-  `;
+// Marker diameter in dp per user "marker size" preference — must match
+// SIZE_DP in LiveVenueMarker.tsx.
+const SIZE_DP = { sm: 34, md: 44, lg: 56 };
+const SCALES = [1, 2, 3];
+
+// Ring per marker state (mirrors the old live ring colors).
+const STATES = {
+  default: { ring: 'rgba(255,255,255,0.55)', ringScale: 0.035 },
+  selected: { ring: '#FFFFFF', ringScale: 0.07 },
+  active: { ring: '#00E5A0', ringScale: 0.06 },
+};
+
+// Cluster badge: count is dynamic, so we bake a small set of label buckets.
+// Must match clusterCountLabel() in lib/venue-marker-icons.ts consumers.
+const CLUSTER_LABELS = ['2', '3', '4', '5', '6', '7', '8', '9', '10+', '20+', '50+', '99+'];
+const CLUSTER_DP = 40;
+const CLUSTER_PURPLE = '#7C6FF7';
+
+/** Twemoji filename: hyphen-joined codepoints, U+FE0F dropped. */
+function twemojiCode(emoji) {
+  return [...emoji]
+    .map((c) => c.codePointAt(0).toString(16))
+    .filter((c) => c !== 'fe0f')
+    .join('-');
 }
 
-function venueSvg({ ringColor, ringWidth }) {
-  const pad = ringWidth ?? 0;
-  const innerSize = SIZE - pad * 2 - 4; // 4px breathing room for outer shadow
-  const innerXY = (SIZE - innerSize) / 2;
-  const radius = innerSize * 0.18;
+async function fetchTwemoji(emoji) {
+  const code = twemojiCode(emoji);
+  const cached = path.join(CACHE_DIR, `${code}.svg`);
+  try {
+    return await fs.readFile(cached);
+  } catch {
+    const res = await fetch(`${TWEMOJI_BASE}/${code}.svg`);
+    if (!res.ok) throw new Error(`twemoji ${code} → HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    await fs.mkdir(CACHE_DIR, { recursive: true });
+    await fs.writeFile(cached, buf);
+    return buf;
+  }
+}
 
+function chipSvg({ px, colors, ring, ringScale }) {
+  const radius = px * 0.28;
+  const rw = Math.max(1, px * ringScale);
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}">
       <defs>
         <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="${PURPLE}"/>
-          <stop offset="1" stop-color="${PURPLE_DARK}"/>
+          <stop offset="0" stop-color="${colors[0]}"/>
+          <stop offset="1" stop-color="${colors[1]}"/>
         </linearGradient>
-        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.35"/>
-        </filter>
       </defs>
-      ${ringColor && ringWidth ? `
-        <rect x="${pad / 2}" y="${pad / 2}"
-              width="${SIZE - pad}" height="${SIZE - pad}"
-              rx="${(SIZE - pad) * 0.18}" ry="${(SIZE - pad) * 0.18}"
-              fill="${ringColor}"/>
-      ` : ''}
-      <g filter="url(#shadow)">
-        <rect x="${innerXY}" y="${innerXY}"
-              width="${innerSize}" height="${innerSize}"
-              rx="${radius}" ry="${radius}"
-              fill="url(#bg)"/>
-      </g>
-      ${eyesMark({ size: SIZE })}
+      <rect x="0" y="0" width="${px}" height="${px}" rx="${radius}" ry="${radius}" fill="url(#bg)"/>
+      <rect x="${rw / 2}" y="${rw / 2}" width="${px - rw}" height="${px - rw}"
+            rx="${radius - rw / 2}" ry="${radius - rw / 2}"
+            fill="none" stroke="${ring}" stroke-width="${rw}"/>
     </svg>
   `;
 }
 
-const VARIANTS = [
-  { name: 'venue',          opts: { ringColor: null, ringWidth: 0 } },
-  { name: 'venue-selected', opts: { ringColor: WHITE, ringWidth: 4 } },
-  { name: 'venue-active',   opts: { ringColor: GREEN, ringWidth: 3 } },
-];
+function clusterSvg({ px, label }) {
+  const radius = px * 0.2;
+  const rw = Math.max(1, px * 0.0375);
+  const fontSize = px * (label.length >= 3 ? 0.3 : 0.36);
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}">
+      <rect x="0" y="0" width="${px}" height="${px}" rx="${radius}" ry="${radius}" fill="${CLUSTER_PURPLE}"/>
+      <rect x="${rw}" y="${rw}" width="${px - rw * 2}" height="${px - rw * 2}"
+            rx="${radius - rw}" ry="${radius - rw}"
+            fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="${rw}"/>
+      <text x="50%" y="50%" dy="0.36em" text-anchor="middle"
+            font-family="Helvetica, Arial, sans-serif" font-weight="bold"
+            font-size="${fontSize}" fill="#FFFFFF">${label}</text>
+    </svg>
+  `;
+}
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 
-// Remove stale variants from previous schemes (density @Nx and single-size).
+// Remove PNGs from previous schemes.
 for (const f of await fs.readdir(OUT_DIR).catch(() => [])) {
-  if (/@\dx\.png$/.test(f)) await fs.rm(path.join(OUT_DIR, f));
+  if (f.endsWith('.png')) await fs.rm(path.join(OUT_DIR, f));
 }
 
-for (const { name, opts } of VARIANTS) {
-  const svg = venueSvg(opts);
-  for (const [sizeKey, px] of Object.entries(OUTPUT_PX_BY_SIZE)) {
-    const file = `${name}-${sizeKey}.png`;
-    await sharp(Buffer.from(svg))
-      .resize(px, px)
-      .png({ compressionLevel: 9 })
-      .toFile(path.join(OUT_DIR, file));
-    console.log(`✓ ${file}  (${px}×${px})`);
+let count = 0;
+for (const [type, { emoji, colors }] of Object.entries(TYPES)) {
+  const emojiSvg = await fetchTwemoji(emoji);
+  for (const [sizeKey, dp] of Object.entries(SIZE_DP)) {
+    for (const [state, { ring, ringScale }] of Object.entries(STATES)) {
+      for (const scale of SCALES) {
+        const px = dp * scale;
+        const emojiPx = Math.round(px * 0.58);
+        const emojiPng = await sharp(emojiSvg, { density: 300 })
+          .resize(emojiPx, emojiPx, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer();
+        const suffix = state === 'default' ? '' : `-${state}`;
+        const at = scale === 1 ? '' : `@${scale}x`;
+        const file = `venue-${type}-${sizeKey}${suffix}${at}.png`;
+        await sharp(Buffer.from(chipSvg({ px, colors, ring, ringScale })))
+          .composite([{ input: emojiPng, gravity: 'centre' }])
+          .png({ compressionLevel: 9 })
+          .toFile(path.join(OUT_DIR, file));
+        count++;
+      }
+    }
   }
 }
 
-console.log('\nMarkers generated.');
+for (const label of CLUSTER_LABELS) {
+  const slug = label.replace('+', 'plus');
+  for (const scale of SCALES) {
+    const at = scale === 1 ? '' : `@${scale}x`;
+    await sharp(Buffer.from(clusterSvg({ px: CLUSTER_DP * scale, label })))
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(OUT_DIR, `cluster-${slug}${at}.png`));
+    count++;
+  }
+}
+
+// ─── Typed require() manifest (Metro needs static requires) ───────────────
+const sizeName = { sm: 'small', md: 'medium', lg: 'large' };
+const lines = [];
+lines.push('// AUTO-GENERATED by scripts/generate-markers.mjs — do not edit by hand.');
+lines.push('// Per-venue-type marker chips (emoji on ambient background) in @1x/@2x/@3x');
+lines.push('// density buckets, drawn natively via <Marker image> on Android.');
+lines.push('');
+lines.push("import type { MarkerSize } from '@/stores/ui.store';");
+lines.push('');
+lines.push("export type MarkerIconState = 'default' | 'selected' | 'active';");
+lines.push('');
+lines.push('export const VENUE_MARKER_ICONS: Record<');
+lines.push('  string,');
+lines.push('  Record<MarkerSize, Record<MarkerIconState, number>>');
+lines.push('> = {');
+for (const type of Object.keys(TYPES)) {
+  lines.push(`  ${type}: {`);
+  for (const sizeKey of Object.keys(SIZE_DP)) {
+    lines.push(`    ${sizeName[sizeKey]}: {`);
+    for (const state of Object.keys(STATES)) {
+      const suffix = state === 'default' ? '' : `-${state}`;
+      lines.push(
+        `      ${state}: require('../assets/markers/venue-${type}-${sizeKey}${suffix}.png'),`,
+      );
+    }
+    lines.push('    },');
+  }
+  lines.push('  },');
+}
+lines.push('};');
+lines.push('');
+lines.push('// Pre-rendered cluster badges (Android cannot snapshot dynamic <View>');
+lines.push('// markers reliably). Buckets: exact 2–9, then 10+/20+/50+/99+.');
+lines.push('export const CLUSTER_ICONS: Record<string, number> = {');
+for (const label of CLUSTER_LABELS) {
+  const slug = label.replace('+', 'plus');
+  lines.push(`  '${label}': require('../assets/markers/cluster-${slug}.png'),`);
+}
+lines.push('};');
+lines.push('');
+lines.push('/** Map a live cluster count onto one of the pre-rendered label buckets. */');
+lines.push('export function clusterCountLabel(count: number): string {');
+lines.push('  if (count <= 9) return String(count);');
+lines.push("  if (count < 20) return '10+';");
+lines.push("  if (count < 50) return '20+';");
+lines.push("  if (count < 99) return '50+';");
+lines.push("  return '99+';");
+lines.push('}');
+lines.push('');
+await fs.writeFile(MANIFEST, lines.join('\n'));
+
+console.log(`✓ ${count} PNGs → assets/markers/`);
+console.log(`✓ manifest → lib/venue-marker-icons.ts`);
