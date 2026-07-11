@@ -115,6 +115,29 @@ export function useNearbyVenues(lat: number | null, lng: number | null, _radiusK
   return useAllVenues();
 }
 
+/**
+ * Venues owned by a given user (their created spots), newest first. This is how
+ * a user gets back into a spot they made — the map only shows nearby/active
+ * venues, and pop-ups vanish after they expire, so owners need a durable list.
+ */
+export function useMyVenues(ownerId: string | undefined) {
+  return useQuery({
+    queryKey: ['venues', 'mine', ownerId],
+    enabled: !!ownerId,
+    queryFn: async (): Promise<Venue[]> => {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('id, name, type, description, address, latitude, longitude, logo_url, cover_url, is_active, venue_kind, expires_at, created_at')
+        .eq('owner_id', ownerId!)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data as unknown as Venue[]) ?? [];
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useVenueDetail(venueId: string) {
   return useQuery({
     queryKey: ['venue', venueId],

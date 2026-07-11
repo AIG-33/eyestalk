@@ -233,7 +233,15 @@
     "communityBadge": "Community",
     "unclaimedBadge": "Unclaimed",
     "claimTitle": "Is this your business?",
-    "claimHint": "Verify ownership to manage this venue"
+    "claimHint": "Verify ownership to manage this venue",
+    "enterSpot": "Enter your spot",
+    "ownerEnterHint": "This is your spot. Enter to host, open the chat, and see who's here — no check-in needed."
+  },
+  "myVenues": {
+    "title": "My spots",
+    "menuHint": "Open a spot you created to host and chat",
+    "empty": "You haven't created any spots yet. Add one to put it on the map!",
+    "expired": "Ended"
   },
   "claimVenue": {
     "title": "Claim venue",

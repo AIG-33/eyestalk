@@ -51,13 +51,18 @@ export async function POST(request: NextRequest) {
 
   const { data: venue } = await supabase
     .from('venues')
-    .select('id, name, latitude, longitude, geofence_radius, checkin_methods')
+    .select('id, name, owner_id, latitude, longitude, geofence_radius, checkin_methods')
     .eq('id', venue_id)
     .single();
 
   if (!venue) {
     return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
   }
+
+  // The owner can always enter their own spot to host/participate, regardless of
+  // GPS proximity or which check-in methods are enabled (they may be setting the
+  // place up remotely, or the pinned GPS point may be imprecise for a pop-up).
+  const isOwner = venue.owner_id === user.id;
 
   const enabledMethods: string[] =
     Array.isArray(venue.checkin_methods) && venue.checkin_methods.length > 0
@@ -98,6 +103,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid check-in code' }, { status: 400 });
     }
     method = 'code';
+  } else if (isOwner) {
+    // Owner direct entry — no proximity/method gate.
+    method = 'geofence';
   } else {
     if (!enabledMethods.includes('geofence')) {
       return NextResponse.json({ error: 'Location check-in is not enabled here' }, { status: 400 });

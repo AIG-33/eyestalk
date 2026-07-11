@@ -58,6 +58,9 @@ export default function VenueDetailScreen() {
 
   const isCheckedInHere = activeCheckin?.venue_id === id;
   const isCheckedInElsewhere = activeCheckin && activeCheckin.venue_id !== id;
+  // The owner can enter their own spot directly (server-side bypass of the
+  // proximity/method gate), so they can host and participate right away.
+  const isOwner = !!session && (venue as any)?.owner_id === session.user.id;
 
   const methods: string[] = useMemo(() => {
     const m = (venue as any)?.checkin_methods;
@@ -108,6 +111,12 @@ export default function VenueDetailScreen() {
     },
     [id, location, checkinMutation],
   );
+
+  // Owner entry always goes through the frictionless geofence route; the server
+  // waves owners past the distance check, so this works even when remote.
+  const handleEnterAsOwner = () => {
+    runCheckin({});
+  };
 
   const handleCheckin = () => {
     // Guests can browse everything; checking in requires an account.
@@ -243,7 +252,9 @@ export default function VenueDetailScreen() {
           {/* Check-in hint for non-checked-in users */}
           {!isCheckedInHere && !isCheckedInElsewhere && (
             <View style={s.hintCard}>
-              <Text style={s.hintText}>{t('venue.checkinHint')}</Text>
+              <Text style={s.hintText}>
+                {isOwner ? t('venue.ownerEnterHint') : t('venue.checkinHint')}
+              </Text>
             </View>
           )}
 
@@ -453,6 +464,13 @@ export default function VenueDetailScreen() {
             variant="danger"
             onPress={handleCheckout}
             loading={checkoutMutation.isPending}
+          />
+        ) : isOwner && !isCheckedInElsewhere ? (
+          <Button
+            title={checkinMutation.isPending ? t('common.loading') : t('venue.enterSpot')}
+            onPress={handleEnterAsOwner}
+            disabled={checkinMutation.isPending}
+            loading={checkinMutation.isPending}
           />
         ) : (
           <>

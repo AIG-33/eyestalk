@@ -284,6 +284,14 @@ export default function ProfileScreen() {
       {/* Venues */}
       <MenuSection label={isRu ? 'Заведения' : 'Venues'} c={c} borderColor={borderColor}>
         <MenuItem
+          icon="location-outline"
+          label={t('myVenues.title')}
+          hint={t('myVenues.menuHint')}
+          onPress={() => router.push('/(app)/my-venues' as any)}
+          c={c}
+          borderColor={borderColorFaint}
+        />
+        <MenuItem
           icon="add-circle-outline"
           label={t('createVenue.menuLabel')}
           hint={t('createVenue.menuHint')}

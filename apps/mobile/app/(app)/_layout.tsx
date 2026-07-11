@@ -13,6 +13,7 @@ export default function AppLayout() {
       <Stack.Screen name="venue/check-in" options={{ presentation: 'modal' }} />
       <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="create-venue" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="my-venues" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="edit-profile" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="tokens" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
