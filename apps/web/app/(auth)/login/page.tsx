@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +50,25 @@ export default function LoginPage() {
     if (oauthError) {
       setError(oauthError.message || t('oauthError'));
       setGoogleLoading(false);
+    }
+    // On success Supabase redirects the browser → no extra navigation needed.
+  };
+
+  const handleApple = async () => {
+    setError('');
+    setAppleLoading(true);
+
+    const supabase = createClient();
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+      },
+    });
+
+    if (oauthError) {
+      setError(oauthError.message || t('oauthError'));
+      setAppleLoading(false);
     }
     // On success Supabase redirects the browser → no extra navigation needed.
   };
@@ -98,7 +118,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleGoogle}
-            disabled={googleLoading || loading}
+            disabled={googleLoading || appleLoading || loading}
             className="w-full flex items-center justify-center gap-3 font-semibold py-3.5 rounded-2xl transition-all disabled:opacity-50"
             style={{
               backgroundColor: 'var(--glass-bg)',
@@ -111,6 +131,26 @@ export default function LoginPage() {
             <GoogleIcon />
             <span>
               {googleLoading ? '...' : t('continueWithGoogle')}
+            </span>
+            <span style={{ width: 18 }} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleApple}
+            disabled={appleLoading || googleLoading || loading}
+            className="w-full flex items-center justify-center gap-3 font-semibold py-3.5 rounded-2xl transition-all disabled:opacity-50"
+            style={{
+              backgroundColor: '#000',
+              border: '1px solid var(--glass-border)',
+              color: '#fff',
+              fontSize: 15,
+              height: 56,
+            }}
+          >
+            <AppleIcon />
+            <span>
+              {appleLoading ? '...' : t('continueWithApple')}
             </span>
             <span style={{ width: 18 }} />
           </button>
@@ -214,6 +254,17 @@ function GoogleIcon() {
       <path d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.806.54-1.8368.8595-3.0477.8595-2.344 0-4.3282-1.5832-5.0364-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/>
       <path d="M3.9636 10.71c-.18-.54-.2823-1.1168-.2823-1.71s.1023-1.17.2823-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9c0 1.4523.3477 2.8268.9573 4.0418L3.9636 10.71z" fill="#FBBC05"/>
       <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.3459l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9636 7.29C4.6718 5.1627 6.656 3.5795 9 3.5795z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+      />
     </svg>
   );
 }

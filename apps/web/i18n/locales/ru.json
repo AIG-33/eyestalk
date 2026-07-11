@@ -250,6 +250,7 @@
     "passwordTooShort": "Пароль должен быть не менее 8 символов",
     "recoverySessionMissing": "Ссылка устарела или некорректна — запросите новую",
     "continueWithGoogle": "Войти через Google",
+    "continueWithApple": "Войти через Apple",
     "or": "или",
     "oauthError": "Не удалось войти. Попробуйте снова."
   },
