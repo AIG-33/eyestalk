@@ -354,7 +354,7 @@ export default async function VenueInvitePage({
                         color: 'var(--text-primary)',
                       }}
                     >
-                       App Store
+                      App Store
                     </a>
                     <a
                       href={PLAY_STORE_URL}
@@ -364,7 +364,7 @@ export default async function VenueInvitePage({
                         color: 'var(--text-primary)',
                       }}
                     >
-                      ▶ Google Play
+                      Google Play
                     </a>
                   </div>
                 </div>
