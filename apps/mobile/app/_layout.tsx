@@ -124,15 +124,25 @@ const INTER_BY_WEIGHT: Record<string, string> = {
   anyText.__eyestalkFontPatched = true;
 })();
 
+// If fonts don't finish loading quickly, launch with system fonts instead of
+// sitting behind the native splash forever (a stuck splash reads as a dead
+// app to App Review's automated launch test).
+const FONT_LOAD_TIMEOUT_MS = 5000;
+
 function useOptionalFonts() {
   const [ready, setReady] = useState(!fontMap);
 
   useEffect(() => {
     if (!fontMap) return;
+    const timeout = setTimeout(() => setReady(true), FONT_LOAD_TIMEOUT_MS);
     import('expo-font')
       .then(({ loadAsync }) => loadAsync(fontMap!))
       .catch(() => {})
-      .finally(() => setReady(true));
+      .finally(() => {
+        clearTimeout(timeout);
+        setReady(true);
+      });
+    return () => clearTimeout(timeout);
   }, []);
 
   return ready;

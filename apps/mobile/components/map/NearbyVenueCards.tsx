@@ -25,6 +25,13 @@ const CARD_WIDTH = 104;
 const CARD_GAP = 8;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 
+/**
+ * The venue list can hold 1000+ rows since the venue import; a horizontal
+ * FlatList that long is useless to scroll and wastes memory on low-end
+ * devices. Show only the closest slice.
+ */
+const MAX_CARDS = 50;
+
 interface Props {
   venues: VenueWithStats[] | undefined;
   userLocation: UserLocation | null;
@@ -64,11 +71,13 @@ export function NearbyVenueCards({
 
     if (matchMode) {
       // Most matching people first, then nearest.
-      return [...venues].sort(
-        (a, b) => b.interest_matches - a.interest_matches || byDistance(a, b),
-      );
+      return [...venues]
+        .sort(
+          (a, b) => b.interest_matches - a.interest_matches || byDistance(a, b),
+        )
+        .slice(0, MAX_CARDS);
     }
-    return [...venues].sort(byDistance);
+    return [...venues].sort(byDistance).slice(0, MAX_CARDS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venues, userLocation, matchMode]);
 
@@ -176,6 +185,10 @@ export function NearbyVenueCards({
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
         decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.985}
         snapToInterval={SNAP_INTERVAL}
         snapToAlignment="start"

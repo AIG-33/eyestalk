@@ -81,6 +81,16 @@ const MAP_BOOT_REGION = {
 /** Only auto-jump to the user's location if there's a venue within this range. */
 const NEAR_VENUE_METERS = 60000;
 
+/**
+ * Hard cap on simultaneously mounted map markers. The venue DB grew to 1000+
+ * rows per fetch; mounting a React <Marker> per venue plus supercluster
+ * re-indexing blocks the JS/main thread long enough on older devices (Apple
+ * reviews on real hardware) to risk a launch watchdog kill / OOM. Markers
+ * beyond the cap are the ones farthest from the current map center, which
+ * clustering would collapse anyway.
+ */
+const MAX_RENDERED_MARKERS = 300;
+
 // ─── Pulsing checkin badge (top bar) ─────────────────────
 
 function PulsingVenueBadge({
@@ -335,6 +345,19 @@ export default function MapScreen() {
         mapRegion,
       ),
     );
+  }, [filteredVenues, mapRegion]);
+
+  // Cap mounted markers: nearest-to-map-center first (see MAX_RENDERED_MARKERS).
+  const renderedVenues = useMemo(() => {
+    if (filteredVenues.length <= MAX_RENDERED_MARKERS) return filteredVenues;
+    const { latitude: cLat, longitude: cLng } = mapRegion;
+    return [...filteredVenues]
+      .sort(
+        (a, b) =>
+          getDistanceMeters(cLat, cLng, Number(a.latitude), Number(a.longitude)) -
+          getDistanceMeters(cLat, cLng, Number(b.latitude), Number(b.longitude)),
+      )
+      .slice(0, MAX_RENDERED_MARKERS);
   }, [filteredVenues, mapRegion]);
 
   const centerOnUser = useCallback(() => {
@@ -659,7 +682,7 @@ export default function MapScreen() {
         renderCluster={renderCluster}
       >
         {markersReady &&
-          filteredVenues.map((venue) => (
+          renderedVenues.map((venue) => (
             <LiveVenueMarker
               key={venue.id}
               venue={venue}
