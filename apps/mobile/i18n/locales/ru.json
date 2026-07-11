@@ -99,8 +99,8 @@
     "settingsHint": "Настройки приватности, внешнего вида и аккаунта",
     "profileCompleteness": "Заполните профиль, чтобы получать больше контактов",
     "tapToViewTokens": "Нажмите, чтобы увидеть баланс и историю",
-    "createVenue": "Создать заведение",
-    "createVenueHint": "Зарегистрируйте своё заведение через веб-панель"
+    "createVenue": "Панель бизнеса",
+    "createVenueHint": "Управляйте официальным заведением (аналитика, QR, персонал) в вебе"
   },
   "tabs": {
     "map": "Карта",
@@ -132,7 +132,16 @@
     "checkedInPeople": "{{count}} внутри",
     "matchesToggle": "Совпадения",
     "matchesInVenue": "{{count}} по вашим интересам",
-    "matchesEmptyHint": "Заполните «Кого ищу» в профиле"
+    "matchesEmptyHint": "Заполните «Кого ищу» в профиле",
+    "markerCapNotice": "Показаны {{count}} заведений рядом с вами"
+  },
+  "allVenues": {
+    "title": "Все заведения",
+    "entry": "Все заведения",
+    "searchPlaceholder": "Поиск по названию или адресу",
+    "allCities": "Все города",
+    "otherCity": "Другие",
+    "empty": "Заведения не найдены"
   },
   "venueTypes": {
     "restaurant": "Ресторан",
@@ -466,6 +475,9 @@
     "addressPlaceholder": "Где это?",
     "description": "Описание (необязательно)",
     "descriptionPlaceholder": "Какой вайб? Что ждёт гостей?",
+    "locationOnMap": "Точка на карте",
+    "mapPickerHint": "Двигайте карту, чтобы поставить точку",
+    "recenter": "Центрировать на моей геопозиции",
     "locationReady": "Привязано к вашей текущей геопозиции",
     "locationLoading": "Определяем геопозицию…",
     "locationMissing": "Геопозиция недоступна — включите доступ к локации",

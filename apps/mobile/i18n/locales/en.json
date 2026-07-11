@@ -99,8 +99,8 @@
     "settingsHint": "Manage privacy, appearance, and account settings",
     "profileCompleteness": "Complete your profile to get more connections",
     "tapToViewTokens": "Tap to view balance and transaction history",
-    "createVenue": "Create Venue",
-    "createVenueHint": "Register your own venue via the web dashboard"
+    "createVenue": "Business dashboard",
+    "createVenueHint": "Manage an official business venue (analytics, QR, staff) on the web"
   },
   "tabs": {
     "map": "Map",
@@ -132,7 +132,16 @@
     "checkedInPeople": "{{count}} checked in",
     "matchesToggle": "Matches",
     "matchesInVenue": "{{count}} match your interests",
-    "matchesEmptyHint": "Set who you're looking for in your profile"
+    "matchesEmptyHint": "Set who you're looking for in your profile",
+    "markerCapNotice": "Showing {{count}} venues around you"
+  },
+  "allVenues": {
+    "title": "All venues",
+    "entry": "All venues",
+    "searchPlaceholder": "Search by name or address",
+    "allCities": "All cities",
+    "otherCity": "Other",
+    "empty": "No venues found"
   },
   "venueTypes": {
     "restaurant": "Restaurant",
@@ -466,6 +475,9 @@
     "addressPlaceholder": "Where is it?",
     "description": "Description (optional)",
     "descriptionPlaceholder": "What's the vibe? What should people expect?",
+    "locationOnMap": "Location on the map",
+    "mapPickerHint": "Drag the map to place the pin",
+    "recenter": "Center on my location",
     "locationReady": "Pinned to your current location",
     "locationLoading": "Getting your location…",
     "locationMissing": "Location unavailable — enable location access to add a spot",

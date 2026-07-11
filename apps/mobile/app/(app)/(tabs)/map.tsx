@@ -78,9 +78,6 @@ const MAP_BOOT_REGION = {
   longitudeDelta: PRIMARY_LAUNCH_CITY.longitudeDelta,
 } as const;
 
-/** Only auto-jump to the user's location if there's a venue within this range. */
-const NEAR_VENUE_METERS = 60000;
-
 /**
  * Hard cap on simultaneously mounted map markers. The venue DB grew to 1000+
  * rows per fetch; mounting a React <Marker> per venue plus supercluster
@@ -295,6 +292,7 @@ export default function MapScreen() {
   const recentCheckins = useRealtimeCheckins();
   const mapMarkerSize = useUIStore((s) => s.mapMarkerSize);
   const { data: profile } = useProfile();
+  const session = useAuthStore((s) => s.session);
   const { visible: showOnboarding, dismiss: dismissOnboarding } =
     useMapOnboardingVisible();
 
@@ -321,6 +319,7 @@ export default function MapScreen() {
   }));
   const mapRef = useRef<any>(null);
   const centeredOnUserRef = useRef(false);
+  const fallbackCenteredRef = useRef(false);
 
   /** Tab bar sits below map screen; FAB sits above venue card strip only. */
   const locationFabBottom = COMPACT_VENUE_STRIP_HEIGHT + spacing.md;
@@ -347,34 +346,60 @@ export default function MapScreen() {
     );
   }, [filteredVenues, mapRegion]);
 
-  // Cap mounted markers: nearest-to-map-center first (see MAX_RENDERED_MARKERS).
+  const myUserId = session?.user?.id ?? null;
+  const activeCheckinVenueId = ((activeCheckin as any)?.venue_id as string | undefined) ?? null;
+
+  /** True once the venue set is large enough that the marker cap kicks in. */
+  const markerCapApplied = filteredVenues.length > MAX_RENDERED_MARKERS;
+
+  // Cap mounted markers around the USER'S location (falling back to the map
+  // center only until we have a GPS fix). Anchoring on the user — not the map
+  // center — means the 300 shown are the 300 closest to the person, and the
+  // "recenter to me" button naturally reveals that set. The user's OWN venues
+  // and the venue they're checked into are always kept regardless of distance,
+  // so a freshly-created spot in a dense city (1000+ imported venues) can never
+  // fall outside the cap and silently disappear. Remaining slots fill nearest-first.
   const renderedVenues = useMemo(() => {
-    if (filteredVenues.length <= MAX_RENDERED_MARKERS) return filteredVenues;
-    const { latitude: cLat, longitude: cLng } = mapRegion;
-    return [...filteredVenues]
+    if (!markerCapApplied) return filteredVenues;
+    const aLat = location?.latitude ?? mapRegion.latitude;
+    const aLng = location?.longitude ?? mapRegion.longitude;
+
+    const pinned: VenueWithStats[] = [];
+    const rest: VenueWithStats[] = [];
+    for (const v of filteredVenues) {
+      const isOwn = !!myUserId && (v as any).owner_id === myUserId;
+      const isActive = v.id === activeCheckinVenueId;
+      if (isOwn || isActive) pinned.push(v);
+      else rest.push(v);
+    }
+
+    const remaining = Math.max(0, MAX_RENDERED_MARKERS - pinned.length);
+    const nearest = rest
       .sort(
         (a, b) =>
-          getDistanceMeters(cLat, cLng, Number(a.latitude), Number(a.longitude)) -
-          getDistanceMeters(cLat, cLng, Number(b.latitude), Number(b.longitude)),
+          getDistanceMeters(aLat, aLng, Number(a.latitude), Number(a.longitude)) -
+          getDistanceMeters(aLat, aLng, Number(b.latitude), Number(b.longitude)),
       )
-      .slice(0, MAX_RENDERED_MARKERS);
-  }, [filteredVenues, mapRegion]);
+      .slice(0, remaining);
+
+    return [...pinned, ...nearest];
+  }, [
+    filteredVenues,
+    markerCapApplied,
+    location,
+    mapRegion,
+    myUserId,
+    activeCheckinVenueId,
+  ]);
 
   const centerOnUser = useCallback(() => {
-    if (!location || !mapRef.current || centeredOnUserRef.current) return;
-    if (!venues) return; // wait for venue data before deciding where to land
-    const nearVenue = venues.some(
-      (v) =>
-        getDistanceMeters(
-          location.latitude,
-          location.longitude,
-          Number(v.latitude),
-          Number(v.longitude),
-        ) <= NEAR_VENUE_METERS,
-    );
-    centeredOnUserRef.current = true;
+    if (!mapRef.current) return;
 
-    if (nearVenue) {
+    // Preferred: the moment we have the user's GPS, zoom straight to them —
+    // never sit on the default launch region (Dubai) when we know where they are.
+    if (location) {
+      if (centeredOnUserRef.current) return;
+      centeredOnUserRef.current = true;
       mapRef.current.animateToRegion?.(
         {
           latitude: location.latitude,
@@ -387,27 +412,30 @@ export default function MapScreen() {
       return;
     }
 
-    // Far from any venue: show the nearest live launch city so the first
-    // impression is a populated map, not an empty neighborhood.
-    const city = nearestLaunchCityWithVenues(venues, location);
-    if (city && (city.latitude !== MAP_BOOT_REGION.latitude || city.longitude !== MAP_BOOT_REGION.longitude)) {
-      mapRef.current.animateToRegion?.(
-        {
-          latitude: city.latitude,
-          longitude: city.longitude,
-          latitudeDelta: city.latitudeDelta,
-          longitudeDelta: city.longitudeDelta,
-        },
-        Platform.OS === 'android' ? 500 : 400,
-      );
+    // No GPS yet / permission denied: land once on the nearest populated launch
+    // city so the first frame is a lively map instead of an empty neighborhood.
+    // Don't latch centeredOnUserRef here — if a fix arrives later we still jump.
+    if (!fallbackCenteredRef.current && venues && venues.length) {
+      const city = nearestLaunchCityWithVenues(venues, null);
+      if (city) {
+        fallbackCenteredRef.current = true;
+        mapRef.current.animateToRegion?.(
+          {
+            latitude: city.latitude,
+            longitude: city.longitude,
+            latitudeDelta: city.latitudeDelta,
+            longitudeDelta: city.longitudeDelta,
+          },
+          Platform.OS === 'android' ? 500 : 400,
+        );
+      }
     }
   }, [location, venues]);
 
   useEffect(() => {
-    if (!location) return;
     const t = setTimeout(centerOnUser, Platform.OS === 'android' ? 200 : 120);
     return () => clearTimeout(t);
-  }, [location, centerOnUser]);
+  }, [location, venues, centerOnUser]);
 
   const lastMarkerPressRef = useRef<{ id: string; at: number } | null>(null);
   const handleMarkerPress = useCallback((venue: VenueWithStats) => {
@@ -451,8 +479,6 @@ export default function MapScreen() {
     },
     [],
   );
-
-  const session = useAuthStore((s) => s.session);
 
   const handleCheckin = useCallback(() => {
     if (!selectedVenue || !location) return;
@@ -725,6 +751,49 @@ export default function MapScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* ─── Marker cap notice (only when > MAX are available) ─── */}
+      {markerCapApplied && (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/(app)/all-venues' as any)}
+          style={[
+            styles.capChip,
+            shadows.md,
+            {
+              bottom: locationFabBottom + 56,
+              backgroundColor: isDark ? 'rgba(13,13,26,0.92)' : 'rgba(255,255,255,0.96)',
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+            },
+          ]}
+        >
+          <Ionicons name="information-circle-outline" size={14} color={c.text.secondary} />
+          <Text style={[styles.capChipText, { color: c.text.secondary }]} numberOfLines={1}>
+            {t('map.markerCapNotice', { count: MAX_RENDERED_MARKERS })}
+          </Text>
+          <Ionicons name="chevron-forward" size={13} color={c.accent.primary} />
+        </TouchableOpacity>
+      )}
+
+      {/* ─── All venues (full list, no 300 cap) ──────── */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[
+          styles.allVenuesPill,
+          shadows.lg,
+          {
+            bottom: locationFabBottom,
+            backgroundColor: c.bg.secondary,
+            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+          },
+        ]}
+        onPress={() => router.push('/(app)/all-venues' as any)}
+      >
+        <Ionicons name="list" size={18} color={c.accent.primary} />
+        <Text style={[styles.allVenuesPillText, { color: c.text.primary }]} numberOfLines={1}>
+          {t('allVenues.entry')}
+        </Text>
+      </TouchableOpacity>
 
       {/* ─── My location button ──────────────────────── */}
       <TouchableOpacity
@@ -1006,5 +1075,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+
+  allVenuesPill: {
+    position: 'absolute',
+    left: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    height: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: 24,
+    borderWidth: 1,
+  },
+  allVenuesPillText: {
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
+  },
+
+  capChip: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '80%',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  capChipText: {
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.medium,
   },
 });

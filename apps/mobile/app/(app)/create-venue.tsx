@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share,
 } from 'react-native';
@@ -12,7 +12,9 @@ import { useLocation } from '@/hooks/use-location';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VenueLocationPicker } from '@/components/venue/VenueLocationPicker';
 import { VENUE_EMOJI, VENUE_TYPE_KEYS } from '@/lib/venue-constants';
+import { PRIMARY_LAUNCH_CITY } from '@/lib/launch-cities';
 import { haptic } from '@/lib/haptics';
 import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 
@@ -40,8 +42,28 @@ export default function CreateVenueScreen() {
   const [popupHours, setPopupHours] = useState<number>(DEFAULT_POPUP_HOURS);
   const [saving, setSaving] = useState(false);
 
+  // The venue point. Defaults to the user's GPS, but they can drag the map to
+  // pin the exact spot (a building entrance, a specific corner, etc.).
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
+
+  // Seed the picked point from the user's GPS as soon as we have a fix, unless
+  // they've already moved the pin themselves.
+  const userMovedPin = useRef(false);
+  useEffect(() => {
+    if (location && !userMovedPin.current && !coords) {
+      setCoords({ latitude: location.latitude, longitude: location.longitude });
+    }
+  }, [location, coords]);
+
+  const pickerSeed = coords
+    ?? (location
+      ? { latitude: location.latitude, longitude: location.longitude }
+      : { latitude: PRIMARY_LAUNCH_CITY.latitude, longitude: PRIMARY_LAUNCH_CITY.longitude });
+
   const canSubmit =
-    !!location && name.trim().length >= 2 && address.trim().length >= 3 && !saving;
+    !!coords && name.trim().length >= 2 && address.trim().length >= 3 && !saving;
 
   const shareVenue = async (venueId: string, venueName: string) => {
     try {
@@ -66,7 +88,7 @@ export default function CreateVenueScreen() {
       );
       return;
     }
-    if (!location) return;
+    if (!coords) return;
     setSaving(true);
     haptic.medium();
 
@@ -83,8 +105,8 @@ export default function CreateVenueScreen() {
         type,
         description: description.trim() || null,
         address: address.trim(),
-        latitude: Math.round(location.latitude * 1e6) / 1e6,
-        longitude: Math.round(location.longitude * 1e6) / 1e6,
+        latitude: Math.round(coords.latitude * 1e6) / 1e6,
+        longitude: Math.round(coords.longitude * 1e6) / 1e6,
         geofence_radius: kind === 'popup' ? POPUP_GEOFENCE_METERS : COMMUNITY_GEOFENCE_METERS,
         venue_kind: kind,
         expires_at: expiresAt,
@@ -215,20 +237,39 @@ export default function CreateVenueScreen() {
           maxLength={500}
         />
 
-        {/* Venue is pinned to the creator's current GPS position */}
-        <View style={s.locationCard}>
-          <Ionicons
-            name={location ? 'location' : 'location-outline'}
-            size={20}
-            color={location ? c.accent.success : c.text.tertiary}
-          />
-          <Text style={s.locationText}>
-            {location
-              ? t('createVenue.locationReady')
-              : locationLoading
-                ? t('createVenue.locationLoading')
-                : t('createVenue.locationMissing')}
-          </Text>
+        {/* Pick the exact venue point on the map (drag to move the pin) */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>{t('createVenue.locationOnMap')}</Text>
+          {locationLoading && !coords ? (
+            <View style={s.mapSkeleton}>
+              <Ionicons name="location-outline" size={22} color={c.text.tertiary} />
+              <Text style={s.locationText}>{t('createVenue.locationLoading')}</Text>
+            </View>
+          ) : (
+            <>
+              <VenueLocationPicker
+                latitude={pickerSeed.latitude}
+                longitude={pickerSeed.longitude}
+                userLocation={location}
+                onChange={(lat, lng) => {
+                  userMovedPin.current = true;
+                  setCoords({ latitude: lat, longitude: lng });
+                }}
+              />
+              <View style={s.coordsRow}>
+                <Ionicons
+                  name={coords ? 'location' : 'location-outline'}
+                  size={16}
+                  color={coords ? c.accent.success : c.text.tertiary}
+                />
+                <Text style={s.coordsText}>
+                  {coords
+                    ? `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`
+                    : t('createVenue.locationMissing')}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={s.rewardCard}>
@@ -337,6 +378,25 @@ function createStyles(c: ThemeColors, isDark: boolean) {
       marginBottom: spacing.md,
     },
     locationText: { flex: 1, color: c.text.secondary, fontSize: typography.size.bodyMd },
+    mapSkeleton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      height: 280,
+      justifyContent: 'center',
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor,
+      backgroundColor: c.bg.secondary,
+      marginBottom: spacing.md,
+    },
+    coordsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    coordsText: { flex: 1, color: c.text.secondary, fontSize: typography.size.bodySm },
     rewardCard: {
       flexDirection: 'row',
       alignItems: 'center',
