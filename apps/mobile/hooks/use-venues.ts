@@ -14,6 +14,8 @@ interface Venue {
   is_active: boolean;
   /** 'standard' | 'popup' | 'community' | 'unclaimed' (imported venues awaiting an owner). */
   venue_kind?: string | null;
+  /** ISO timestamp after which a pop-up event disappears (null for permanent venues). */
+  expires_at?: string | null;
 }
 
 export interface VenueWithStats extends Venue {

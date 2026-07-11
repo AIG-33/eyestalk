@@ -3,7 +3,13 @@ import { View, Text, Image, StyleSheet, Platform, PixelRatio } from 'react-nativ
 import { Marker } from 'react-native-maps';
 import type { VenueWithStats } from '@/hooks/use-venues';
 import type { MarkerSize } from '@/stores/ui.store';
-import { VENUE_EMOJI } from '@/lib/venue-constants';
+import {
+  VENUE_EMOJI,
+  POPUP_EMOJI,
+  POPUP_COLOR,
+  POPUP_AMBIENT,
+  isPopupVenue,
+} from '@/lib/venue-constants';
 import { VENUE_MARKER_ICONS, type MarkerIconState } from '@/lib/venue-marker-icons';
 import { venueAmbient } from '@/theme';
 
@@ -69,9 +75,24 @@ function LiveVenueMarkerInner({
   const hasLogo = !!venue.logo_url;
   const hasActivity = venue.active_checkins > 0;
   const hasMatch = matchMode && venue.interest_matches > 0;
+  const isPopup = isPopupVenue(venue);
 
   // ─────────────────────── Android: native image markers only ─────────────
   if (IS_ANDROID) {
+    // Pop-up events get a distinct gold teardrop pin. A native pinColor marker
+    // is safe on the New Architecture (no custom <View> to snapshot) and reads
+    // as clearly different from the round venue-type emoji chips.
+    if (isPopup) {
+      return (
+        <Marker
+          coordinate={coordinate}
+          onPress={() => onPress(venue)}
+          stopPropagation
+          tracksViewChanges={false}
+          pinColor={POPUP_COLOR}
+        />
+      );
+    }
     if (hasLogo) {
       // Remote bitmaps draw at intrinsic pixel size, so request the dp size
       // multiplied by the device density — same on-screen size as the chips.
@@ -109,21 +130,26 @@ function LiveVenueMarkerInner({
   // ─────────────────────────── iOS: custom view marker ────────────────────
   const size = SIZE_DP[sizeKey];
   const radius = Math.round(size * 0.28);
-  const emoji = VENUE_EMOJI[venue.type] || '📍';
-  const ambient = venueAmbient[venue.type]?.[0] ?? venueAmbient.other[0];
+  // Pop-up events use a party emoji + amber tint so they pop against venues.
+  const emoji = isPopup ? POPUP_EMOJI : VENUE_EMOJI[venue.type] || '📍';
+  const ambient = isPopup
+    ? POPUP_AMBIENT
+    : (venueAmbient[venue.type]?.[0] ?? venueAmbient.other[0]);
   const pad = Math.round(size * 0.34);
   const outer = size + pad * 2;
 
   const ringColor = isSelected
     ? '#FFFFFF'
-    : hasMatch
-      ? '#FF6B9D'
-      : recentlyActive
-        ? '#00E5A0'
-        : hasActivity
-          ? 'rgba(0,229,160,0.8)'
-          : 'rgba(255,255,255,0.5)';
-  const ringWidth = isSelected || hasMatch ? Math.max(2, size * 0.06) : hasActivity ? size * 0.05 : size * 0.035;
+    : isPopup
+      ? POPUP_COLOR
+      : hasMatch
+        ? '#FF6B9D'
+        : recentlyActive
+          ? '#00E5A0'
+          : hasActivity
+            ? 'rgba(0,229,160,0.8)'
+            : 'rgba(255,255,255,0.5)';
+  const ringWidth = isSelected || hasMatch || isPopup ? Math.max(2, size * 0.06) : hasActivity ? size * 0.05 : size * 0.035;
 
   return (
     <Marker

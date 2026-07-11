@@ -133,7 +133,10 @@
     "matchesToggle": "Matches",
     "matchesInVenue": "{{count}} match your interests",
     "matchesEmptyHint": "Set who you're looking for in your profile",
-    "markerCapNotice": "Showing {{count}} venues around you"
+    "markerCapNotice": "Showing {{count}} venues around you",
+    "popupEndsInHours": "Ends in {{count}}h",
+    "popupEndsInMinutes": "Ends in {{count}}m",
+    "popupEnded": "Ended"
   },
   "allVenues": {
     "title": "All venues",

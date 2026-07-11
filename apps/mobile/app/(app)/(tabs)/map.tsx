@@ -36,7 +36,7 @@ import {
   MapOnboarding,
   useMapOnboardingVisible,
 } from '@/components/map/MapOnboarding';
-import { VENUE_EMOJI } from '@/lib/venue-constants';
+import { VENUE_EMOJI, isPopupVenue } from '@/lib/venue-constants';
 import { CLUSTER_ICONS, clusterCountLabel } from '@/lib/venue-marker-icons';
 import {
   isLatLngInMapRegion,
@@ -87,6 +87,15 @@ const MAP_BOOT_REGION = {
  * clustering would collapse anyway.
  */
 const MAX_RENDERED_MARKERS = 300;
+
+/**
+ * Of the marker budget, reserve up to this many for pop-up events. Pop-ups are
+ * user-created, time-limited, and few in number, so we prioritize the nearest
+ * ones above generic far-away venues — but still bound them so a pathological
+ * flood of pop-ups can never blow past the total render budget (which risks the
+ * iOS launch watchdog kill we hit before).
+ */
+const MAX_POPUP_MARKERS = 60;
 
 // ─── Pulsing checkin badge (top bar) ─────────────────────
 
@@ -364,25 +373,32 @@ export default function MapScreen() {
     const aLat = location?.latitude ?? mapRegion.latitude;
     const aLng = location?.longitude ?? mapRegion.longitude;
 
+    const byDistance = (a: VenueWithStats, b: VenueWithStats) =>
+      getDistanceMeters(aLat, aLng, Number(a.latitude), Number(a.longitude)) -
+      getDistanceMeters(aLat, aLng, Number(b.latitude), Number(b.longitude));
+
     const pinned: VenueWithStats[] = [];
+    const popups: VenueWithStats[] = [];
     const rest: VenueWithStats[] = [];
     for (const v of filteredVenues) {
       const isOwn = !!myUserId && (v as any).owner_id === myUserId;
       const isActive = v.id === activeCheckinVenueId;
       if (isOwn || isActive) pinned.push(v);
+      else if (isPopupVenue(v)) popups.push(v);
       else rest.push(v);
     }
 
-    const remaining = Math.max(0, MAX_RENDERED_MARKERS - pinned.length);
-    const nearest = rest
-      .sort(
-        (a, b) =>
-          getDistanceMeters(aLat, aLng, Number(a.latitude), Number(a.longitude)) -
-          getDistanceMeters(aLat, aLng, Number(b.latitude), Number(b.longitude)),
-      )
-      .slice(0, remaining);
+    // Pop-up events: keep the nearest ones (bounded) so live events never get
+    // dropped in favor of far-away permanent venues.
+    const nearestPopups = popups.sort(byDistance).slice(0, MAX_POPUP_MARKERS);
 
-    return [...pinned, ...nearest];
+    const remaining = Math.max(
+      0,
+      MAX_RENDERED_MARKERS - pinned.length - nearestPopups.length,
+    );
+    const nearest = rest.sort(byDistance).slice(0, remaining);
+
+    return [...pinned, ...nearestPopups, ...nearest];
   }, [
     filteredVenues,
     markerCapApplied,

@@ -133,7 +133,10 @@
     "matchesToggle": "Совпадения",
     "matchesInVenue": "{{count}} по вашим интересам",
     "matchesEmptyHint": "Заполните «Кого ищу» в профиле",
-    "markerCapNotice": "Показаны {{count}} заведений рядом с вами"
+    "markerCapNotice": "Показаны {{count}} заведений рядом с вами",
+    "popupEndsInHours": "Закончится через {{count}} ч",
+    "popupEndsInMinutes": "Закончится через {{count}} мин",
+    "popupEnded": "Завершено"
   },
   "allVenues": {
     "title": "Все заведения",

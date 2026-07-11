@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,13 @@ import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography, radius, spacing } from '@/theme';
-import { VENUE_EMOJI, ACTIVITY_EMOJI } from '@/lib/venue-constants';
+import {
+  VENUE_EMOJI,
+  ACTIVITY_EMOJI,
+  POPUP_EMOJI,
+  POPUP_COLOR,
+  isPopupVenue,
+} from '@/lib/venue-constants';
 import { getDistanceMeters, formatDistance } from '@/lib/geo';
 import { Avatar } from '@/components/ui/avatar';
 import { useVenueActivities } from '@/hooks/use-venue-activities';
@@ -52,7 +58,28 @@ export function VenueBottomSheet({
   const isCheckedInHere =
     String(activeCheckin?.venue_id ?? '') === String(venue.id ?? '');
 
-  const emoji = VENUE_EMOJI[venue.type] || '📍';
+  const isPopup = isPopupVenue(venue);
+  const emoji = isPopup ? POPUP_EMOJI : VENUE_EMOJI[venue.type] || '📍';
+
+  // Human-friendly "ends in …" label for pop-up events.
+  const popupTimeLabel = useMemo(() => {
+    if (!isPopup || !venue.expires_at) return null;
+    const ms = new Date(venue.expires_at).getTime() - Date.now();
+    if (ms <= 0) return t('map.popupEnded', { defaultValue: 'Ended' });
+    const hrs = Math.floor(ms / 3_600_000);
+    if (hrs >= 1) {
+      return t('map.popupEndsInHours', {
+        count: hrs,
+        defaultValue: `Ends in ${hrs}h`,
+      });
+    }
+    const mins = Math.max(1, Math.floor(ms / 60_000));
+    return t('map.popupEndsInMinutes', {
+      count: mins,
+      defaultValue: `Ends in ${mins}m`,
+    });
+  }, [isPopup, venue.expires_at, t]);
+
   const dist = userLocation
     ? formatDistance(
         getDistanceMeters(
@@ -141,11 +168,23 @@ export function VenueBottomSheet({
               {venue.name}
             </Text>
             <View style={styles.meta}>
+              {isPopup && (
+                <View style={styles.popupBadge}>
+                  <Text style={styles.popupBadgeText}>
+                    {POPUP_EMOJI} {t('venue.popupBadge', { defaultValue: 'Pop-up' })}
+                  </Text>
+                </View>
+              )}
               <Text style={[styles.type, { color: c.text.secondary }]}>
                 {t(`venueTypes.${venue.type}`, {
                   defaultValue: (venue.type ?? '').replace(/_/g, ' ') || '—',
                 })}
               </Text>
+              {popupTimeLabel && (
+                <Text style={[styles.popupTime, { color: POPUP_COLOR }]}>
+                  ⏳ {popupTimeLabel}
+                </Text>
+              )}
               {venue.active_checkins > 0 && (
                 <View style={styles.live}>
                   <View style={styles.liveDot} />
@@ -463,6 +502,23 @@ const styles = StyleSheet.create({
   type: {
     fontSize: typography.size.bodySm,
     textTransform: 'capitalize',
+  },
+  popupBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,176,32,0.16)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  popupBadgeText: {
+    color: '#D9A400',
+    fontSize: typography.size.micro,
+    fontWeight: typography.weight.bold,
+  },
+  popupTime: {
+    fontSize: typography.size.bodySm,
+    fontWeight: typography.weight.semibold,
   },
   live: {
     flexDirection: 'row',
