@@ -249,6 +249,24 @@ export default function VenueDetailScreen() {
             <Text style={s.description}>{venue.description}</Text>
           )}
 
+          {/* Owner: manage check-in / auto check-out settings */}
+          {isOwner && (
+            <TouchableOpacity
+              style={s.claimCard}
+              onPress={() => router.push(`/(app)/venue/${id}/edit` as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.infoIconWrap}>
+                <Ionicons name="settings-outline" size={20} color={c.accent.info} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.infoValue}>{t('editVenue.manageTitle')}</Text>
+                <Text style={s.infoLabel}>{t('editVenue.manageHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.text.tertiary} />
+            </TouchableOpacity>
+          )}
+
           {/* Check-in hint for non-checked-in users */}
           {!isCheckedInHere && !isCheckedInElsewhere && (
             <View style={s.hintCard}>

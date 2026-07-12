@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Alert, AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus } from 'react-native';
 import * as Location from 'expo-location';
-import { useTranslation } from 'react-i18next';
 import { getDistanceMeters } from '@/lib/geo';
 import { useActiveCheckin, useCheckin } from '@/hooks/use-checkin';
 
@@ -12,12 +11,15 @@ const OUTSIDE_READINGS_REQUIRED = 2;
  * with status `geofence_checkout` when they are farther than the venue's geofence radius
  * (confirmed by consecutive readings outside, to reduce GPS jitter).
  *
+ * Only runs when the venue's `checkout_policy` includes `geofence_exit` (the default).
+ * The user-facing notice is shown centrally by `useAutoCheckoutNotice`, which reads
+ * the recorded `checkout_reason` — so this hook only performs the check-out.
+ *
  * Requires location permission; works when the app is in foreground (When In Use).
  */
 export function useGeofenceAutoCheckout() {
   const { data: activeCheckin } = useActiveCheckin();
   const { checkoutMutation } = useCheckin();
-  const { t } = useTranslation();
   const checkinRef = useRef(activeCheckin);
   checkinRef.current = activeCheckin;
 
@@ -47,11 +49,17 @@ export function useGeofenceAutoCheckout() {
           latitude?: number | string | null;
           longitude?: number | string | null;
           geofence_radius?: number | string | null;
+          checkout_policy?: string[] | null;
         }
       | null
       | undefined;
 
     if (!venue) return;
+
+    // Respect the venue's auto check-out policy: only leave-the-zone check-out when
+    // the owner enabled `geofence_exit`. Missing policy = legacy default (enabled).
+    const policy = venue.checkout_policy;
+    if (Array.isArray(policy) && !policy.includes('geofence_exit')) return;
 
     const vLat = Number(venue.latitude);
     const vLng = Number(venue.longitude);
@@ -59,7 +67,6 @@ export function useGeofenceAutoCheckout() {
 
     const radiusM = Math.max(10, Number(venue.geofence_radius) || 100);
     const checkinId = activeCheckin.id;
-    const venueName = venue.name ?? '';
 
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
@@ -72,17 +79,13 @@ export function useGeofenceAutoCheckout() {
 
       checkoutInFlightRef.current = true;
       mutateCheckoutRef.current(
-        { checkinId, status: 'geofence_checkout' },
+        { checkinId, status: 'geofence_checkout', reason: 'geofence_exit' },
         {
           onSettled: () => {
             checkoutInFlightRef.current = false;
           },
           onSuccess: () => {
             outsideStreakRef.current = 0;
-            Alert.alert(
-              t('venue.autoGeofenceCheckoutTitle'),
-              t('venue.autoGeofenceCheckoutMessage', { venueName }),
-            );
           },
         },
       );

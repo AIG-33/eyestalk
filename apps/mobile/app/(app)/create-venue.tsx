@@ -13,9 +13,17 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VenueLocationPicker } from '@/components/venue/VenueLocationPicker';
+import { VenueAccessFields } from '@/components/venue/VenueAccessFields';
 import { VENUE_EMOJI, VENUE_TYPE_KEYS } from '@/lib/venue-constants';
 import { PRIMARY_LAUNCH_CITY } from '@/lib/launch-cities';
 import { haptic } from '@/lib/haptics';
+import { toggleCheckinMethod, toggleCheckoutPolicy } from '@/lib/checkin-options';
+import {
+  DEFAULT_CHECKIN_METHODS,
+  DEFAULT_CHECKOUT_POLICY,
+  type CheckinMethod,
+  type CheckoutPolicy,
+} from '@eyestalk/shared/constants';
 import { useTheme, typography, spacing, radius, type ThemeColors } from '@/theme';
 
 type VenueKind = 'community' | 'popup';
@@ -40,6 +48,9 @@ export default function CreateVenueScreen() {
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [popupHours, setPopupHours] = useState<number>(DEFAULT_POPUP_HOURS);
+  const [checkinMethods, setCheckinMethods] = useState<CheckinMethod[]>([...DEFAULT_CHECKIN_METHODS]);
+  const [checkoutPolicy, setCheckoutPolicy] = useState<CheckoutPolicy[]>([...DEFAULT_CHECKOUT_POLICY]);
+  const [checkinCode, setCheckinCode] = useState('');
   const [saving, setSaving] = useState(false);
 
   // The venue point. Defaults to the user's GPS, but they can drag the map to
@@ -62,8 +73,17 @@ export default function CreateVenueScreen() {
       ? { latitude: location.latitude, longitude: location.longitude }
       : { latitude: PRIMARY_LAUNCH_CITY.latitude, longitude: PRIMARY_LAUNCH_CITY.longitude });
 
+  // If the owner enables the staff-code method, they must set the code now.
+  const codeRequiredButMissing =
+    checkinMethods.includes('code') && checkinCode.trim().length < 3;
+
   const canSubmit =
-    !!coords && name.trim().length >= 2 && address.trim().length >= 3 && !saving;
+    !!coords &&
+    name.trim().length >= 2 &&
+    address.trim().length >= 3 &&
+    checkinMethods.length >= 1 &&
+    !codeRequiredButMissing &&
+    !saving;
 
   const shareVenue = async (venueId: string, venueName: string) => {
     try {
@@ -97,6 +117,12 @@ export default function CreateVenueScreen() {
         ? new Date(Date.now() + popupHours * 3600_000).toISOString()
         : null;
 
+    // `venue_close` only makes sense for pop-ups (community places never expire).
+    const policy =
+      kind === 'popup'
+        ? checkoutPolicy
+        : checkoutPolicy.filter((p) => p !== 'venue_close');
+
     const { data, error } = await supabase
       .from('venues')
       .insert({
@@ -110,19 +136,29 @@ export default function CreateVenueScreen() {
         geofence_radius: kind === 'popup' ? POPUP_GEOFENCE_METERS : COMMUNITY_GEOFENCE_METERS,
         venue_kind: kind,
         expires_at: expiresAt,
+        checkin_methods: checkinMethods,
+        checkout_policy: policy.length > 0 ? policy : [...DEFAULT_CHECKOUT_POLICY],
       } as any)
       .select('id, name')
       .single();
 
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       haptic.error();
       Alert.alert(t('common.error'), error.message);
       return;
     }
 
     const created = data as unknown as { id: string; name: string };
+
+    // Persist the staff check-in code alongside the venue when that method is on.
+    if (checkinMethods.includes('code') && checkinCode.trim()) {
+      await supabase
+        .from('venue_secrets')
+        .upsert({ venue_id: created.id, checkin_code: checkinCode.trim() } as any);
+    }
+
+    setSaving(false);
 
     haptic.success();
     queryClient.invalidateQueries({ queryKey: ['venues'] });
@@ -271,6 +307,16 @@ export default function CreateVenueScreen() {
             </>
           )}
         </View>
+
+        <VenueAccessFields
+          methods={checkinMethods}
+          onToggleMethod={(m) => setCheckinMethods((cur) => toggleCheckinMethod(cur, m))}
+          checkoutPolicy={checkoutPolicy}
+          onTogglePolicy={(p) => setCheckoutPolicy((cur) => toggleCheckoutPolicy(cur, p))}
+          code={checkinCode}
+          onChangeCode={setCheckinCode}
+          allowVenueClose={kind === 'popup'}
+        />
 
         <View style={s.rewardCard}>
           <Text style={s.rewardEmoji}>🪙</Text>

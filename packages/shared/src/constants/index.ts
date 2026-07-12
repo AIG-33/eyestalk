@@ -83,6 +83,29 @@ export const MAX_CHECKIN_CODE_LENGTH = 50;
 export const CHECKIN_STATUSES = ['active', 'expired', 'manual_checkout', 'geofence_checkout'] as const;
 export type CheckinStatus = (typeof CHECKIN_STATUSES)[number];
 
+// Automatic check-out policies a venue owner can enable. Several can be combined,
+// except `manual_only`, which means "never auto check-out".
+//  - geofence_exit   : check the user out when they leave the venue's geofence
+//  - session_timeout : check the user out after CHECKIN_DURATION_HOURS (expires_at)
+//  - venue_close     : check the user out when a pop-up venue expires (venues.expires_at)
+//  - manual_only     : never auto check-out; the user leaves manually
+export const CHECKOUT_POLICIES = ['geofence_exit', 'session_timeout', 'venue_close', 'manual_only'] as const;
+export type CheckoutPolicy = (typeof CHECKOUT_POLICIES)[number];
+
+// Keeps today's behaviour: leave the geofence or let the session time out.
+export const DEFAULT_CHECKOUT_POLICY: CheckoutPolicy[] = ['geofence_exit', 'session_timeout'];
+
+// Why a check-in ended — recorded on checkins.checkout_reason and shown to the
+// user on an automatic check-out. `manual` is not surfaced (the user chose it).
+export const CHECKOUT_REASONS = [
+  'geofence_exit',
+  'session_timeout',
+  'venue_closed',
+  'checked_in_elsewhere',
+  'manual',
+] as const;
+export type CheckoutReason = (typeof CHECKOUT_REASONS)[number];
+
 export const MESSAGE_TYPES = ['text', 'emoji', 'sticker', 'image', 'wave', 'compliment', 'system', 'announcement'] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 

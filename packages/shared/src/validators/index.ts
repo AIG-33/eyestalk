@@ -8,6 +8,7 @@ import {
   REPORT_REASONS,
   ACTIVITY_TYPES,
   CHECKIN_METHODS,
+  CHECKOUT_POLICIES,
   MAX_CHECKIN_CODE_LENGTH,
   MAX_NICKNAME_LENGTH,
   MAX_INTERESTS,
@@ -40,12 +41,14 @@ export const venueSchema = z.object({
   geofence_radius: z.number().min(10).max(500).default(50),
   wifi_ssid: z.string().max(100).optional().nullable(),
   checkin_methods: z.array(z.enum(CHECKIN_METHODS)).min(1).optional(),
+  checkout_policy: z.array(z.enum(CHECKOUT_POLICIES)).min(1).optional(),
 });
 
 // Owner-editable check-in / access config (settings page).
 export const venueAccessSchema = z
   .object({
     checkin_methods: z.array(z.enum(CHECKIN_METHODS)).min(1),
+    checkout_policy: z.array(z.enum(CHECKOUT_POLICIES)).min(1).optional(),
     checkin_code: z.string().max(MAX_CHECKIN_CODE_LENGTH).optional().nullable(),
     wifi_ssid: z.string().max(100).optional().nullable(),
     wifi_password: z.string().max(200).optional().nullable(),

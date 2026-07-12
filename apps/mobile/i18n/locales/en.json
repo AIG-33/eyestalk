@@ -185,6 +185,13 @@
     "checkoutHint": "Leave this venue — your chats will expire in 24 hours",
     "autoGeofenceCheckoutTitle": "Checked out",
     "autoGeofenceCheckoutMessage": "You left {{venueName}} — we checked you out automatically.",
+    "autoCheckoutTitle": "You were checked out",
+    "checkoutReason": {
+      "geofence_exit": "You left the venue area, so we checked you out of {{venueName}}.",
+      "session_timeout": "Your session at {{venueName}} timed out, so we checked you out.",
+      "venue_closed": "{{venueName}} closed / the event ended, so we checked you out.",
+      "checked_in_elsewhere": "You checked in somewhere else, so we checked you out of {{venueName}}."
+    },
     "people": "People",
     "peopleHint": "See who's here right now and send a wave to connect",
     "chat": "Chat",
@@ -468,6 +475,40 @@
     "getStarted": "Get Started",
     "exploreFirst": "Explore the map first",
     "skipOnboarding": "Skip intro"
+  },
+  "checkinMethods": {
+    "title": "How can people check in?",
+    "subtitle": "Pick one or more ways guests can check in to your spot.",
+    "geofence": "Location / nearby",
+    "geofenceHint": "People check in automatically when they're at the spot",
+    "qr": "QR code",
+    "qrHint": "People scan the spot's QR code (created for you automatically)",
+    "code": "Staff code",
+    "codeHint": "People type a short code your staff hands out",
+    "codeLabel": "Check-in code",
+    "codePlaceholder": "e.g. PARTY24",
+    "codeInputHint": "Guests enter this code to check in. Share it at the door or on a table."
+  },
+  "checkoutPolicies": {
+    "title": "Auto check-out",
+    "subtitle": "Decide when people are automatically checked out of your spot.",
+    "geofence_exit": "When they leave the area",
+    "geofence_exitHint": "Check people out once they walk out of the geofence",
+    "session_timeout": "After a few hours",
+    "session_timeoutHint": "Check people out automatically when their session times out",
+    "venue_close": "When the event ends",
+    "venue_closeHint": "Check everyone out when the pop-up reaches its end time",
+    "manual_only": "Only manually",
+    "manual_onlyHint": "Never auto check-out — people leave when they choose to"
+  },
+  "editVenue": {
+    "title": "Edit spot",
+    "manageTitle": "Manage check-in",
+    "manageHint": "Edit details, check-in methods, and auto check-out",
+    "save": "Save changes",
+    "savedTitle": "Saved",
+    "savedBody": "Your spot has been updated.",
+    "notOwner": "Only the owner can edit this spot."
   },
   "createVenue": {
     "title": "Add a spot",

@@ -6,6 +6,7 @@ import { appStorage } from '@/lib/storage';
 import { api } from '@/lib/api';
 import { useCheckinStore } from '@/stores/checkin.store';
 import { useAuthStore } from '@/stores/auth.store';
+import type { CheckoutReason } from '@eyestalk/shared/constants';
 
 const VISIBILITY_CONSENT_KEY = 'eyestalk.visibilityConsent';
 
@@ -18,7 +19,7 @@ export function useActiveCheckin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('checkins')
-        .select('*, venues(id, name, type, logo_url, latitude, longitude, geofence_radius)')
+        .select('*, venues(id, name, type, logo_url, latitude, longitude, geofence_radius, checkout_policy, expires_at)')
         .eq('user_id', session!.user.id)
         .eq('status', 'active')
         .maybeSingle();
@@ -113,16 +114,28 @@ export function useCheckin() {
 
   const checkoutMutation = useMutation({
     mutationFn: async (
-      arg: string | { checkinId: string; status?: 'manual_checkout' | 'geofence_checkout' },
+      arg:
+        | string
+        | {
+            checkinId: string;
+            status?: 'manual_checkout' | 'geofence_checkout';
+            reason?: CheckoutReason;
+          },
     ) => {
       const checkinId = typeof arg === 'string' ? arg : arg.checkinId;
       const status =
         typeof arg === 'string' ? 'manual_checkout' : (arg.status ?? 'manual_checkout');
+      // A manual tap has no "auto reason" to surface; anything else records why.
+      const reason: CheckoutReason =
+        typeof arg === 'string'
+          ? 'manual'
+          : (arg.reason ?? (status === 'geofence_checkout' ? 'geofence_exit' : 'manual'));
       const { error } = await supabase
         .from('checkins')
         .update({
           status,
           checked_out_at: new Date().toISOString(),
+          checkout_reason: reason,
         })
         .eq('id', checkinId);
 

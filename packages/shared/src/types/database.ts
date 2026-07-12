@@ -93,6 +93,8 @@ export interface Database {
           subscription_tier: string;
           is_active: boolean;
           settings: Json;
+          checkin_methods: string[];
+          checkout_policy: string[];
           venue_kind: string;
           expires_at: string | null;
           external_source: string | null;
@@ -115,6 +117,8 @@ export interface Database {
           subscription_tier?: string;
           is_active?: boolean;
           settings?: Json;
+          checkin_methods?: string[];
+          checkout_policy?: string[];
           venue_kind?: string;
           expires_at?: string | null;
           external_source?: string | null;
@@ -136,6 +140,8 @@ export interface Database {
           subscription_tier?: string;
           is_active?: boolean;
           settings?: Json;
+          checkin_methods?: string[];
+          checkout_policy?: string[];
           venue_kind?: string;
           expires_at?: string | null;
           external_source?: string | null;
@@ -217,6 +223,7 @@ export interface Database {
           tokens_earned: number;
           checked_in_at: string;
           checked_out_at: string | null;
+          checkout_reason: string | null;
           expires_at: string;
         };
         Insert: {
@@ -231,6 +238,7 @@ export interface Database {
           tokens_earned?: number;
           checked_in_at?: string;
           checked_out_at?: string | null;
+          checkout_reason?: string | null;
           expires_at: string;
         };
         Update: {
@@ -239,6 +247,7 @@ export interface Database {
           status_tag?: string | null;
           is_visible?: boolean;
           checked_out_at?: string | null;
+          checkout_reason?: string | null;
         };
       };
       chats: {
