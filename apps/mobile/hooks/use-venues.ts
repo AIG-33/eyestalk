@@ -12,6 +12,8 @@ interface Venue {
   logo_url: string | null;
   cover_url: string | null;
   is_active: boolean;
+  /** Creator of the venue. Used on the map to always show the owner their own spots. */
+  owner_id?: string | null;
   /** 'standard' | 'popup' | 'community' | 'unclaimed' (imported venues awaiting an owner). */
   venue_kind?: string | null;
   /** ISO timestamp after which a pop-up event disappears (null for permanent venues). */
@@ -127,7 +129,7 @@ export function useMyVenues(ownerId: string | undefined) {
     queryFn: async (): Promise<Venue[]> => {
       const { data, error } = await supabase
         .from('venues')
-        .select('id, name, type, description, address, latitude, longitude, logo_url, cover_url, is_active, venue_kind, expires_at, created_at')
+        .select('id, name, type, description, address, latitude, longitude, logo_url, cover_url, is_active, owner_id, venue_kind, expires_at, created_at')
         .eq('owner_id', ownerId!)
         .order('created_at', { ascending: false });
 

@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocation } from '@/hooks/use-location';
 import {
   useAllVenues,
+  useMyVenues,
   useVenueMatchCounts,
   type VenueWithStats,
 } from '@/hooks/use-venues';
@@ -302,6 +303,12 @@ export default function MapScreen() {
   const mapMarkerSize = useUIStore((s) => s.mapMarkerSize);
   const { data: profile } = useProfile();
   const session = useAuthStore((s) => s.session);
+  const myUserId = session?.user?.id ?? null;
+  // The owner's OWN venues, fetched independently of the map's active/expiry
+  // filters (useAllVenues drops inactive venues and expired pop-ups). This is
+  // what guarantees an owner always sees the spots they created — even an
+  // expired pop-up or a venue far outside the current viewport.
+  const { data: myVenues } = useMyVenues(myUserId ?? undefined);
   const { visible: showOnboarding, dismiss: dismissOnboarding } =
     useMapOnboardingVisible();
 
@@ -333,17 +340,50 @@ export default function MapScreen() {
   /** Tab bar sits below map screen; FAB sits above venue card strip only. */
   const locationFabBottom = COMPACT_VENUE_STRIP_HEIGHT + spacing.md;
 
+  /** IDs of venues the current user created — always kept & pinned on the map. */
+  const myVenueIds = useMemo(
+    () => new Set((myVenues ?? []).map((v) => v.id)),
+    [myVenues],
+  );
+
+  // Map dataset = the active/nearby venues from useAllVenues PLUS the user's own
+  // venues merged in (deduped by id). useAllVenues filters out inactive venues
+  // and expired pop-ups, so without this merge an owner's created spot can be
+  // entirely absent from the map data — and no amount of pin/priority logic can
+  // resurrect a row that was never fetched. Owned rows are tagged with owner_id
+  // so the pin check below always recognizes them.
+  const mergedVenues = useMemo<VenueWithStats[]>(() => {
+    const base = venues ?? [];
+    if (!myUserId || !myVenues?.length) return base;
+    const byId = new Map<string, VenueWithStats>();
+    for (const v of base) byId.set(v.id, v);
+    for (const mv of myVenues) {
+      const existing = byId.get(mv.id);
+      if (existing) {
+        byId.set(mv.id, { ...existing, owner_id: existing.owner_id ?? myUserId });
+      } else {
+        byId.set(mv.id, {
+          ...(mv as VenueWithStats),
+          owner_id: mv.owner_id ?? myUserId,
+          active_checkins: 0,
+          open_to_chat: 0,
+          interest_matches: 0,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  }, [venues, myVenues, myUserId]);
+
   const filteredVenues = useMemo(() => {
-    if (!venues) return [];
     const base = typeFilter
-      ? venues.filter((v) => v.type === typeFilter)
-      : venues;
+      ? mergedVenues.filter((v) => v.type === typeFilter)
+      : mergedVenues;
     if (!matchMode) return base;
     return base.map((v) => ({
       ...v,
       interest_matches: matchMap?.[v.id] ?? 0,
     }));
-  }, [venues, typeFilter, matchMode, matchMap]);
+  }, [mergedVenues, typeFilter, matchMode, matchMap]);
 
   const venuesInViewport = useMemo(() => {
     return filteredVenues.filter((v) =>
@@ -355,7 +395,6 @@ export default function MapScreen() {
     );
   }, [filteredVenues, mapRegion]);
 
-  const myUserId = session?.user?.id ?? null;
   const activeCheckinVenueId = ((activeCheckin as any)?.venue_id as string | undefined) ?? null;
 
   /** True once the venue set is large enough that the marker cap kicks in. */
@@ -381,7 +420,8 @@ export default function MapScreen() {
     const popups: VenueWithStats[] = [];
     const rest: VenueWithStats[] = [];
     for (const v of filteredVenues) {
-      const isOwn = !!myUserId && (v as any).owner_id === myUserId;
+      const isOwn =
+        myVenueIds.has(v.id) || (!!myUserId && v.owner_id === myUserId);
       const isActive = v.id === activeCheckinVenueId;
       if (isOwn || isActive) pinned.push(v);
       else if (isPopupVenue(v)) popups.push(v);
@@ -405,6 +445,7 @@ export default function MapScreen() {
     location,
     mapRegion,
     myUserId,
+    myVenueIds,
     activeCheckinVenueId,
   ]);
 
@@ -742,7 +783,7 @@ export default function MapScreen() {
       </ClusteredMapView>
 
       {/* ─── Empty state ─────────────────────────────── */}
-      {venues && venues.length === 0 && !venuesLoading && (
+      {mergedVenues.length === 0 && !venuesLoading && (
         <View style={styles.emptyOverlay}>
           <Text style={[styles.emptyTitle, { color: c.text.primary }]}>
             {t('map.noVenues')}
