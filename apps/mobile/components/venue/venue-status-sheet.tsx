@@ -11,9 +11,19 @@ interface Props {
   currentStatusTag: string | null;
   isVisible: boolean;
   onClose: () => void;
+  /** Optional welcome header shown at the top (used right after check-in). */
+  introTitle?: string;
+  introSubtitle?: string;
 }
 
-export function VenueStatusSheet({ checkinId, currentStatusTag, isVisible, onClose }: Props) {
+export function VenueStatusSheet({
+  checkinId,
+  currentStatusTag,
+  isVisible,
+  onClose,
+  introTitle,
+  introSubtitle,
+}: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -44,6 +54,15 @@ export function VenueStatusSheet({ checkinId, currentStatusTag, isVisible, onClo
       <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
       <View style={styles.sheet}>
         <View style={styles.handle} />
+
+        {introTitle ? (
+          <View style={styles.intro}>
+            <Text style={styles.introTitle}>{introTitle}</Text>
+            {introSubtitle ? (
+              <Text style={styles.introSubtitle}>{introSubtitle}</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Visibility toggle */}
         <View style={styles.visibilityRow}>
@@ -116,6 +135,17 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: component.bottomSheet.handleColor,
     alignSelf: 'center', marginBottom: spacing.xl,
+  },
+  intro: {
+    marginBottom: spacing.xl,
+  },
+  introTitle: {
+    color: colors.text.primary, fontSize: typography.size.headingMd,
+    fontWeight: typography.weight.bold, marginBottom: spacing.xs,
+  },
+  introSubtitle: {
+    color: colors.text.secondary, fontSize: typography.size.bodyMd,
+    lineHeight: typography.size.bodyMd * 1.5,
   },
   visibilityRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

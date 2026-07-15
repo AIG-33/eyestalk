@@ -418,27 +418,43 @@ export default function MapScreen() {
 
     const pinned: VenueWithStats[] = [];
     const popups: VenueWithStats[] = [];
-    const rest: VenueWithStats[] = [];
+    // "Featured" = venues a real person or business created (community/pop-up/
+    // official). They are few and are the whole point of the app, so they must
+    // never be crowded out by the thousands of bulk-imported ('unclaimed') POI
+    // rows that exist only to seed the map. Without this, a freshly-created
+    // community spot in a dense city could fall outside the nearest-300 cap and
+    // silently vanish for everyone but its owner.
+    const featured: VenueWithStats[] = [];
+    const imported: VenueWithStats[] = [];
     for (const v of filteredVenues) {
       const isOwn =
         myVenueIds.has(v.id) || (!!myUserId && v.owner_id === myUserId);
       const isActive = v.id === activeCheckinVenueId;
       if (isOwn || isActive) pinned.push(v);
       else if (isPopupVenue(v)) popups.push(v);
-      else rest.push(v);
+      else if (v.venue_kind === 'unclaimed') imported.push(v);
+      else featured.push(v);
     }
 
     // Pop-up events: keep the nearest ones (bounded) so live events never get
     // dropped in favor of far-away permanent venues.
     const nearestPopups = popups.sort(byDistance).slice(0, MAX_POPUP_MARKERS);
 
-    const remaining = Math.max(
+    // Keep every featured venue if they fit; if a city somehow has more than the
+    // budget, keep the nearest ones — still ahead of any imported POI.
+    let budget = Math.max(
       0,
       MAX_RENDERED_MARKERS - pinned.length - nearestPopups.length,
     );
-    const nearest = rest.sort(byDistance).slice(0, remaining);
+    const keptFeatured =
+      featured.length <= budget
+        ? featured
+        : featured.sort(byDistance).slice(0, budget);
+    budget = Math.max(0, budget - keptFeatured.length);
 
-    return [...pinned, ...nearestPopups, ...nearest];
+    const nearestImported = imported.sort(byDistance).slice(0, budget);
+
+    return [...pinned, ...nearestPopups, ...keptFeatured, ...nearestImported];
   }, [
     filteredVenues,
     markerCapApplied,

@@ -32,7 +32,10 @@ export default function ChatsScreen() {
   useFocusEffect(
     useCallback(() => {
       void markAllIncomingWavesSeen(queryClient);
-    }, [queryClient]),
+      // Re-pull unread counts when returning from an open conversation, so a
+      // chat we just read no longer shows an unread badge here.
+      void refetch();
+    }, [queryClient, refetch]),
   );
   const { data: activeCheckin } = useActiveCheckin();
   const session = useAuthStore((st) => st.session);

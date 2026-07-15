@@ -1,14 +1,9 @@
-import { Alert } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { appStorage } from '@/lib/storage';
 import { api } from '@/lib/api';
 import { useCheckinStore } from '@/stores/checkin.store';
 import { useAuthStore } from '@/stores/auth.store';
 import type { CheckoutReason } from '@eyestalk/shared/constants';
-
-const VISIBILITY_CONSENT_KEY = 'eyestalk.visibilityConsent';
 
 export function useActiveCheckin() {
   const session = useAuthStore((s) => s.session);
@@ -42,45 +37,7 @@ export function useActiveCheckin() {
 export function useCheckin() {
   const queryClient = useQueryClient();
   const session = useAuthStore((s) => s.session);
-  const { t } = useTranslation();
-
-  // Apple 5.1.2: a user's presence is only shown to others after they explicitly
-  // consent. On the first check-in we ask, and remember the choice. Choosing to
-  // stay hidden flips `is_visible` off (server default is visible).
-  const hideCheckin = async (checkinId?: string) => {
-    if (!checkinId) return;
-    await supabase.from('checkins').update({ is_visible: false }).eq('id', checkinId);
-    queryClient.invalidateQueries({ queryKey: ['checkin'] });
-  };
-
-  const requestVisibilityConsent = async (checkinId?: string) => {
-    const stored = await appStorage.get(VISIBILITY_CONSENT_KEY);
-    if (stored === 'hidden') {
-      await hideCheckin(checkinId);
-      return;
-    }
-    if (stored === 'visible') return;
-
-    Alert.alert(
-      t('checkin.visibilityConsentTitle'),
-      t('checkin.visibilityConsentBody'),
-      [
-        {
-          text: t('checkin.visibilityConsentHide'),
-          style: 'cancel',
-          onPress: async () => {
-            await appStorage.set(VISIBILITY_CONSENT_KEY, 'hidden');
-            await hideCheckin(checkinId);
-          },
-        },
-        {
-          text: t('checkin.visibilityConsentShow'),
-          onPress: () => appStorage.set(VISIBILITY_CONSENT_KEY, 'visible'),
-        },
-      ],
-      { cancelable: false },
-    );
-  };
+  const promptPostCheckin = useCheckinStore((s) => s.promptPostCheckin);
 
   const checkinMutation = useMutation({
     mutationFn: async (params: {
@@ -107,8 +64,11 @@ export function useCheckin() {
       queryClient.invalidateQueries({ queryKey: ['checkin'] });
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // Right after joining a spot, ask the person for their status + whether
+      // they want to be visible to others there (Apple 5.1.2: presence is only
+      // shown after explicit opt-in — the server default is hidden).
       const checkinId = (data?.checkin as { id?: string } | undefined)?.id;
-      void requestVisibilityConsent(checkinId);
+      if (checkinId) promptPostCheckin(checkinId);
     },
   });
 

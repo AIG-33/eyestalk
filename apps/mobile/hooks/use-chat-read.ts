@@ -20,7 +20,13 @@ export async function markChatAsRead(
     .eq('chat_id', chatId)
     .eq('user_id', uid);
 
-  await queryClient.invalidateQueries({ queryKey: CHAT_TAB_BADGES_QUERY_KEY });
+  // Both the tab badge AND the per-chat unread count in the chats list read from
+  // last_read_at, so refresh both — otherwise the unread badge lingers on the
+  // Chats list after opening (and reading) a conversation.
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: CHAT_TAB_BADGES_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: ['chats'] }),
+  ]);
 }
 
 /** Clear yellow wave badge when user opens the Chats tab. */

@@ -12,6 +12,7 @@ import { useAutoCheckoutNotice } from '@/hooks/use-auto-checkout-notice';
 import { useMatchStore } from '@/stores/match.store';
 import { useUIStore } from '@/stores/ui.store';
 import { MatchNotification } from '@/components/ui/match-notification';
+import { PostCheckinSheet } from '@/components/venue/post-checkin-sheet';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ThemeProvider, useTheme } from '@/theme';
 import '@/i18n';
@@ -174,6 +175,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(app)" />
               </Stack>
               <MatchToast />
+              <PostCheckinSheet />
             </GlobalListeners>
           </ThemeProvider>
         </ErrorBoundary>
